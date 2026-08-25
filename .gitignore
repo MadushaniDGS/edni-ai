@@ -1,0 +1,22 @@
+# Node
+edni-frontend/node_modules
+edni-frontend/.next
+edni-frontend/out
+
+# Python
+edni-backend/.venv
+edni-backend/venv
+edni-backend/__pycache__
+edni-backend/.pytest_cache
+*.pyc
+
+# Environment files
+edni-frontend/.env.local
+edni-backend/.env
+.env
+
+# OS / Editor
+.vscode
+.idea
+.DS_Store
+Thumbs.db

@@ -1,0 +1,46 @@
+# Edni AI — Agentic Backend
+# FastAPI + LangGraph + IRT + RAG + Bloom's Taxonomy
+
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+python-dotenv==1.0.1
+
+# Database
+sqlalchemy==2.0.30
+asyncpg==0.29.0
+alembic==1.13.1
+psycopg2-binary==2.9.9
+redis==5.0.4
+motor==3.4.0          # MongoDB async
+
+# Auth
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+python-multipart==0.0.9
+
+# LangGraph + LLM
+langgraph==0.1.9
+langchain==0.2.5
+langchain-community==0.2.5
+langchain-groq==0.1.6       # Llama-3-70B via Groq
+langchain-openai==0.1.8     # fallback
+
+# RAG
+pinecone-client==4.1.0
+cohere==5.5.4
+sentence-transformers==3.0.1
+
+# IRT (Item Response Theory)
+numpy==1.26.4
+scipy==1.13.1
+pandas==2.2.2
+
+# Validation
+pydantic==2.7.4
+pydantic-settings==2.3.1
+
+# Utils
+httpx==0.27.0
+tenacity==8.3.0
+loguru==0.7.2
