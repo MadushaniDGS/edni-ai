@@ -1,40 +1,16 @@
 {
   "metadata": {
     "total": 250,
-    "subjects": {
-      "Data Structures and Algorithms": 50,
-      "Software Quality Assurance": 50,
-      "Software Engineering": 50,
-      "Programming Languages": 50,
-      "Database Systems": 50
-    },
-    "bloom_cognitive_levels": [
-      "Remember",
-      "Understand",
-      "Apply",
-      "Analyze",
-      "Evaluate",
-      "Create"
-    ],
-    "knowledge_dimension_types": [
-      "Factual",
-      "Conceptual",
-      "Procedural",
-      "Metacognitive"
-    ],
-    "irt_parameters": {
-      "a": "Discrimination (0.5\u20132.5)",
-      "b": "Difficulty (-3.0 to 3.0)",
-      "c": "Pseudo-guessing (0.10\u20130.25)"
-    },
-    "version": "1.0",
-    "description": "Edni AI Question Bank \u2014 3D tagged: Concept \u00d7 Bloom Cognitive Dimension \u00d7 Knowledge Dimension + 3PL IRT parameters"
+    "version": "2.0",
+    "description": "Standardized Edni AI Question Bank",
+    "conversion_note": "Converted from v1.0 format with normalized field names and Bloom levels as integers"
   },
   "questions": [
     {
-      "topic": "Arrays",
+      "question_id": "DSA_001",
       "concept": "Array Indexing",
-      "bloom_level": "Remember",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 1,
       "knowledge_type": "Factual",
       "difficulty": "easy",
       "irt_a": 0.8,
@@ -47,15 +23,14 @@
         "C": "-1",
         "D": "Depends on language"
       },
-      "correct_answer": "B",
-      "explanation": "Most languages use 0-based indexing.",
-      "id": "DSA_001",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "B",
+      "explanation": "Most languages use 0-based indexing."
     },
     {
-      "topic": "Arrays",
+      "question_id": "DSA_002",
       "concept": "Array Access",
-      "bloom_level": "Understand",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "easy",
       "irt_a": 1.0,
@@ -68,15 +43,14 @@
         "C": "O(1)",
         "D": "O(n\u00b2)"
       },
-      "correct_answer": "C",
-      "explanation": "Arrays provide O(1) access via direct memory addressing.",
-      "id": "DSA_002",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "C",
+      "explanation": "Arrays provide O(1) access via direct memory addressing."
     },
     {
-      "topic": "Arrays",
+      "question_id": "DSA_003",
       "concept": "Dynamic Arrays",
-      "bloom_level": "Apply",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -89,15 +63,14 @@
         "C": "O(n\u00b2)",
         "D": "O(1)"
       },
-      "correct_answer": "D",
-      "explanation": "Amortized analysis shows append is O(1) even with occasional O(n) resizing.",
-      "id": "DSA_003",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "D",
+      "explanation": "Amortized analysis shows append is O(1) even with occasional O(n) resizing."
     },
     {
-      "topic": "Arrays",
+      "question_id": "DSA_004",
       "concept": "2D Arrays",
-      "bloom_level": "Analyze",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.3,
@@ -110,15 +83,14 @@
         "C": "Row elements",
         "D": "Random elements"
       },
-      "correct_answer": "C",
-      "explanation": "Row-major stores all elements of a row contiguously.",
-      "id": "DSA_004",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "C",
+      "explanation": "Row-major stores all elements of a row contiguously."
     },
     {
-      "topic": "Arrays",
+      "question_id": "DSA_005",
       "concept": "Array vs Linked List",
-      "bloom_level": "Evaluate",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 5,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -131,15 +103,14 @@
         "C": "Frequent random access by index",
         "D": "Memory-efficient sparse data"
       },
-      "correct_answer": "C",
-      "explanation": "Arrays excel at O(1) random access.",
-      "id": "DSA_005",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "C",
+      "explanation": "Arrays excel at O(1) random access."
     },
     {
-      "topic": "Linked Lists",
+      "question_id": "DSA_006",
       "concept": "Node Structure",
-      "bloom_level": "Remember",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 1,
       "knowledge_type": "Factual",
       "difficulty": "easy",
       "irt_a": 0.9,
@@ -152,15 +123,14 @@
         "C": "Data and two pointers",
         "D": "Only a pointer"
       },
-      "correct_answer": "B",
-      "explanation": "A singly linked list node contains data and one next pointer.",
-      "id": "DSA_006",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "B",
+      "explanation": "A singly linked list node contains data and one next pointer."
     },
     {
-      "topic": "Linked Lists",
+      "question_id": "DSA_007",
       "concept": "Insertion",
-      "bloom_level": "Apply",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -173,15 +143,14 @@
         "C": "O(1)",
         "D": "O(n\u00b2)"
       },
-      "correct_answer": "C",
-      "explanation": "Inserting at head only requires updating the head pointer.",
-      "id": "DSA_007",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "C",
+      "explanation": "Inserting at head only requires updating the head pointer."
     },
     {
-      "topic": "Linked Lists",
+      "question_id": "DSA_008",
       "concept": "Traversal",
-      "bloom_level": "Understand",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 2,
       "knowledge_type": "Procedural",
       "difficulty": "easy",
       "irt_a": 1.0,
@@ -194,15 +163,14 @@
         "C": "When data is zero",
         "D": "When address is zero"
       },
-      "correct_answer": "B",
-      "explanation": "The last node's next pointer is NULL.",
-      "id": "DSA_008",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "B",
+      "explanation": "The last node's next pointer is NULL."
     },
     {
-      "topic": "Linked Lists",
+      "question_id": "DSA_009",
       "concept": "Cycle Detection",
-      "bloom_level": "Analyze",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 4,
       "knowledge_type": "Procedural",
       "difficulty": "hard",
       "irt_a": 1.6,
@@ -215,15 +183,14 @@
         "C": "Slow moves 2, fast moves 3",
         "D": "Both move randomly"
       },
-      "correct_answer": "B",
-      "explanation": "Floyd's: slow pointer 1 step, fast pointer 2 steps.",
-      "id": "DSA_009",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "B",
+      "explanation": "Floyd's: slow pointer 1 step, fast pointer 2 steps."
     },
     {
-      "topic": "Linked Lists",
+      "question_id": "DSA_010",
       "concept": "Doubly Linked List",
-      "bloom_level": "Evaluate",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 5,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.3,
@@ -236,15 +203,14 @@
         "C": "Cannot insert at head",
         "D": "No random access"
       },
-      "correct_answer": "B",
-      "explanation": "Doubly linked lists store an extra prev pointer, increasing memory.",
-      "id": "DSA_010",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "B",
+      "explanation": "Doubly linked lists store an extra prev pointer, increasing memory."
     },
     {
-      "topic": "Stacks",
+      "question_id": "DSA_011",
       "concept": "LIFO Principle",
-      "bloom_level": "Remember",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 1,
       "knowledge_type": "Factual",
       "difficulty": "easy",
       "irt_a": 0.8,
@@ -257,15 +223,14 @@
         "C": "Linear In First Out",
         "D": "Linked In First Out"
       },
-      "correct_answer": "A",
-      "explanation": "LIFO: the last element inserted is the first removed.",
-      "id": "DSA_011",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "A",
+      "explanation": "LIFO: the last element inserted is the first removed."
     },
     {
-      "topic": "Stacks",
+      "question_id": "DSA_012",
       "concept": "Stack Operations",
-      "bloom_level": "Apply",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "easy",
       "irt_a": 1.0,
@@ -278,15 +243,14 @@
         "C": "Pop",
         "D": "Enqueue"
       },
-      "correct_answer": "C",
-      "explanation": "Pop removes and returns the top element.",
-      "id": "DSA_012",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "C",
+      "explanation": "Pop removes and returns the top element."
     },
     {
-      "topic": "Stacks",
+      "question_id": "DSA_013",
       "concept": "Stack Applications",
-      "bloom_level": "Understand",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -299,15 +263,14 @@
         "C": "Priority scheduling",
         "D": "Hash table collision"
       },
-      "correct_answer": "B",
-      "explanation": "The call stack manages function calls and return addresses.",
-      "id": "DSA_013",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "B",
+      "explanation": "The call stack manages function calls and return addresses."
     },
     {
-      "topic": "Stacks",
+      "question_id": "DSA_014",
       "concept": "Balanced Parentheses",
-      "bloom_level": "Apply",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.3,
@@ -320,15 +283,14 @@
         "C": "Clear the stack",
         "D": "Skip it"
       },
-      "correct_answer": "B",
-      "explanation": "Pop and verify it matches the corresponding opening bracket.",
-      "id": "DSA_014",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "B",
+      "explanation": "Pop and verify it matches the corresponding opening bracket."
     },
     {
-      "topic": "Stacks",
+      "question_id": "DSA_015",
       "concept": "Stack Overflow",
-      "bloom_level": "Analyze",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -341,15 +303,14 @@
         "C": "Wrong data type",
         "D": "Missing return statement"
       },
-      "correct_answer": "B",
-      "explanation": "Deep recursion keeps adding frames until memory is exhausted.",
-      "id": "DSA_015",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "B",
+      "explanation": "Deep recursion keeps adding frames until memory is exhausted."
     },
     {
-      "topic": "Queues",
+      "question_id": "DSA_016",
       "concept": "FIFO Principle",
-      "bloom_level": "Remember",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 1,
       "knowledge_type": "Factual",
       "difficulty": "easy",
       "irt_a": 0.8,
@@ -362,15 +323,14 @@
         "C": "FILO",
         "D": "LILO"
       },
-      "correct_answer": "B",
-      "explanation": "FIFO: First In First Out.",
-      "id": "DSA_016",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "B",
+      "explanation": "FIFO: First In First Out."
     },
     {
-      "topic": "Queues",
+      "question_id": "DSA_017",
       "concept": "Queue Operations",
-      "bloom_level": "Understand",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 2,
       "knowledge_type": "Procedural",
       "difficulty": "easy",
       "irt_a": 1.0,
@@ -383,15 +343,14 @@
         "C": "Enqueue",
         "D": "Dequeue"
       },
-      "correct_answer": "C",
-      "explanation": "Enqueue adds an element to the rear.",
-      "id": "DSA_017",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "C",
+      "explanation": "Enqueue adds an element to the rear."
     },
     {
-      "topic": "Queues",
+      "question_id": "DSA_018",
       "concept": "Circular Queue",
-      "bloom_level": "Analyze",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -404,15 +363,14 @@
         "C": "Supports priority ordering",
         "D": "Allows random access"
       },
-      "correct_answer": "B",
-      "explanation": "Circular queues wrap around, reusing dequeued slots.",
-      "id": "DSA_018",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "B",
+      "explanation": "Circular queues wrap around, reusing dequeued slots."
     },
     {
-      "topic": "Queues",
+      "question_id": "DSA_019",
       "concept": "Priority Queue",
-      "bloom_level": "Evaluate",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 5,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.6,
@@ -425,15 +383,14 @@
         "C": "Heap",
         "D": "Stack"
       },
-      "correct_answer": "C",
-      "explanation": "A binary heap provides O(log n) insert and extract operations.",
-      "id": "DSA_019",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "C",
+      "explanation": "A binary heap provides O(log n) insert and extract operations."
     },
     {
-      "topic": "Queues",
+      "question_id": "DSA_020",
       "concept": "BFS Application",
-      "bloom_level": "Apply",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -446,15 +403,14 @@
         "C": "BFS",
         "D": "Postorder"
       },
-      "correct_answer": "C",
-      "explanation": "BFS uses a queue to explore nodes level by level.",
-      "id": "DSA_020",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "C",
+      "explanation": "BFS uses a queue to explore nodes level by level."
     },
     {
-      "topic": "Trees",
+      "question_id": "DSA_021",
       "concept": "Binary Tree",
-      "bloom_level": "Remember",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 1,
       "knowledge_type": "Factual",
       "difficulty": "easy",
       "irt_a": 0.9,
@@ -467,15 +423,14 @@
         "C": "3",
         "D": "Unlimited"
       },
-      "correct_answer": "B",
-      "explanation": "A binary tree node has at most 2 children: left and right.",
-      "id": "DSA_021",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "B",
+      "explanation": "A binary tree node has at most 2 children: left and right."
     },
     {
-      "topic": "Trees",
+      "question_id": "DSA_022",
       "concept": "BST Property",
-      "bloom_level": "Understand",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -488,15 +443,14 @@
         "C": "Root level",
         "D": "Random position"
       },
-      "correct_answer": "B",
-      "explanation": "BST: left subtree has values less than root.",
-      "id": "DSA_022",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "B",
+      "explanation": "BST: left subtree has values less than root."
     },
     {
-      "topic": "Trees",
+      "question_id": "DSA_023",
       "concept": "Tree Height",
-      "bloom_level": "Analyze",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.3,
@@ -509,15 +463,14 @@
         "C": "O(log n)",
         "D": "O(1)"
       },
-      "correct_answer": "C",
-      "explanation": "Each level doubles nodes, giving O(log n) height.",
-      "id": "DSA_023",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "C",
+      "explanation": "Each level doubles nodes, giving O(log n) height."
     },
     {
-      "topic": "Trees",
+      "question_id": "DSA_024",
       "concept": "AVL Tree",
-      "bloom_level": "Evaluate",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 5,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.7,
@@ -530,15 +483,14 @@
         "C": "Between -1 and 1",
         "D": "Any value"
       },
-      "correct_answer": "C",
-      "explanation": "AVL trees maintain balance factor of -1, 0, or 1.",
-      "id": "DSA_024",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "C",
+      "explanation": "AVL trees maintain balance factor of -1, 0, or 1."
     },
     {
-      "topic": "Trees",
+      "question_id": "DSA_025",
       "concept": "Tree Traversal",
-      "bloom_level": "Apply",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -551,15 +503,14 @@
         "C": "Inorder",
         "D": "Level order"
       },
-      "correct_answer": "C",
-      "explanation": "Inorder: Left, Root, Right \u2014 produces sorted output for BSTs.",
-      "id": "DSA_025",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "C",
+      "explanation": "Inorder: Left, Root, Right \u2014 produces sorted output for BSTs."
     },
     {
-      "topic": "Graphs",
+      "question_id": "DSA_026",
       "concept": "Graph Types",
-      "bloom_level": "Remember",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 1,
       "knowledge_type": "Factual",
       "difficulty": "easy",
       "irt_a": 0.8,
@@ -572,15 +523,14 @@
         "C": "Weighted graph",
         "D": "Sparse graph"
       },
-      "correct_answer": "B",
-      "explanation": "A directed graph is called a digraph.",
-      "id": "DSA_026",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "B",
+      "explanation": "A directed graph is called a digraph."
     },
     {
-      "topic": "Graphs",
+      "question_id": "DSA_027",
       "concept": "Graph Representation",
-      "bloom_level": "Understand",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -593,15 +543,14 @@
         "C": "Edge matrix",
         "D": "Incidence matrix"
       },
-      "correct_answer": "B",
-      "explanation": "Adjacency list uses O(V+E) vs O(V\u00b2) for matrix.",
-      "id": "DSA_027",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "B",
+      "explanation": "Adjacency list uses O(V+E) vs O(V\u00b2) for matrix."
     },
     {
-      "topic": "Graphs",
+      "question_id": "DSA_028",
       "concept": "Dijkstra's Algorithm",
-      "bloom_level": "Apply",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "hard",
       "irt_a": 1.6,
@@ -614,15 +563,14 @@
         "C": "Min-heap",
         "D": "Array"
       },
-      "correct_answer": "C",
-      "explanation": "A min-heap allows O(log V) extraction of minimum distance node.",
-      "id": "DSA_028",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "C",
+      "explanation": "A min-heap allows O(log V) extraction of minimum distance node."
     },
     {
-      "topic": "Graphs",
+      "question_id": "DSA_029",
       "concept": "DFS vs BFS",
-      "bloom_level": "Analyze",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.3,
@@ -635,15 +583,14 @@
         "C": "Dijkstra",
         "D": "Bellman-Ford"
       },
-      "correct_answer": "B",
-      "explanation": "BFS guarantees shortest path in unweighted graphs by exploring level by level.",
-      "id": "DSA_029",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "B",
+      "explanation": "BFS guarantees shortest path in unweighted graphs by exploring level by level."
     },
     {
-      "topic": "Graphs",
+      "question_id": "DSA_030",
       "concept": "Topological Sort",
-      "bloom_level": "Evaluate",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 5,
       "knowledge_type": "Procedural",
       "difficulty": "hard",
       "irt_a": 1.7,
@@ -656,15 +603,14 @@
         "C": "Directed Acyclic Graphs (DAG)",
         "D": "Complete graphs"
       },
-      "correct_answer": "C",
-      "explanation": "Cycles make topological ordering impossible; only DAGs qualify.",
-      "id": "DSA_030",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "C",
+      "explanation": "Cycles make topological ordering impossible; only DAGs qualify."
     },
     {
-      "topic": "Sorting",
+      "question_id": "DSA_031",
       "concept": "Bubble Sort",
-      "bloom_level": "Remember",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 1,
       "knowledge_type": "Factual",
       "difficulty": "easy",
       "irt_a": 0.8,
@@ -677,15 +623,14 @@
         "C": "O(n\u00b2)",
         "D": "O(log n)"
       },
-      "correct_answer": "C",
-      "explanation": "Bubble sort has O(n\u00b2) worst case due to nested loops.",
-      "id": "DSA_031",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "C",
+      "explanation": "Bubble sort has O(n\u00b2) worst case due to nested loops."
     },
     {
-      "topic": "Sorting",
+      "question_id": "DSA_032",
       "concept": "Merge Sort",
-      "bloom_level": "Understand",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -698,15 +643,14 @@
         "C": "Divide and Conquer",
         "D": "Backtracking"
       },
-      "correct_answer": "C",
-      "explanation": "Merge sort divides, recursively sorts, then merges.",
-      "id": "DSA_032",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "C",
+      "explanation": "Merge sort divides, recursively sorts, then merges."
     },
     {
-      "topic": "Sorting",
+      "question_id": "DSA_033",
       "concept": "Quick Sort",
-      "bloom_level": "Apply",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -719,15 +663,14 @@
         "C": "With random data",
         "D": "Never"
       },
-      "correct_answer": "B",
-      "explanation": "Consistently bad pivot creates unbalanced partitions leading to O(n\u00b2).",
-      "id": "DSA_033",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "B",
+      "explanation": "Consistently bad pivot creates unbalanced partitions leading to O(n\u00b2)."
     },
     {
-      "topic": "Sorting",
+      "question_id": "DSA_034",
       "concept": "Stability",
-      "bloom_level": "Analyze",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.3,
@@ -740,15 +683,14 @@
         "C": "Merge Sort",
         "D": "Selection Sort"
       },
-      "correct_answer": "C",
-      "explanation": "Merge sort preserves relative order of equal elements.",
-      "id": "DSA_034",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "C",
+      "explanation": "Merge sort preserves relative order of equal elements."
     },
     {
-      "topic": "Sorting",
+      "question_id": "DSA_035",
       "concept": "Counting Sort",
-      "bloom_level": "Evaluate",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 5,
       "knowledge_type": "Procedural",
       "difficulty": "hard",
       "irt_a": 1.6,
@@ -761,15 +703,14 @@
         "C": "When data is already sorted",
         "D": "Always"
       },
-      "correct_answer": "B",
-      "explanation": "Counting sort is O(n+k); beats O(n log n) when k is small.",
-      "id": "DSA_035",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "B",
+      "explanation": "Counting sort is O(n+k); beats O(n log n) when k is small."
     },
     {
-      "topic": "Searching",
+      "question_id": "DSA_036",
       "concept": "Linear Search",
-      "bloom_level": "Remember",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 1,
       "knowledge_type": "Factual",
       "difficulty": "easy",
       "irt_a": 0.8,
@@ -782,15 +723,14 @@
         "C": "O(n)",
         "D": "O(n\u00b2)"
       },
-      "correct_answer": "C",
-      "explanation": "Linear search checks each element sequentially, giving O(n) worst case.",
-      "id": "DSA_036",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "C",
+      "explanation": "Linear search checks each element sequentially, giving O(n) worst case."
     },
     {
-      "topic": "Searching",
+      "question_id": "DSA_037",
       "concept": "Binary Search",
-      "bloom_level": "Apply",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -803,15 +743,14 @@
         "C": "Data must be unique",
         "D": "Data must be integers"
       },
-      "correct_answer": "B",
-      "explanation": "Binary search requires sorted data to eliminate half the search space each step.",
-      "id": "DSA_037",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "B",
+      "explanation": "Binary search requires sorted data to eliminate half the search space each step."
     },
     {
-      "topic": "Searching",
+      "question_id": "DSA_038",
       "concept": "Hashing",
-      "bloom_level": "Understand",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -824,15 +763,14 @@
         "C": "O(1)",
         "D": "O(n log n)"
       },
-      "correct_answer": "C",
-      "explanation": "Hash tables provide O(1) average-case search.",
-      "id": "DSA_038",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "C",
+      "explanation": "Hash tables provide O(1) average-case search."
     },
     {
-      "topic": "Searching",
+      "question_id": "DSA_039",
       "concept": "Collision Handling",
-      "bloom_level": "Analyze",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 4,
       "knowledge_type": "Procedural",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -845,15 +783,14 @@
         "C": "Separate chaining",
         "D": "Quadratic probing"
       },
-      "correct_answer": "C",
-      "explanation": "Separate chaining stores colliding elements in a linked list at the same slot.",
-      "id": "DSA_039",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "C",
+      "explanation": "Separate chaining stores colliding elements in a linked list at the same slot."
     },
     {
-      "topic": "Searching",
+      "question_id": "DSA_040",
       "concept": "Interpolation Search",
-      "bloom_level": "Evaluate",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 5,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.6,
@@ -866,15 +803,14 @@
         "C": "When data is reverse sorted",
         "D": "When data has duplicates"
       },
-      "correct_answer": "B",
-      "explanation": "Interpolation search achieves O(log log n) for uniformly distributed data.",
-      "id": "DSA_040",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "B",
+      "explanation": "Interpolation search achieves O(log log n) for uniformly distributed data."
     },
     {
-      "topic": "Dynamic Programming",
+      "question_id": "DSA_041",
       "concept": "Memoization",
-      "bloom_level": "Understand",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.3,
@@ -887,15 +823,14 @@
         "C": "Breaking into unrelated parts",
         "D": "Recursion without base case"
       },
-      "correct_answer": "B",
-      "explanation": "Memoization caches subproblem results so they are computed only once.",
-      "id": "DSA_041",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "B",
+      "explanation": "Memoization caches subproblem results so they are computed only once."
     },
     {
-      "topic": "Dynamic Programming",
+      "question_id": "DSA_042",
       "concept": "Overlapping Subproblems",
-      "bloom_level": "Analyze",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -908,15 +843,14 @@
         "C": "Linear input",
         "D": "Sorted input"
       },
-      "correct_answer": "B",
-      "explanation": "DP requires overlapping subproblems and optimal substructure.",
-      "id": "DSA_042",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "B",
+      "explanation": "DP requires overlapping subproblems and optimal substructure."
     },
     {
-      "topic": "Dynamic Programming",
+      "question_id": "DSA_043",
       "concept": "Fibonacci",
-      "bloom_level": "Apply",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "easy",
       "irt_a": 1.0,
@@ -929,15 +863,14 @@
         "C": "O(n)",
         "D": "O(log n)"
       },
-      "correct_answer": "C",
-      "explanation": "DP reduces Fibonacci from O(2^n) to O(n).",
-      "id": "DSA_043",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "C",
+      "explanation": "DP reduces Fibonacci from O(2^n) to O(n)."
     },
     {
-      "topic": "Dynamic Programming",
+      "question_id": "DSA_044",
       "concept": "Knapsack",
-      "bloom_level": "Evaluate",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 5,
       "knowledge_type": "Procedural",
       "difficulty": "hard",
       "irt_a": 1.7,
@@ -950,15 +883,14 @@
         "C": "O(nW)",
         "D": "O(2^n)"
       },
-      "correct_answer": "C",
-      "explanation": "DP table has n\u00d7W cells, each O(1), giving O(nW) total.",
-      "id": "DSA_044",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "C",
+      "explanation": "DP table has n\u00d7W cells, each O(1), giving O(nW) total."
     },
     {
-      "topic": "Dynamic Programming",
+      "question_id": "DSA_045",
       "concept": "Bottom-up vs Top-down",
-      "bloom_level": "Create",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 6,
       "knowledge_type": "Metacognitive",
       "difficulty": "hard",
       "irt_a": 1.8,
@@ -971,15 +903,14 @@
         "C": "Greedy approach",
         "D": "Divide and conquer"
       },
-      "correct_answer": "B",
-      "explanation": "Bottom-up avoids recursion entirely, eliminating stack overflow risk.",
-      "id": "DSA_045",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "B",
+      "explanation": "Bottom-up avoids recursion entirely, eliminating stack overflow risk."
     },
     {
-      "topic": "Complexity Analysis",
+      "question_id": "DSA_046",
       "concept": "Big O Notation",
-      "bloom_level": "Remember",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 1,
       "knowledge_type": "Factual",
       "difficulty": "easy",
       "irt_a": 0.9,
@@ -992,15 +923,14 @@
         "C": "Logarithmic time",
         "D": "Quadratic time"
       },
-      "correct_answer": "B",
-      "explanation": "O(1) means constant time regardless of input size.",
-      "id": "DSA_046",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "B",
+      "explanation": "O(1) means constant time regardless of input size."
     },
     {
-      "topic": "Complexity Analysis",
+      "question_id": "DSA_047",
       "concept": "Space Complexity",
-      "bloom_level": "Understand",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -1013,15 +943,14 @@
         "C": "O(1)",
         "D": "O(n\u00b2)"
       },
-      "correct_answer": "C",
-      "explanation": "In-place algorithms use O(1) extra space.",
-      "id": "DSA_047",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "C",
+      "explanation": "In-place algorithms use O(1) extra space."
     },
     {
-      "topic": "Complexity Analysis",
+      "question_id": "DSA_048",
       "concept": "Worst vs Average Case",
-      "bloom_level": "Analyze",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -1034,15 +963,14 @@
         "C": "Less memory",
         "D": "Easier to implement"
       },
-      "correct_answer": "B",
-      "explanation": "If average case and constants are better, practical performance may be superior.",
-      "id": "DSA_048",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "B",
+      "explanation": "If average case and constants are better, practical performance may be superior."
     },
     {
-      "topic": "Complexity Analysis",
+      "question_id": "DSA_049",
       "concept": "P vs NP",
-      "bloom_level": "Evaluate",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 5,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.8,
@@ -1055,15 +983,14 @@
         "C": "NP has no solution",
         "D": "P is unsolvable"
       },
-      "correct_answer": "B",
-      "explanation": "NP: verifiable in polynomial time; whether solvable in polynomial time is the P=NP question.",
-      "id": "DSA_049",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "B",
+      "explanation": "NP: verifiable in polynomial time; whether solvable in polynomial time is the P=NP question."
     },
     {
-      "topic": "Complexity Analysis",
+      "question_id": "DSA_050",
       "concept": "Algorithm Selection",
-      "bloom_level": "Create",
+      "learning_area": "Data Structures and Algorithms",
+      "bloom_level": 6,
       "knowledge_type": "Metacognitive",
       "difficulty": "hard",
       "irt_a": 1.8,
@@ -1076,15 +1003,14 @@
         "C": "Choose more lines of code",
         "D": "Complexity is the only factor"
       },
-      "correct_answer": "B",
-      "explanation": "When Big-O is equal, practical performance depends on constants, cache, and real-world input.",
-      "id": "DSA_050",
-      "subject": "Data Structures and Algorithms"
+      "correct_option": "B",
+      "explanation": "When Big-O is equal, practical performance depends on constants, cache, and real-world input."
     },
     {
-      "topic": "Testing Fundamentals",
+      "question_id": "SQA_001",
       "concept": "Goal of Testing",
-      "bloom_level": "Remember",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 1,
       "knowledge_type": "Factual",
       "difficulty": "easy",
       "irt_a": 0.8,
@@ -1097,15 +1023,14 @@
         "C": "Write test cases",
         "D": "Document requirements"
       },
-      "correct_answer": "B",
-      "explanation": "Testing aims to find defects and assess quality, not prove correctness.",
-      "id": "SQA_001",
-      "subject": "Software Quality Assurance"
+      "correct_option": "B",
+      "explanation": "Testing aims to find defects and assess quality, not prove correctness."
     },
     {
-      "topic": "Testing Fundamentals",
+      "question_id": "SQA_002",
       "concept": "Verification vs Validation",
-      "bloom_level": "Understand",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -1118,15 +1043,14 @@
         "C": "Is the code compiling?",
         "D": "Is the database connected?"
       },
-      "correct_answer": "B",
-      "explanation": "Validation: right product (user needs). Verification: built correctly.",
-      "id": "SQA_002",
-      "subject": "Software Quality Assurance"
+      "correct_option": "B",
+      "explanation": "Validation: right product (user needs). Verification: built correctly."
     },
     {
-      "topic": "Testing Fundamentals",
+      "question_id": "SQA_003",
       "concept": "Test Levels",
-      "bloom_level": "Remember",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 1,
       "knowledge_type": "Factual",
       "difficulty": "easy",
       "irt_a": 0.9,
@@ -1139,15 +1063,14 @@
         "C": "Unit testing",
         "D": "Acceptance testing"
       },
-      "correct_answer": "C",
-      "explanation": "Unit testing tests individual components in isolation.",
-      "id": "SQA_003",
-      "subject": "Software Quality Assurance"
+      "correct_option": "C",
+      "explanation": "Unit testing tests individual components in isolation."
     },
     {
-      "topic": "Testing Fundamentals",
+      "question_id": "SQA_004",
       "concept": "Regression Testing",
-      "bloom_level": "Understand",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -1160,15 +1083,14 @@
         "C": "Only before release",
         "D": "During requirements gathering"
       },
-      "correct_answer": "B",
-      "explanation": "Regression testing re-runs tests after changes to detect side effects.",
-      "id": "SQA_004",
-      "subject": "Software Quality Assurance"
+      "correct_option": "B",
+      "explanation": "Regression testing re-runs tests after changes to detect side effects."
     },
     {
-      "topic": "Testing Fundamentals",
+      "question_id": "SQA_005",
       "concept": "Test Pyramid",
-      "bloom_level": "Analyze",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -1181,15 +1103,14 @@
         "C": "Unit tests",
         "D": "Manual tests"
       },
-      "correct_answer": "C",
-      "explanation": "The pyramid advocates many fast unit tests at the base.",
-      "id": "SQA_005",
-      "subject": "Software Quality Assurance"
+      "correct_option": "C",
+      "explanation": "The pyramid advocates many fast unit tests at the base."
     },
     {
-      "topic": "Unit Testing",
+      "question_id": "SQA_006",
       "concept": "AAA Pattern",
-      "bloom_level": "Apply",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "easy",
       "irt_a": 1.0,
@@ -1202,15 +1123,14 @@
         "C": "Assert, Assign, Analyze",
         "D": "Analyze, Arrange, Assert"
       },
-      "correct_answer": "B",
-      "explanation": "AAA: Arrange (setup), Act (execute), Assert (verify).",
-      "id": "SQA_006",
-      "subject": "Software Quality Assurance"
+      "correct_option": "B",
+      "explanation": "AAA: Arrange (setup), Act (execute), Assert (verify)."
     },
     {
-      "topic": "Unit Testing",
+      "question_id": "SQA_007",
       "concept": "Mocking",
-      "bloom_level": "Understand",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.3,
@@ -1223,15 +1143,14 @@
         "C": "To generate random data",
         "D": "To replace the test framework"
       },
-      "correct_answer": "B",
-      "explanation": "Mocks simulate dependencies so the unit is tested in isolation.",
-      "id": "SQA_007",
-      "subject": "Software Quality Assurance"
+      "correct_option": "B",
+      "explanation": "Mocks simulate dependencies so the unit is tested in isolation."
     },
     {
-      "topic": "Unit Testing",
+      "question_id": "SQA_008",
       "concept": "Code Coverage",
-      "bloom_level": "Analyze",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.3,
@@ -1244,15 +1163,14 @@
         "C": "All requirements are met",
         "D": "Software will not crash"
       },
-      "correct_answer": "B",
-      "explanation": "100% coverage means every line executed, not all edge cases correct.",
-      "id": "SQA_008",
-      "subject": "Software Quality Assurance"
+      "correct_option": "B",
+      "explanation": "100% coverage means every line executed, not all edge cases correct."
     },
     {
-      "topic": "Unit Testing",
+      "question_id": "SQA_009",
       "concept": "TDD",
-      "bloom_level": "Apply",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -1265,15 +1183,14 @@
         "C": "Refactor \u2192 Write test \u2192 Write code",
         "D": "Write code \u2192 Refactor \u2192 Write test"
       },
-      "correct_answer": "B",
-      "explanation": "TDD: Red (write failing test) \u2192 Green (pass) \u2192 Refactor.",
-      "id": "SQA_009",
-      "subject": "Software Quality Assurance"
+      "correct_option": "B",
+      "explanation": "TDD: Red (write failing test) \u2192 Green (pass) \u2192 Refactor."
     },
     {
-      "topic": "Unit Testing",
+      "question_id": "SQA_010",
       "concept": "Assertion",
-      "bloom_level": "Remember",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 1,
       "knowledge_type": "Factual",
       "difficulty": "easy",
       "irt_a": 0.8,
@@ -1286,15 +1203,14 @@
         "C": "Set up test data",
         "D": "Connect to database"
       },
-      "correct_answer": "B",
-      "explanation": "Assertions verify actual matches expected, failing the test if not.",
-      "id": "SQA_010",
-      "subject": "Software Quality Assurance"
+      "correct_option": "B",
+      "explanation": "Assertions verify actual matches expected, failing the test if not."
     },
     {
-      "topic": "Integration Testing",
+      "question_id": "SQA_011",
       "concept": "Big Bang Integration",
-      "bloom_level": "Understand",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -1307,15 +1223,14 @@
         "C": "Requires stubs",
         "D": "Only works with waterfall"
       },
-      "correct_answer": "B",
-      "explanation": "Big bang makes defect isolation hard since all components combined simultaneously.",
-      "id": "SQA_011",
-      "subject": "Software Quality Assurance"
+      "correct_option": "B",
+      "explanation": "Big bang makes defect isolation hard since all components combined simultaneously."
     },
     {
-      "topic": "Integration Testing",
+      "question_id": "SQA_012",
       "concept": "Stubs and Drivers",
-      "bloom_level": "Apply",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.3,
@@ -1328,15 +1243,14 @@
         "C": "Mock frameworks",
         "D": "Harnesses"
       },
-      "correct_answer": "B",
-      "explanation": "Stubs simulate lower-level modules in top-down testing.",
-      "id": "SQA_012",
-      "subject": "Software Quality Assurance"
+      "correct_option": "B",
+      "explanation": "Stubs simulate lower-level modules in top-down testing."
     },
     {
-      "topic": "Integration Testing",
+      "question_id": "SQA_013",
       "concept": "API Testing",
-      "bloom_level": "Apply",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -1349,15 +1263,14 @@
         "C": "204 No Content",
         "D": "400 Bad Request"
       },
-      "correct_answer": "B",
-      "explanation": "201 Created is the standard response for successful POST creating a resource.",
-      "id": "SQA_013",
-      "subject": "Software Quality Assurance"
+      "correct_option": "B",
+      "explanation": "201 Created is the standard response for successful POST creating a resource."
     },
     {
-      "topic": "Integration Testing",
+      "question_id": "SQA_014",
       "concept": "Contract Testing",
-      "bloom_level": "Evaluate",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 5,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.6,
@@ -1370,15 +1283,14 @@
         "C": "Security compliance",
         "D": "Database integrity"
       },
-      "correct_answer": "B",
-      "explanation": "Consumer-driven contracts prevent provider breaking changes.",
-      "id": "SQA_014",
-      "subject": "Software Quality Assurance"
+      "correct_option": "B",
+      "explanation": "Consumer-driven contracts prevent provider breaking changes."
     },
     {
-      "topic": "Integration Testing",
+      "question_id": "SQA_015",
       "concept": "Continuous Integration",
-      "bloom_level": "Analyze",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -1391,15 +1303,14 @@
         "C": "Replaces unit tests",
         "D": "Reduces test coverage"
       },
-      "correct_answer": "B",
-      "explanation": "CI runs integration tests on every commit, catching issues early.",
-      "id": "SQA_015",
-      "subject": "Software Quality Assurance"
+      "correct_option": "B",
+      "explanation": "CI runs integration tests on every commit, catching issues early."
     },
     {
-      "topic": "Black Box Testing",
+      "question_id": "SQA_016",
       "concept": "Equivalence Partitioning",
-      "bloom_level": "Apply",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -1412,15 +1323,14 @@
         "C": "Partitions have identical values",
         "D": "It is a shortcut"
       },
-      "correct_answer": "B",
-      "explanation": "All values in a class produce the same system behavior.",
-      "id": "SQA_016",
-      "subject": "Software Quality Assurance"
+      "correct_option": "B",
+      "explanation": "All values in a class produce the same system behavior."
     },
     {
-      "topic": "Black Box Testing",
+      "question_id": "SQA_017",
       "concept": "Boundary Value Analysis",
-      "bloom_level": "Apply",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.3,
@@ -1433,15 +1343,14 @@
         "C": "1, 2, 99, 100",
         "D": "0, 1, 2, 99, 100, 101"
       },
-      "correct_answer": "D",
-      "explanation": "BVA: boundaries and just outside: 0,1,2,99,100,101.",
-      "id": "SQA_017",
-      "subject": "Software Quality Assurance"
+      "correct_option": "D",
+      "explanation": "BVA: boundaries and just outside: 0,1,2,99,100,101."
     },
     {
-      "topic": "Black Box Testing",
+      "question_id": "SQA_018",
       "concept": "Decision Table Testing",
-      "bloom_level": "Analyze",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 4,
       "knowledge_type": "Procedural",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -1454,15 +1363,14 @@
         "C": "Only one condition exists",
         "D": "Testing performance"
       },
-      "correct_answer": "B",
-      "explanation": "Decision tables excel when multiple conditions determine different behaviors.",
-      "id": "SQA_018",
-      "subject": "Software Quality Assurance"
+      "correct_option": "B",
+      "explanation": "Decision tables excel when multiple conditions determine different behaviors."
     },
     {
-      "topic": "Black Box Testing",
+      "question_id": "SQA_019",
       "concept": "State Transition Testing",
-      "bloom_level": "Understand",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -1475,15 +1383,14 @@
         "C": "Are purely functional",
         "D": "Have static outputs"
       },
-      "correct_answer": "B",
-      "explanation": "State transition testing models systems where behavior depends on current state.",
-      "id": "SQA_019",
-      "subject": "Software Quality Assurance"
+      "correct_option": "B",
+      "explanation": "State transition testing models systems where behavior depends on current state."
     },
     {
-      "topic": "Black Box Testing",
+      "question_id": "SQA_020",
       "concept": "Exploratory Testing",
-      "bloom_level": "Evaluate",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 5,
       "knowledge_type": "Metacognitive",
       "difficulty": "hard",
       "irt_a": 1.6,
@@ -1496,15 +1403,14 @@
         "C": "It requires no skill",
         "D": "It replaces automation"
       },
-      "correct_answer": "B",
-      "explanation": "Exploratory testing leverages expertise to discover unexpected defects.",
-      "id": "SQA_020",
-      "subject": "Software Quality Assurance"
+      "correct_option": "B",
+      "explanation": "Exploratory testing leverages expertise to discover unexpected defects."
     },
     {
-      "topic": "White Box Testing",
+      "question_id": "SQA_021",
       "concept": "Statement Coverage",
-      "bloom_level": "Remember",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 1,
       "knowledge_type": "Factual",
       "difficulty": "easy",
       "irt_a": 0.9,
@@ -1517,15 +1423,14 @@
         "C": "Number of test cases",
         "D": "Time to execute tests"
       },
-      "correct_answer": "B",
-      "explanation": "Statement coverage: percentage of code statements executed during testing.",
-      "id": "SQA_021",
-      "subject": "Software Quality Assurance"
+      "correct_option": "B",
+      "explanation": "Statement coverage: percentage of code statements executed during testing."
     },
     {
-      "topic": "White Box Testing",
+      "question_id": "SQA_022",
       "concept": "Branch Coverage",
-      "bloom_level": "Understand",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -1538,15 +1443,14 @@
         "C": "Easier to measure",
         "D": "Covers more lines"
       },
-      "correct_answer": "B",
-      "explanation": "Branch coverage ensures every decision outcome is tested.",
-      "id": "SQA_022",
-      "subject": "Software Quality Assurance"
+      "correct_option": "B",
+      "explanation": "Branch coverage ensures every decision outcome is tested."
     },
     {
-      "topic": "White Box Testing",
+      "question_id": "SQA_023",
       "concept": "Path Testing",
-      "bloom_level": "Analyze",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 4,
       "knowledge_type": "Procedural",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -1559,15 +1463,14 @@
         "C": "Paths are not measurable",
         "D": "Too expensive to buy tools"
       },
-      "correct_answer": "B",
-      "explanation": "Loops create exponentially many paths.",
-      "id": "SQA_023",
-      "subject": "Software Quality Assurance"
+      "correct_option": "B",
+      "explanation": "Loops create exponentially many paths."
     },
     {
-      "topic": "White Box Testing",
+      "question_id": "SQA_024",
       "concept": "Mutation Testing",
-      "bloom_level": "Evaluate",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 5,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.7,
@@ -1580,15 +1483,14 @@
         "C": "Test database mutations",
         "D": "Generate test data"
       },
-      "correct_answer": "B",
-      "explanation": "Mutation testing evaluates test suite strength by introducing small code faults.",
-      "id": "SQA_024",
-      "subject": "Software Quality Assurance"
+      "correct_option": "B",
+      "explanation": "Mutation testing evaluates test suite strength by introducing small code faults."
     },
     {
-      "topic": "White Box Testing",
+      "question_id": "SQA_025",
       "concept": "Cyclomatic Complexity",
-      "bloom_level": "Apply",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.3,
@@ -1601,15 +1503,14 @@
         "C": "4",
         "D": "10"
       },
-      "correct_answer": "B",
-      "explanation": "Cyclomatic complexity = decision points + 1 = 5+1 = 6.",
-      "id": "SQA_025",
-      "subject": "Software Quality Assurance"
+      "correct_option": "B",
+      "explanation": "Cyclomatic complexity = decision points + 1 = 5+1 = 6."
     },
     {
-      "topic": "Test Planning",
+      "question_id": "SQA_026",
       "concept": "Test Plan Contents",
-      "bloom_level": "Remember",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 1,
       "knowledge_type": "Factual",
       "difficulty": "easy",
       "irt_a": 0.8,
@@ -1622,15 +1523,14 @@
         "C": "UI mockups",
         "D": "Database schema"
       },
-      "correct_answer": "B",
-      "explanation": "Test plan documents scope, objectives, resources, schedule, and risks.",
-      "id": "SQA_026",
-      "subject": "Software Quality Assurance"
+      "correct_option": "B",
+      "explanation": "Test plan documents scope, objectives, resources, schedule, and risks."
     },
     {
-      "topic": "Test Planning",
+      "question_id": "SQA_027",
       "concept": "Risk-Based Testing",
-      "bloom_level": "Evaluate",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 5,
       "knowledge_type": "Metacognitive",
       "difficulty": "hard",
       "irt_a": 1.6,
@@ -1643,15 +1543,14 @@
         "C": "By lines of code",
         "D": "By developer preference"
       },
-      "correct_answer": "B",
-      "explanation": "Risk-based: prioritize areas with higher probability and greater business impact.",
-      "id": "SQA_027",
-      "subject": "Software Quality Assurance"
+      "correct_option": "B",
+      "explanation": "Risk-based: prioritize areas with higher probability and greater business impact."
     },
     {
-      "topic": "Defect Management",
+      "question_id": "SQA_028",
       "concept": "Defect Lifecycle",
-      "bloom_level": "Understand",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 2,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -1664,15 +1563,14 @@
         "C": "Fix \u2192 Open \u2192 Verify \u2192 Close",
         "D": "Open \u2192 Fix \u2192 Close \u2192 Verify"
       },
-      "correct_answer": "A",
-      "explanation": "Standard defect flow: Open \u2192 Assign \u2192 Fix \u2192 Verify \u2192 Close.",
-      "id": "SQA_028",
-      "subject": "Software Quality Assurance"
+      "correct_option": "A",
+      "explanation": "Standard defect flow: Open \u2192 Assign \u2192 Fix \u2192 Verify \u2192 Close."
     },
     {
-      "topic": "Defect Management",
+      "question_id": "SQA_029",
       "concept": "Severity vs Priority",
-      "bloom_level": "Analyze",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.3,
@@ -1685,15 +1583,14 @@
         "C": "It affects performance",
         "D": "It is a security risk"
       },
-      "correct_answer": "B",
-      "explanation": "Priority reflects business urgency independent of technical severity.",
-      "id": "SQA_029",
-      "subject": "Software Quality Assurance"
+      "correct_option": "B",
+      "explanation": "Priority reflects business urgency independent of technical severity."
     },
     {
-      "topic": "Performance Testing",
+      "question_id": "SQA_030",
       "concept": "Load Testing",
-      "bloom_level": "Understand",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -1706,15 +1603,14 @@
         "C": "Unit functionality",
         "D": "Code coverage"
       },
-      "correct_answer": "B",
-      "explanation": "Load testing evaluates performance under anticipated concurrent user load.",
-      "id": "SQA_030",
-      "subject": "Software Quality Assurance"
+      "correct_option": "B",
+      "explanation": "Load testing evaluates performance under anticipated concurrent user load."
     },
     {
-      "topic": "Performance Testing",
+      "question_id": "SQA_031",
       "concept": "Stress Testing",
-      "bloom_level": "Analyze",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -1727,15 +1623,14 @@
         "C": "Load testing is more extreme",
         "D": "They are identical"
       },
-      "correct_answer": "B",
-      "explanation": "Stress testing exceeds capacity to find where and how systems fail.",
-      "id": "SQA_031",
-      "subject": "Software Quality Assurance"
+      "correct_option": "B",
+      "explanation": "Stress testing exceeds capacity to find where and how systems fail."
     },
     {
-      "topic": "Test Automation",
+      "question_id": "SQA_032",
       "concept": "Automation ROI",
-      "bloom_level": "Evaluate",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 5,
       "knowledge_type": "Metacognitive",
       "difficulty": "hard",
       "irt_a": 1.6,
@@ -1748,15 +1643,14 @@
         "C": "Tester preference",
         "D": "Programming language"
       },
-      "correct_answer": "B",
-      "explanation": "Frequently run, stable tests have the highest automation ROI.",
-      "id": "SQA_032",
-      "subject": "Software Quality Assurance"
+      "correct_option": "B",
+      "explanation": "Frequently run, stable tests have the highest automation ROI."
     },
     {
-      "topic": "Test Automation",
+      "question_id": "SQA_033",
       "concept": "Page Object Model",
-      "bloom_level": "Apply",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.3,
@@ -1769,15 +1663,14 @@
         "C": "Reduces lines of code",
         "D": "Eliminates need for assertions"
       },
-      "correct_answer": "B",
-      "explanation": "POM encapsulates UI elements so UI changes only require updates in one place.",
-      "id": "SQA_033",
-      "subject": "Software Quality Assurance"
+      "correct_option": "B",
+      "explanation": "POM encapsulates UI elements so UI changes only require updates in one place."
     },
     {
-      "topic": "Regression Testing",
+      "question_id": "SQA_034",
       "concept": "Regression Suite",
-      "bloom_level": "Create",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 6,
       "knowledge_type": "Metacognitive",
       "difficulty": "hard",
       "irt_a": 1.8,
@@ -1790,15 +1683,14 @@
         "C": "Only previously failed tests",
         "D": "Random selection"
       },
-      "correct_answer": "B",
-      "explanation": "Effective regression suites balance coverage and execution time by prioritizing risk and business-critical paths.",
-      "id": "SQA_034",
-      "subject": "Software Quality Assurance"
+      "correct_option": "B",
+      "explanation": "Effective regression suites balance coverage and execution time by prioritizing risk and business-critical paths."
     },
     {
-      "topic": "SDLC",
+      "question_id": "SE_001",
       "concept": "SDLC Phases",
-      "bloom_level": "Remember",
+      "learning_area": "Software Engineering",
+      "bloom_level": 1,
       "knowledge_type": "Factual",
       "difficulty": "easy",
       "irt_a": 0.8,
@@ -1811,15 +1703,14 @@
         "C": "Requirements",
         "D": "Maintenance"
       },
-      "correct_answer": "C",
-      "explanation": "Requirements phase: eliciting and documenting user needs.",
-      "id": "SE_001",
-      "subject": "Software Engineering"
+      "correct_option": "C",
+      "explanation": "Requirements phase: eliciting and documenting user needs."
     },
     {
-      "topic": "SDLC",
+      "question_id": "SE_002",
       "concept": "Waterfall Model",
-      "bloom_level": "Understand",
+      "learning_area": "Software Engineering",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -1832,15 +1723,14 @@
         "C": "No documentation",
         "D": "No testing phase"
       },
-      "correct_answer": "B",
-      "explanation": "Waterfall is sequential; going back is costly.",
-      "id": "SE_002",
-      "subject": "Software Engineering"
+      "correct_option": "B",
+      "explanation": "Waterfall is sequential; going back is costly."
     },
     {
-      "topic": "SDLC",
+      "question_id": "SE_003",
       "concept": "Spiral Model",
-      "bloom_level": "Analyze",
+      "learning_area": "Software Engineering",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -1853,15 +1743,14 @@
         "C": "Single iteration",
         "D": "No user involvement"
       },
-      "correct_answer": "B",
-      "explanation": "Spiral incorporates risk analysis at each iteration.",
-      "id": "SE_003",
-      "subject": "Software Engineering"
+      "correct_option": "B",
+      "explanation": "Spiral incorporates risk analysis at each iteration."
     },
     {
-      "topic": "SDLC",
+      "question_id": "SE_004",
       "concept": "Prototyping",
-      "bloom_level": "Apply",
+      "learning_area": "Software Engineering",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -1874,15 +1763,14 @@
         "C": "Team is large",
         "D": "Budget is limited"
       },
-      "correct_answer": "B",
-      "explanation": "Prototyping clarifies vague requirements by giving users a tangible model.",
-      "id": "SE_004",
-      "subject": "Software Engineering"
+      "correct_option": "B",
+      "explanation": "Prototyping clarifies vague requirements by giving users a tangible model."
     },
     {
-      "topic": "SDLC",
+      "question_id": "SE_005",
       "concept": "V-Model",
-      "bloom_level": "Understand",
+      "learning_area": "Software Engineering",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -1895,15 +1783,14 @@
         "C": "Requirements",
         "D": "Coding"
       },
-      "correct_answer": "C",
-      "explanation": "V-Model pairs: requirements \u2194 acceptance testing.",
-      "id": "SE_005",
-      "subject": "Software Engineering"
+      "correct_option": "C",
+      "explanation": "V-Model pairs: requirements \u2194 acceptance testing."
     },
     {
-      "topic": "Requirements Engineering",
+      "question_id": "SE_006",
       "concept": "Functional Requirements",
-      "bloom_level": "Remember",
+      "learning_area": "Software Engineering",
+      "bloom_level": 1,
       "knowledge_type": "Factual",
       "difficulty": "easy",
       "irt_a": 0.9,
@@ -1916,15 +1803,14 @@
         "C": "System available 99.9%",
         "D": "Code must be maintainable"
       },
-      "correct_answer": "B",
-      "explanation": "Functional requirements describe specific system behaviors.",
-      "id": "SE_006",
-      "subject": "Software Engineering"
+      "correct_option": "B",
+      "explanation": "Functional requirements describe specific system behaviors."
     },
     {
-      "topic": "Requirements Engineering",
+      "question_id": "SE_007",
       "concept": "Non-Functional Requirements",
-      "bloom_level": "Understand",
+      "learning_area": "Software Engineering",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -1937,15 +1823,14 @@
         "C": "User stories",
         "D": "Design patterns"
       },
-      "correct_answer": "B",
-      "explanation": "Non-functional requirements describe system quality attributes.",
-      "id": "SE_007",
-      "subject": "Software Engineering"
+      "correct_option": "B",
+      "explanation": "Non-functional requirements describe system quality attributes."
     },
     {
-      "topic": "Requirements Engineering",
+      "question_id": "SE_008",
       "concept": "Use Cases",
-      "bloom_level": "Apply",
+      "learning_area": "Software Engineering",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -1958,15 +1843,14 @@
         "C": "A test case",
         "D": "A database table"
       },
-      "correct_answer": "B",
-      "explanation": "An actor is any entity that interacts with the system being developed.",
-      "id": "SE_008",
-      "subject": "Software Engineering"
+      "correct_option": "B",
+      "explanation": "An actor is any entity that interacts with the system being developed."
     },
     {
-      "topic": "Requirements Engineering",
+      "question_id": "SE_009",
       "concept": "User Stories",
-      "bloom_level": "Apply",
+      "learning_area": "Software Engineering",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "easy",
       "irt_a": 1.0,
@@ -1979,15 +1863,14 @@
         "C": "Given [context] when [action] then [outcome]",
         "D": "[Feature]: [Description]"
       },
-      "correct_answer": "B",
-      "explanation": "Standard user story captures role, goal, and business value.",
-      "id": "SE_009",
-      "subject": "Software Engineering"
+      "correct_option": "B",
+      "explanation": "Standard user story captures role, goal, and business value."
     },
     {
-      "topic": "Requirements Engineering",
+      "question_id": "SE_010",
       "concept": "Requirements Traceability",
-      "bloom_level": "Evaluate",
+      "learning_area": "Software Engineering",
+      "bloom_level": 5,
       "knowledge_type": "Metacognitive",
       "difficulty": "hard",
       "irt_a": 1.6,
@@ -2000,15 +1883,14 @@
         "C": "Reduces documentation",
         "D": "Eliminates testing"
       },
-      "correct_answer": "B",
-      "explanation": "Traceability ensures every requirement is designed, coded, and tested.",
-      "id": "SE_010",
-      "subject": "Software Engineering"
+      "correct_option": "B",
+      "explanation": "Traceability ensures every requirement is designed, coded, and tested."
     },
     {
-      "topic": "System Design",
+      "question_id": "SE_011",
       "concept": "Cohesion",
-      "bloom_level": "Understand",
+      "learning_area": "Software Engineering",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -2021,15 +1903,14 @@
         "C": "Module has many functions",
         "D": "Module is large"
       },
-      "correct_answer": "B",
-      "explanation": "High cohesion: single, well-defined purpose \u2014 a positive design quality.",
-      "id": "SE_011",
-      "subject": "Software Engineering"
+      "correct_option": "B",
+      "explanation": "High cohesion: single, well-defined purpose \u2014 a positive design quality."
     },
     {
-      "topic": "System Design",
+      "question_id": "SE_012",
       "concept": "Coupling",
-      "bloom_level": "Analyze",
+      "learning_area": "Software Engineering",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.3,
@@ -2042,15 +1923,14 @@
         "C": "Reduces memory usage",
         "D": "Makes code shorter"
       },
-      "correct_answer": "B",
-      "explanation": "Low coupling enables independent development, testing, and modification.",
-      "id": "SE_012",
-      "subject": "Software Engineering"
+      "correct_option": "B",
+      "explanation": "Low coupling enables independent development, testing, and modification."
     },
     {
-      "topic": "Design Patterns",
+      "question_id": "SE_013",
       "concept": "Singleton Pattern",
-      "bloom_level": "Understand",
+      "learning_area": "Software Engineering",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -2063,15 +1943,14 @@
         "C": "Thread safety always",
         "D": "Faster object creation"
       },
-      "correct_answer": "B",
-      "explanation": "Singleton: exactly one instance with a global access point.",
-      "id": "SE_013",
-      "subject": "Software Engineering"
+      "correct_option": "B",
+      "explanation": "Singleton: exactly one instance with a global access point."
     },
     {
-      "topic": "Design Patterns",
+      "question_id": "SE_014",
       "concept": "Observer Pattern",
-      "bloom_level": "Apply",
+      "learning_area": "Software Engineering",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.3,
@@ -2084,15 +1963,14 @@
         "C": "Providing simplified interface to a complex system",
         "D": "Controlling object access"
       },
-      "correct_answer": "A",
-      "explanation": "Observer implements publish-subscribe: subject changes notify all observers.",
-      "id": "SE_014",
-      "subject": "Software Engineering"
+      "correct_option": "A",
+      "explanation": "Observer implements publish-subscribe: subject changes notify all observers."
     },
     {
-      "topic": "Design Patterns",
+      "question_id": "SE_015",
       "concept": "Factory Pattern",
-      "bloom_level": "Analyze",
+      "learning_area": "Software Engineering",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -2105,15 +1983,14 @@
         "C": "Thread synchronization",
         "D": "Data validation"
       },
-      "correct_answer": "B",
-      "explanation": "Factory Method decouples creation logic from usage.",
-      "id": "SE_015",
-      "subject": "Software Engineering"
+      "correct_option": "B",
+      "explanation": "Factory Method decouples creation logic from usage."
     },
     {
-      "topic": "Agile Methodology",
+      "question_id": "SE_016",
       "concept": "Scrum Roles",
-      "bloom_level": "Remember",
+      "learning_area": "Software Engineering",
+      "bloom_level": 1,
       "knowledge_type": "Factual",
       "difficulty": "easy",
       "irt_a": 0.9,
@@ -2126,15 +2003,14 @@
         "C": "Product Owner",
         "D": "Stakeholders"
       },
-      "correct_answer": "C",
-      "explanation": "The Product Owner owns and prioritizes the product backlog.",
-      "id": "SE_016",
-      "subject": "Software Engineering"
+      "correct_option": "C",
+      "explanation": "The Product Owner owns and prioritizes the product backlog."
     },
     {
-      "topic": "Agile Methodology",
+      "question_id": "SE_017",
       "concept": "Sprint",
-      "bloom_level": "Understand",
+      "learning_area": "Software Engineering",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "easy",
       "irt_a": 1.0,
@@ -2147,15 +2023,14 @@
         "C": "A team meeting",
         "D": "A testing phase"
       },
-      "correct_answer": "B",
-      "explanation": "Sprint: time-boxed iteration producing a usable product increment.",
-      "id": "SE_017",
-      "subject": "Software Engineering"
+      "correct_option": "B",
+      "explanation": "Sprint: time-boxed iteration producing a usable product increment."
     },
     {
-      "topic": "Agile Methodology",
+      "question_id": "SE_018",
       "concept": "Kanban",
-      "bloom_level": "Apply",
+      "learning_area": "Software Engineering",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -2168,15 +2043,14 @@
         "C": "Sprint planning",
         "D": "Burndown charts"
       },
-      "correct_answer": "B",
-      "explanation": "Kanban uses WIP limits to prevent overloading teams and maintain flow.",
-      "id": "SE_018",
-      "subject": "Software Engineering"
+      "correct_option": "B",
+      "explanation": "Kanban uses WIP limits to prevent overloading teams and maintain flow."
     },
     {
-      "topic": "UML",
+      "question_id": "SE_019",
       "concept": "Class Diagram",
-      "bloom_level": "Apply",
+      "learning_area": "Software Engineering",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -2189,15 +2063,14 @@
         "C": "Composition",
         "D": "Dependency"
       },
-      "correct_answer": "C",
-      "explanation": "Filled diamond = Composition: child cannot exist without parent.",
-      "id": "SE_019",
-      "subject": "Software Engineering"
+      "correct_option": "C",
+      "explanation": "Filled diamond = Composition: child cannot exist without parent."
     },
     {
-      "topic": "UML",
+      "question_id": "SE_020",
       "concept": "Sequence Diagram",
-      "bloom_level": "Understand",
+      "learning_area": "Software Engineering",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -2210,15 +2083,14 @@
         "C": "Database relationships",
         "D": "Module dependencies"
       },
-      "correct_answer": "B",
-      "explanation": "Sequence diagrams show message passing in chronological order.",
-      "id": "SE_020",
-      "subject": "Software Engineering"
+      "correct_option": "B",
+      "explanation": "Sequence diagrams show message passing in chronological order."
     },
     {
-      "topic": "Project Management",
+      "question_id": "SE_021",
       "concept": "Project Triangle",
-      "bloom_level": "Understand",
+      "learning_area": "Software Engineering",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "easy",
       "irt_a": 1.0,
@@ -2231,15 +2103,14 @@
         "C": "People, Process, Tools",
         "D": "Risk, Quality, Scope"
       },
-      "correct_answer": "B",
-      "explanation": "Iron triangle: Scope, Schedule, Cost \u2014 changing one affects others.",
-      "id": "SE_021",
-      "subject": "Software Engineering"
+      "correct_option": "B",
+      "explanation": "Iron triangle: Scope, Schedule, Cost \u2014 changing one affects others."
     },
     {
-      "topic": "Project Management",
+      "question_id": "SE_022",
       "concept": "Gantt Chart",
-      "bloom_level": "Apply",
+      "learning_area": "Software Engineering",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -2252,15 +2123,14 @@
         "C": "Managing communication",
         "D": "Estimating costs"
       },
-      "correct_answer": "B",
-      "explanation": "Gantt charts provide a visual timeline of tasks, durations, and dependencies.",
-      "id": "SE_022",
-      "subject": "Software Engineering"
+      "correct_option": "B",
+      "explanation": "Gantt charts provide a visual timeline of tasks, durations, and dependencies."
     },
     {
-      "topic": "Software Architecture",
+      "question_id": "SE_023",
       "concept": "MVC Pattern",
-      "bloom_level": "Understand",
+      "learning_area": "Software Engineering",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -2273,15 +2143,14 @@
         "C": "Renders the UI",
         "D": "Manages the database"
       },
-      "correct_answer": "B",
-      "explanation": "Controller processes user input, updates Model, and selects View.",
-      "id": "SE_023",
-      "subject": "Software Engineering"
+      "correct_option": "B",
+      "explanation": "Controller processes user input, updates Model, and selects View."
     },
     {
-      "topic": "Software Architecture",
+      "question_id": "SE_024",
       "concept": "Microservices",
-      "bloom_level": "Analyze",
+      "learning_area": "Software Engineering",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -2294,15 +2163,14 @@
         "C": "Cannot deploy independently",
         "D": "Harder to code"
       },
-      "correct_answer": "B",
-      "explanation": "Microservices enable independent scaling but introduce distributed system complexity.",
-      "id": "SE_024",
-      "subject": "Software Engineering"
+      "correct_option": "B",
+      "explanation": "Microservices enable independent scaling but introduce distributed system complexity."
     },
     {
-      "topic": "Maintenance",
+      "question_id": "SE_025",
       "concept": "Types of Maintenance",
-      "bloom_level": "Remember",
+      "learning_area": "Software Engineering",
+      "bloom_level": 1,
       "knowledge_type": "Factual",
       "difficulty": "easy",
       "irt_a": 0.8,
@@ -2315,15 +2183,14 @@
         "C": "Preventive",
         "D": "Corrective"
       },
-      "correct_answer": "D",
-      "explanation": "Corrective maintenance addresses defects discovered post-deployment.",
-      "id": "SE_025",
-      "subject": "Software Engineering"
+      "correct_option": "D",
+      "explanation": "Corrective maintenance addresses defects discovered post-deployment."
     },
     {
-      "topic": "Maintenance",
+      "question_id": "SE_026",
       "concept": "Technical Debt",
-      "bloom_level": "Evaluate",
+      "learning_area": "Software Engineering",
+      "bloom_level": 5,
       "knowledge_type": "Metacognitive",
       "difficulty": "hard",
       "irt_a": 1.6,
@@ -2336,15 +2203,14 @@
         "C": "Number of unresolved bugs",
         "D": "Documentation backlog"
       },
-      "correct_answer": "B",
-      "explanation": "Technical debt: implied cost of future rework from quick solutions.",
-      "id": "SE_026",
-      "subject": "Software Engineering"
+      "correct_option": "B",
+      "explanation": "Technical debt: implied cost of future rework from quick solutions."
     },
     {
-      "topic": "Risk Management",
+      "question_id": "SE_027",
       "concept": "Risk Identification",
-      "bloom_level": "Apply",
+      "learning_area": "Software Engineering",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -2357,15 +2223,14 @@
         "C": "Performance testing",
         "D": "Unit testing"
       },
-      "correct_answer": "B",
-      "explanation": "Brainstorming and checklists systematically uncover potential threats.",
-      "id": "SE_027",
-      "subject": "Software Engineering"
+      "correct_option": "B",
+      "explanation": "Brainstorming and checklists systematically uncover potential threats."
     },
     {
-      "topic": "Risk Management",
+      "question_id": "SE_028",
       "concept": "Risk Matrix",
-      "bloom_level": "Analyze",
+      "learning_area": "Software Engineering",
+      "bloom_level": 4,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.3,
@@ -2378,15 +2243,14 @@
         "C": "Risk = Severity + Priority",
         "D": "Risk = Complexity / Team size"
       },
-      "correct_answer": "B",
-      "explanation": "Risk = Probability \u00d7 Impact, used to prioritize mitigation.",
-      "id": "SE_028",
-      "subject": "Software Engineering"
+      "correct_option": "B",
+      "explanation": "Risk = Probability \u00d7 Impact, used to prioritize mitigation."
     },
     {
-      "topic": "Software Architecture",
+      "question_id": "SE_029",
       "concept": "SOA",
-      "bloom_level": "Understand",
+      "learning_area": "Software Engineering",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -2399,15 +2263,14 @@
         "C": "Single monolithic application",
         "D": "Direct DB access from UI"
       },
-      "correct_answer": "B",
-      "explanation": "SOA: interoperable services reusable across applications.",
-      "id": "SE_029",
-      "subject": "Software Engineering"
+      "correct_option": "B",
+      "explanation": "SOA: interoperable services reusable across applications."
     },
     {
-      "topic": "Software Architecture",
+      "question_id": "SE_030",
       "concept": "Event-Driven Architecture",
-      "bloom_level": "Evaluate",
+      "learning_area": "Software Engineering",
+      "bloom_level": 5,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.6,
@@ -2420,15 +2283,14 @@
         "C": "Faster database access",
         "D": "Eliminates APIs"
       },
-      "correct_answer": "B",
-      "explanation": "Event-driven: decouples producers from consumers enabling scalability.",
-      "id": "SE_030",
-      "subject": "Software Engineering"
+      "correct_option": "B",
+      "explanation": "Event-driven: decouples producers from consumers enabling scalability."
     },
     {
-      "topic": "UML",
+      "question_id": "SE_031",
       "concept": "Activity Diagram",
-      "bloom_level": "Apply",
+      "learning_area": "Software Engineering",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -2441,15 +2303,14 @@
         "C": "Object interactions over time",
         "D": "Component dependencies"
       },
-      "correct_answer": "B",
-      "explanation": "Activity diagrams model workflows with decision and parallel paths.",
-      "id": "SE_031",
-      "subject": "Software Engineering"
+      "correct_option": "B",
+      "explanation": "Activity diagrams model workflows with decision and parallel paths."
     },
     {
-      "topic": "SDLC",
+      "question_id": "SE_032",
       "concept": "DevOps",
-      "bloom_level": "Evaluate",
+      "learning_area": "Software Engineering",
+      "bloom_level": 5,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.6,
@@ -2462,15 +2323,14 @@
         "C": "Uses only waterfall",
         "D": "Eliminates developers"
       },
-      "correct_answer": "B",
-      "explanation": "DevOps bridges development and operations through CI/CD and shared responsibility.",
-      "id": "SE_032",
-      "subject": "Software Engineering"
+      "correct_option": "B",
+      "explanation": "DevOps bridges development and operations through CI/CD and shared responsibility."
     },
     {
-      "topic": "Design Patterns",
+      "question_id": "SE_033",
       "concept": "SOLID Principles",
-      "bloom_level": "Analyze",
+      "learning_area": "Software Engineering",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -2483,15 +2343,14 @@
         "C": "Inherit from one class only",
         "D": "Implement only one interface"
       },
-      "correct_answer": "B",
-      "explanation": "SRP: one responsibility = one reason to change.",
-      "id": "SE_033",
-      "subject": "Software Engineering"
+      "correct_option": "B",
+      "explanation": "SRP: one responsibility = one reason to change."
     },
     {
-      "topic": "Agile Methodology",
+      "question_id": "SE_034",
       "concept": "Retrospective",
-      "bloom_level": "Evaluate",
+      "learning_area": "Software Engineering",
+      "bloom_level": 5,
       "knowledge_type": "Metacognitive",
       "difficulty": "medium",
       "irt_a": 1.3,
@@ -2504,15 +2363,14 @@
         "C": "Reflect on team process and identify improvements",
         "D": "Estimate story points"
       },
-      "correct_answer": "C",
-      "explanation": "Retrospective: what went well, what didn't, how to improve.",
-      "id": "SE_034",
-      "subject": "Software Engineering"
+      "correct_option": "C",
+      "explanation": "Retrospective: what went well, what didn't, how to improve."
     },
     {
-      "topic": "Project Management",
+      "question_id": "SE_035",
       "concept": "Estimation",
-      "bloom_level": "Create",
+      "learning_area": "Software Engineering",
+      "bloom_level": 6,
       "knowledge_type": "Metacognitive",
       "difficulty": "hard",
       "irt_a": 1.8,
@@ -2525,15 +2383,14 @@
         "C": "Expert guess",
         "D": "Copy previous estimates"
       },
-      "correct_answer": "B",
-      "explanation": "Three-point estimation accounts for uncertainty by considering best, expected, and worst case.",
-      "id": "SE_035",
-      "subject": "Software Engineering"
+      "correct_option": "B",
+      "explanation": "Three-point estimation accounts for uncertainty by considering best, expected, and worst case."
     },
     {
-      "topic": "Variables and Types",
+      "question_id": "PL_001",
       "concept": "Data Types",
-      "bloom_level": "Remember",
+      "learning_area": "Programming Languages",
+      "bloom_level": 1,
       "knowledge_type": "Factual",
       "difficulty": "easy",
       "irt_a": 0.8,
@@ -2546,15 +2403,14 @@
         "C": "int",
         "D": "Object"
       },
-      "correct_answer": "C",
-      "explanation": "int is primitive in Java; others are reference types.",
-      "id": "PL_001",
-      "subject": "Programming Languages"
+      "correct_option": "C",
+      "explanation": "int is primitive in Java; others are reference types."
     },
     {
-      "topic": "Variables and Types",
+      "question_id": "PL_002",
       "concept": "Static vs Dynamic Typing",
-      "bloom_level": "Understand",
+      "learning_area": "Programming Languages",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -2567,15 +2423,14 @@
         "C": "Never",
         "D": "During testing"
       },
-      "correct_answer": "B",
-      "explanation": "Static typing checks types at compile time.",
-      "id": "PL_002",
-      "subject": "Programming Languages"
+      "correct_option": "B",
+      "explanation": "Static typing checks types at compile time."
     },
     {
-      "topic": "Variables and Types",
+      "question_id": "PL_003",
       "concept": "Type Coercion",
-      "bloom_level": "Apply",
+      "learning_area": "Programming Languages",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -2588,15 +2443,14 @@
         "C": "Type checking at runtime",
         "D": "Removing a variable's type"
       },
-      "correct_answer": "B",
-      "explanation": "Implicit coercion is automatic conversion without explicit programmer instruction.",
-      "id": "PL_003",
-      "subject": "Programming Languages"
+      "correct_option": "B",
+      "explanation": "Implicit coercion is automatic conversion without explicit programmer instruction."
     },
     {
-      "topic": "Variables and Types",
+      "question_id": "PL_004",
       "concept": "Scope",
-      "bloom_level": "Understand",
+      "learning_area": "Programming Languages",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -2609,15 +2463,14 @@
         "C": "Local/function scope",
         "D": "Class scope"
       },
-      "correct_answer": "C",
-      "explanation": "Variables declared inside a function are local to that function.",
-      "id": "PL_004",
-      "subject": "Programming Languages"
+      "correct_option": "C",
+      "explanation": "Variables declared inside a function are local to that function."
     },
     {
-      "topic": "Variables and Types",
+      "question_id": "PL_005",
       "concept": "Const vs Let",
-      "bloom_level": "Apply",
+      "learning_area": "Programming Languages",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "easy",
       "irt_a": 1.0,
@@ -2630,15 +2483,14 @@
         "C": "let is function-scoped",
         "D": "const can only hold numbers"
       },
-      "correct_answer": "B",
-      "explanation": "const prevents reassignment; let allows it.",
-      "id": "PL_005",
-      "subject": "Programming Languages"
+      "correct_option": "B",
+      "explanation": "const prevents reassignment; let allows it."
     },
     {
-      "topic": "Control Structures",
+      "question_id": "PL_006",
       "concept": "Loops",
-      "bloom_level": "Remember",
+      "learning_area": "Programming Languages",
+      "bloom_level": 1,
       "knowledge_type": "Factual",
       "difficulty": "easy",
       "irt_a": 0.8,
@@ -2651,15 +2503,14 @@
         "C": "do-while loop",
         "D": "foreach loop"
       },
-      "correct_answer": "C",
-      "explanation": "do-while executes body first, then checks condition.",
-      "id": "PL_006",
-      "subject": "Programming Languages"
+      "correct_option": "C",
+      "explanation": "do-while executes body first, then checks condition."
     },
     {
-      "topic": "Control Structures",
+      "question_id": "PL_007",
       "concept": "Switch Statement",
-      "bloom_level": "Apply",
+      "learning_area": "Programming Languages",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -2672,15 +2523,14 @@
         "C": "Switch exits",
         "D": "Default runs"
       },
-      "correct_answer": "B",
-      "explanation": "Without break, execution falls through to the next case.",
-      "id": "PL_007",
-      "subject": "Programming Languages"
+      "correct_option": "B",
+      "explanation": "Without break, execution falls through to the next case."
     },
     {
-      "topic": "Control Structures",
+      "question_id": "PL_008",
       "concept": "Short-Circuit Evaluation",
-      "bloom_level": "Analyze",
+      "learning_area": "Programming Languages",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.3,
@@ -2693,15 +2543,14 @@
         "C": "B causes error",
         "D": "B evaluated twice"
       },
-      "correct_answer": "B",
-      "explanation": "Short-circuit: in &&, if first is false, second is not evaluated.",
-      "id": "PL_008",
-      "subject": "Programming Languages"
+      "correct_option": "B",
+      "explanation": "Short-circuit: in &&, if first is false, second is not evaluated."
     },
     {
-      "topic": "Control Structures",
+      "question_id": "PL_009",
       "concept": "Recursion",
-      "bloom_level": "Apply",
+      "learning_area": "Programming Languages",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.3,
@@ -2714,15 +2563,14 @@
         "C": "Input and output",
         "D": "Stack and queue"
       },
-      "correct_answer": "B",
-      "explanation": "Recursion needs base case (stop) and recursive case (self-call).",
-      "id": "PL_009",
-      "subject": "Programming Languages"
+      "correct_option": "B",
+      "explanation": "Recursion needs base case (stop) and recursive case (self-call)."
     },
     {
-      "topic": "Control Structures",
+      "question_id": "PL_010",
       "concept": "Exception Handling",
-      "bloom_level": "Understand",
+      "learning_area": "Programming Languages",
+      "bloom_level": 2,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -2735,15 +2583,14 @@
         "C": "Always, regardless of exception",
         "D": "Only when catch is empty"
       },
-      "correct_answer": "C",
-      "explanation": "finally always executes after try and catch.",
-      "id": "PL_010",
-      "subject": "Programming Languages"
+      "correct_option": "C",
+      "explanation": "finally always executes after try and catch."
     },
     {
-      "topic": "Functions",
+      "question_id": "PL_011",
       "concept": "First-Class Functions",
-      "bloom_level": "Understand",
+      "learning_area": "Programming Languages",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -2756,15 +2603,14 @@
         "C": "Functions have priority",
         "D": "Must be declared before use"
       },
-      "correct_answer": "B",
-      "explanation": "First-class: functions treated like any value \u2014 assigned, passed, returned.",
-      "id": "PL_011",
-      "subject": "Programming Languages"
+      "correct_option": "B",
+      "explanation": "First-class: functions treated like any value \u2014 assigned, passed, returned."
     },
     {
-      "topic": "Functions",
+      "question_id": "PL_012",
       "concept": "Closures",
-      "bloom_level": "Analyze",
+      "learning_area": "Programming Languages",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -2777,15 +2623,14 @@
         "C": "A type of class",
         "D": "A method to end a loop"
       },
-      "correct_answer": "B",
-      "explanation": "Closure: function bundled with references to its surrounding lexical scope.",
-      "id": "PL_012",
-      "subject": "Programming Languages"
+      "correct_option": "B",
+      "explanation": "Closure: function bundled with references to its surrounding lexical scope."
     },
     {
-      "topic": "Functions",
+      "question_id": "PL_013",
       "concept": "Higher-Order Functions",
-      "bloom_level": "Apply",
+      "learning_area": "Programming Languages",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.3,
@@ -2798,15 +2643,14 @@
         "C": "A recursive function",
         "D": "Has many parameters"
       },
-      "correct_answer": "B",
-      "explanation": "Higher-order functions take functions as arguments or return them.",
-      "id": "PL_013",
-      "subject": "Programming Languages"
+      "correct_option": "B",
+      "explanation": "Higher-order functions take functions as arguments or return them."
     },
     {
-      "topic": "Functions",
+      "question_id": "PL_014",
       "concept": "Pure Functions",
-      "bloom_level": "Evaluate",
+      "learning_area": "Programming Languages",
+      "bloom_level": 5,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.6,
@@ -2819,15 +2663,14 @@
         "C": "Has no parameters",
         "D": "Declared with const"
       },
-      "correct_answer": "B",
-      "explanation": "Pure: deterministic (same input = same output) with no side effects.",
-      "id": "PL_014",
-      "subject": "Programming Languages"
+      "correct_option": "B",
+      "explanation": "Pure: deterministic (same input = same output) with no side effects."
     },
     {
-      "topic": "Functions",
+      "question_id": "PL_015",
       "concept": "Recursion vs Iteration",
-      "bloom_level": "Evaluate",
+      "learning_area": "Programming Languages",
+      "bloom_level": 5,
       "knowledge_type": "Metacognitive",
       "difficulty": "hard",
       "irt_a": 1.6,
@@ -2840,15 +2683,14 @@
         "C": "When traversing trees",
         "D": "When implementing DFS"
       },
-      "correct_answer": "B",
-      "explanation": "Iteration avoids stack overhead and stack overflow risk.",
-      "id": "PL_015",
-      "subject": "Programming Languages"
+      "correct_option": "B",
+      "explanation": "Iteration avoids stack overhead and stack overflow risk."
     },
     {
-      "topic": "OOP Concepts",
+      "question_id": "PL_016",
       "concept": "Encapsulation",
-      "bloom_level": "Remember",
+      "learning_area": "Programming Languages",
+      "bloom_level": 1,
       "knowledge_type": "Factual",
       "difficulty": "easy",
       "irt_a": 0.8,
@@ -2861,15 +2703,14 @@
         "C": "Creating multiple objects",
         "D": "Overriding parent methods"
       },
-      "correct_answer": "B",
-      "explanation": "Encapsulation bundles data and methods and hides internal state.",
-      "id": "PL_016",
-      "subject": "Programming Languages"
+      "correct_option": "B",
+      "explanation": "Encapsulation bundles data and methods and hides internal state."
     },
     {
-      "topic": "OOP Concepts",
+      "question_id": "PL_017",
       "concept": "Abstraction",
-      "bloom_level": "Understand",
+      "learning_area": "Programming Languages",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -2882,15 +2723,14 @@
         "C": "Make all methods public",
         "D": "Copy code between classes"
       },
-      "correct_answer": "B",
-      "explanation": "Abstraction simplifies by hiding implementation and exposing essentials.",
-      "id": "PL_017",
-      "subject": "Programming Languages"
+      "correct_option": "B",
+      "explanation": "Abstraction simplifies by hiding implementation and exposing essentials."
     },
     {
-      "topic": "Inheritance",
+      "question_id": "PL_018",
       "concept": "Diamond Problem",
-      "bloom_level": "Analyze",
+      "learning_area": "Programming Languages",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -2903,15 +2743,14 @@
         "C": "Circular references",
         "D": "Stack overflow from deep inheritance"
       },
-      "correct_answer": "B",
-      "explanation": "Diamond: ambiguity about which version of a shared ancestor's method to use.",
-      "id": "PL_018",
-      "subject": "Programming Languages"
+      "correct_option": "B",
+      "explanation": "Diamond: ambiguity about which version of a shared ancestor's method to use."
     },
     {
-      "topic": "Inheritance",
+      "question_id": "PL_019",
       "concept": "Method Overriding",
-      "bloom_level": "Apply",
+      "learning_area": "Programming Languages",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -2924,15 +2763,14 @@
         "C": "Making a method private",
         "D": "Calling a parent method"
       },
-      "correct_answer": "B",
-      "explanation": "Overriding: subclass redefines a superclass method.",
-      "id": "PL_019",
-      "subject": "Programming Languages"
+      "correct_option": "B",
+      "explanation": "Overriding: subclass redefines a superclass method."
     },
     {
-      "topic": "Inheritance",
+      "question_id": "PL_020",
       "concept": "super keyword",
-      "bloom_level": "Apply",
+      "learning_area": "Programming Languages",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "easy",
       "irt_a": 1.0,
@@ -2945,15 +2783,14 @@
         "C": "Create a new object",
         "D": "Define an interface"
       },
-      "correct_answer": "B",
-      "explanation": "super refers to the parent class, enabling access to overridden methods.",
-      "id": "PL_020",
-      "subject": "Programming Languages"
+      "correct_option": "B",
+      "explanation": "super refers to the parent class, enabling access to overridden methods."
     },
     {
-      "topic": "Polymorphism",
+      "question_id": "PL_021",
       "concept": "Method Overloading",
-      "bloom_level": "Understand",
+      "learning_area": "Programming Languages",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -2966,15 +2803,14 @@
         "C": "Overloading is runtime polymorphism",
         "D": "Overloading changes return type"
       },
-      "correct_answer": "B",
-      "explanation": "Overloading: same name, different parameters, same class (compile-time).",
-      "id": "PL_021",
-      "subject": "Programming Languages"
+      "correct_option": "B",
+      "explanation": "Overloading: same name, different parameters, same class (compile-time)."
     },
     {
-      "topic": "Polymorphism",
+      "question_id": "PL_022",
       "concept": "Runtime Polymorphism",
-      "bloom_level": "Analyze",
+      "learning_area": "Programming Languages",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -2987,15 +2823,14 @@
         "C": "Final methods",
         "D": "Static methods"
       },
-      "correct_answer": "B",
-      "explanation": "Runtime polymorphism uses dynamic dispatch to resolve method calls at runtime.",
-      "id": "PL_022",
-      "subject": "Programming Languages"
+      "correct_option": "B",
+      "explanation": "Runtime polymorphism uses dynamic dispatch to resolve method calls at runtime."
     },
     {
-      "topic": "Memory Management",
+      "question_id": "PL_023",
       "concept": "Stack vs Heap",
-      "bloom_level": "Understand",
+      "learning_area": "Programming Languages",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -3008,15 +2843,14 @@
         "C": "Heap memory",
         "D": "ROM"
       },
-      "correct_answer": "C",
-      "explanation": "Objects are heap-allocated; stack stores primitives and references.",
-      "id": "PL_023",
-      "subject": "Programming Languages"
+      "correct_option": "C",
+      "explanation": "Objects are heap-allocated; stack stores primitives and references."
     },
     {
-      "topic": "Memory Management",
+      "question_id": "PL_024",
       "concept": "Garbage Collection",
-      "bloom_level": "Understand",
+      "learning_area": "Programming Languages",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -3029,15 +2863,14 @@
         "C": "Prevents allocation",
         "D": "Sorts objects"
       },
-      "correct_answer": "B",
-      "explanation": "GC automatically frees memory from objects with no remaining references.",
-      "id": "PL_024",
-      "subject": "Programming Languages"
+      "correct_option": "B",
+      "explanation": "GC automatically frees memory from objects with no remaining references."
     },
     {
-      "topic": "Memory Management",
+      "question_id": "PL_025",
       "concept": "Memory Leak",
-      "bloom_level": "Analyze",
+      "learning_area": "Programming Languages",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -3050,15 +2883,14 @@
         "C": "Using recursion",
         "D": "Too many classes"
       },
-      "correct_answer": "B",
-      "explanation": "References held unintentionally prevent GC from collecting unused objects.",
-      "id": "PL_025",
-      "subject": "Programming Languages"
+      "correct_option": "B",
+      "explanation": "References held unintentionally prevent GC from collecting unused objects."
     },
     {
-      "topic": "Exception Handling",
+      "question_id": "PL_026",
       "concept": "Checked vs Unchecked",
-      "bloom_level": "Understand",
+      "learning_area": "Programming Languages",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -3071,15 +2903,14 @@
         "C": "Unchecked are more severe",
         "D": "Checked occur at compile time"
       },
-      "correct_answer": "B",
-      "explanation": "Checked: mandatory handling. Unchecked (RuntimeException): no mandatory handling.",
-      "id": "PL_026",
-      "subject": "Programming Languages"
+      "correct_option": "B",
+      "explanation": "Checked: mandatory handling. Unchecked (RuntimeException): no mandatory handling."
     },
     {
-      "topic": "Concurrency",
+      "question_id": "PL_027",
       "concept": "Thread vs Process",
-      "bloom_level": "Understand",
+      "learning_area": "Programming Languages",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -3092,15 +2923,14 @@
         "C": "Processes are smaller",
         "D": "Threads cannot communicate"
       },
-      "correct_answer": "B",
-      "explanation": "Threads share the same memory space; processes have separate memory.",
-      "id": "PL_027",
-      "subject": "Programming Languages"
+      "correct_option": "B",
+      "explanation": "Threads share the same memory space; processes have separate memory."
     },
     {
-      "topic": "Concurrency",
+      "question_id": "PL_028",
       "concept": "Race Condition",
-      "bloom_level": "Analyze",
+      "learning_area": "Programming Languages",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -3113,15 +2943,14 @@
         "C": "A network timing issue",
         "D": "Thread priority conflict"
       },
-      "correct_answer": "B",
-      "explanation": "Race condition: outcome depends on non-deterministic thread execution order.",
-      "id": "PL_028",
-      "subject": "Programming Languages"
+      "correct_option": "B",
+      "explanation": "Race condition: outcome depends on non-deterministic thread execution order."
     },
     {
-      "topic": "Functional Programming",
+      "question_id": "PL_029",
       "concept": "Immutability",
-      "bloom_level": "Understand",
+      "learning_area": "Programming Languages",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -3134,15 +2963,14 @@
         "C": "Makes code faster",
         "D": "Required by compilers"
       },
-      "correct_answer": "B",
-      "explanation": "Immutable data eliminates side effects, making concurrent programming safer.",
-      "id": "PL_029",
-      "subject": "Programming Languages"
+      "correct_option": "B",
+      "explanation": "Immutable data eliminates side effects, making concurrent programming safer."
     },
     {
-      "topic": "Functional Programming",
+      "question_id": "PL_030",
       "concept": "Map Filter Reduce",
-      "bloom_level": "Apply",
+      "learning_area": "Programming Languages",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.3,
@@ -3155,15 +2983,14 @@
         "C": "map",
         "D": "fold"
       },
-      "correct_answer": "C",
-      "explanation": "map applies a function to each element and returns transformed results.",
-      "id": "PL_030",
-      "subject": "Programming Languages"
+      "correct_option": "C",
+      "explanation": "map applies a function to each element and returns transformed results."
     },
     {
-      "topic": "OOP Concepts",
+      "question_id": "PL_031",
       "concept": "Interface vs Abstract Class",
-      "bloom_level": "Evaluate",
+      "learning_area": "Programming Languages",
+      "bloom_level": 5,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.6,
@@ -3176,15 +3003,14 @@
         "C": "When memory efficiency matters",
         "D": "When using primitive types"
       },
-      "correct_answer": "B",
-      "explanation": "Interfaces define contracts; use abstract class when sharing code.",
-      "id": "PL_031",
-      "subject": "Programming Languages"
+      "correct_option": "B",
+      "explanation": "Interfaces define contracts; use abstract class when sharing code."
     },
     {
-      "topic": "Programming Languages",
+      "question_id": "PL_032",
       "concept": "Compiled vs Interpreted",
-      "bloom_level": "Understand",
+      "learning_area": "Programming Languages",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -3197,15 +3023,14 @@
         "C": "Interpreted cannot handle errors",
         "D": "Compiled uses more memory"
       },
-      "correct_answer": "B",
-      "explanation": "Compiled: translate before execution. Interpreted: translate line-by-line at runtime.",
-      "id": "PL_032",
-      "subject": "Programming Languages"
+      "correct_option": "B",
+      "explanation": "Compiled: translate before execution. Interpreted: translate line-by-line at runtime."
     },
     {
-      "topic": "Programming Languages",
+      "question_id": "PL_033",
       "concept": "Paradigms",
-      "bloom_level": "Create",
+      "learning_area": "Programming Languages",
+      "bloom_level": 6,
       "knowledge_type": "Metacognitive",
       "difficulty": "hard",
       "irt_a": 1.8,
@@ -3218,15 +3043,14 @@
         "C": "Always use FP",
         "D": "Choose by team size"
       },
-      "correct_answer": "B",
-      "explanation": "OOP suits state/entities; FP suits data transformation and immutability needs.",
-      "id": "PL_033",
-      "subject": "Programming Languages"
+      "correct_option": "B",
+      "explanation": "OOP suits state/entities; FP suits data transformation and immutability needs."
     },
     {
-      "topic": "Relational Model",
+      "question_id": "DB_001",
       "concept": "Tables",
-      "bloom_level": "Remember",
+      "learning_area": "Database Systems",
+      "bloom_level": 1,
       "knowledge_type": "Factual",
       "difficulty": "easy",
       "irt_a": 0.8,
@@ -3239,15 +3063,14 @@
         "C": "Graphs",
         "D": "Lists"
       },
-      "correct_answer": "B",
-      "explanation": "Relational model: tables with rows (tuples) and columns (attributes).",
-      "id": "DB_001",
-      "subject": "Database Systems"
+      "correct_option": "B",
+      "explanation": "Relational model: tables with rows (tuples) and columns (attributes)."
     },
     {
-      "topic": "Relational Model",
+      "question_id": "DB_002",
       "concept": "Primary Key",
-      "bloom_level": "Remember",
+      "learning_area": "Database Systems",
+      "bloom_level": 1,
       "knowledge_type": "Factual",
       "difficulty": "easy",
       "irt_a": 0.9,
@@ -3260,15 +3083,14 @@
         "C": "Can be duplicated",
         "D": "Must be a number"
       },
-      "correct_answer": "B",
-      "explanation": "Primary key: uniquely identifies each row, cannot be NULL.",
-      "id": "DB_002",
-      "subject": "Database Systems"
+      "correct_option": "B",
+      "explanation": "Primary key: uniquely identifies each row, cannot be NULL."
     },
     {
-      "topic": "Relational Model",
+      "question_id": "DB_003",
       "concept": "Foreign Key",
-      "bloom_level": "Understand",
+      "learning_area": "Database Systems",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -3281,15 +3103,14 @@
         "C": "Data type consistency",
         "D": "Index performance"
       },
-      "correct_answer": "B",
-      "explanation": "Foreign key: links tables and enforces referential integrity.",
-      "id": "DB_003",
-      "subject": "Database Systems"
+      "correct_option": "B",
+      "explanation": "Foreign key: links tables and enforces referential integrity."
     },
     {
-      "topic": "Relational Model",
+      "question_id": "DB_004",
       "concept": "Candidate Key",
-      "bloom_level": "Understand",
+      "learning_area": "Database Systems",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -3302,15 +3123,14 @@
         "C": "A foreign key candidate",
         "D": "An indexed column"
       },
-      "correct_answer": "B",
-      "explanation": "Candidate key: any minimal attribute set that could serve as primary key.",
-      "id": "DB_004",
-      "subject": "Database Systems"
+      "correct_option": "B",
+      "explanation": "Candidate key: any minimal attribute set that could serve as primary key."
     },
     {
-      "topic": "Relational Model",
+      "question_id": "DB_005",
       "concept": "Referential Integrity",
-      "bloom_level": "Analyze",
+      "learning_area": "Database Systems",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -3323,15 +3143,14 @@
         "C": "Row automatically corrected",
         "D": "Referenced table updated"
       },
-      "correct_answer": "B",
-      "explanation": "Referential integrity prevents orphan records \u2014 invalid FK raises constraint violation.",
-      "id": "DB_005",
-      "subject": "Database Systems"
+      "correct_option": "B",
+      "explanation": "Referential integrity prevents orphan records \u2014 invalid FK raises constraint violation."
     },
     {
-      "topic": "SQL Basics",
+      "question_id": "DB_006",
       "concept": "WHERE Clause",
-      "bloom_level": "Remember",
+      "learning_area": "Database Systems",
+      "bloom_level": 1,
       "knowledge_type": "Factual",
       "difficulty": "easy",
       "irt_a": 0.8,
@@ -3344,15 +3163,14 @@
         "C": "WHERE",
         "D": "GROUP BY"
       },
-      "correct_answer": "C",
-      "explanation": "WHERE filters rows based on a specified condition.",
-      "id": "DB_006",
-      "subject": "Database Systems"
+      "correct_option": "C",
+      "explanation": "WHERE filters rows based on a specified condition."
     },
     {
-      "topic": "SQL Basics",
+      "question_id": "DB_007",
       "concept": "JOIN Types",
-      "bloom_level": "Understand",
+      "learning_area": "Database Systems",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -3365,15 +3183,14 @@
         "C": "RIGHT JOIN",
         "D": "FULL OUTER JOIN"
       },
-      "correct_answer": "D",
-      "explanation": "FULL OUTER JOIN returns all rows from both tables with NULLs for non-matches.",
-      "id": "DB_007",
-      "subject": "Database Systems"
+      "correct_option": "D",
+      "explanation": "FULL OUTER JOIN returns all rows from both tables with NULLs for non-matches."
     },
     {
-      "topic": "SQL Basics",
+      "question_id": "DB_008",
       "concept": "Aggregate Functions",
-      "bloom_level": "Apply",
+      "learning_area": "Database Systems",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -3386,15 +3203,14 @@
         "C": "COUNT()",
         "D": "MAX()"
       },
-      "correct_answer": "C",
-      "explanation": "COUNT() returns the number of rows matching the query.",
-      "id": "DB_008",
-      "subject": "Database Systems"
+      "correct_option": "C",
+      "explanation": "COUNT() returns the number of rows matching the query."
     },
     {
-      "topic": "SQL Basics",
+      "question_id": "DB_009",
       "concept": "GROUP BY Order",
-      "bloom_level": "Apply",
+      "learning_area": "Database Systems",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.3,
@@ -3407,15 +3223,14 @@
         "C": "SELECT \u2192 FROM \u2192 GROUP BY \u2192 WHERE",
         "D": "WHERE \u2192 FROM \u2192 SELECT \u2192 HAVING"
       },
-      "correct_answer": "B",
-      "explanation": "SQL logical order: FROM \u2192 WHERE \u2192 GROUP BY \u2192 HAVING \u2192 SELECT \u2192 ORDER BY.",
-      "id": "DB_009",
-      "subject": "Database Systems"
+      "correct_option": "B",
+      "explanation": "SQL logical order: FROM \u2192 WHERE \u2192 GROUP BY \u2192 HAVING \u2192 SELECT \u2192 ORDER BY."
     },
     {
-      "topic": "SQL Basics",
+      "question_id": "DB_010",
       "concept": "Correlated Subquery",
-      "bloom_level": "Apply",
+      "learning_area": "Database Systems",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -3428,15 +3243,14 @@
         "C": "It uses JOIN instead of WHERE",
         "D": "It returns one row only"
       },
-      "correct_answer": "B",
-      "explanation": "Correlated subqueries re-execute for each outer row, unlike independent subqueries.",
-      "id": "DB_010",
-      "subject": "Database Systems"
+      "correct_option": "B",
+      "explanation": "Correlated subqueries re-execute for each outer row, unlike independent subqueries."
     },
     {
-      "topic": "Normalization",
+      "question_id": "DB_011",
       "concept": "1NF",
-      "bloom_level": "Remember",
+      "learning_area": "Database Systems",
+      "bloom_level": 1,
       "knowledge_type": "Factual",
       "difficulty": "easy",
       "irt_a": 0.9,
@@ -3449,15 +3263,14 @@
         "C": "No transitive dependencies",
         "D": "Every table has primary key only"
       },
-      "correct_answer": "B",
-      "explanation": "1NF: atomicity \u2014 each column holds indivisible values, no repeating groups.",
-      "id": "DB_011",
-      "subject": "Database Systems"
+      "correct_option": "B",
+      "explanation": "1NF: atomicity \u2014 each column holds indivisible values, no repeating groups."
     },
     {
-      "topic": "Normalization",
+      "question_id": "DB_012",
       "concept": "2NF",
-      "bloom_level": "Understand",
+      "learning_area": "Database Systems",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -3470,15 +3283,14 @@
         "C": "Multi-valued attributes",
         "D": "Null values"
       },
-      "correct_answer": "B",
-      "explanation": "2NF: 1NF plus no non-key attribute depends on part of a composite key.",
-      "id": "DB_012",
-      "subject": "Database Systems"
+      "correct_option": "B",
+      "explanation": "2NF: 1NF plus no non-key attribute depends on part of a composite key."
     },
     {
-      "topic": "Normalization",
+      "question_id": "DB_013",
       "concept": "3NF",
-      "bloom_level": "Analyze",
+      "learning_area": "Database Systems",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -3491,15 +3303,14 @@
         "C": "Multi-valued attributes",
         "D": "All redundancy"
       },
-      "correct_answer": "B",
-      "explanation": "3NF: 2NF plus no non-key attribute transitively depends on primary key.",
-      "id": "DB_013",
-      "subject": "Database Systems"
+      "correct_option": "B",
+      "explanation": "3NF: 2NF plus no non-key attribute transitively depends on primary key."
     },
     {
-      "topic": "Normalization",
+      "question_id": "DB_014",
       "concept": "Denormalization",
-      "bloom_level": "Evaluate",
+      "learning_area": "Database Systems",
+      "bloom_level": 5,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.6,
@@ -3512,15 +3323,14 @@
         "C": "When storage is unlimited",
         "D": "When data integrity is not important"
       },
-      "correct_answer": "B",
-      "explanation": "Denormalization reduces JOINs for faster reads at cost of redundancy \u2014 common in data warehouses.",
-      "id": "DB_014",
-      "subject": "Database Systems"
+      "correct_option": "B",
+      "explanation": "Denormalization reduces JOINs for faster reads at cost of redundancy \u2014 common in data warehouses."
     },
     {
-      "topic": "Normalization",
+      "question_id": "DB_015",
       "concept": "BCNF",
-      "bloom_level": "Analyze",
+      "learning_area": "Database Systems",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.6,
@@ -3533,15 +3343,14 @@
         "C": "Requires more tables",
         "D": "Eliminates primary keys"
       },
-      "correct_answer": "B",
-      "explanation": "BCNF: for every dependency X\u2192Y, X must be a superkey.",
-      "id": "DB_015",
-      "subject": "Database Systems"
+      "correct_option": "B",
+      "explanation": "BCNF: for every dependency X\u2192Y, X must be a superkey."
     },
     {
-      "topic": "Transactions",
+      "question_id": "DB_016",
       "concept": "ACID Properties",
-      "bloom_level": "Remember",
+      "learning_area": "Database Systems",
+      "bloom_level": 1,
       "knowledge_type": "Factual",
       "difficulty": "easy",
       "irt_a": 0.9,
@@ -3554,15 +3363,14 @@
         "C": "Authorization",
         "D": "Asynchronous"
       },
-      "correct_answer": "B",
-      "explanation": "ACID: Atomicity, Consistency, Isolation, Durability.",
-      "id": "DB_016",
-      "subject": "Database Systems"
+      "correct_option": "B",
+      "explanation": "ACID: Atomicity, Consistency, Isolation, Durability."
     },
     {
-      "topic": "Transactions",
+      "question_id": "DB_017",
       "concept": "Isolation Levels",
-      "bloom_level": "Analyze",
+      "learning_area": "Database Systems",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -3575,15 +3383,14 @@
         "C": "Repeatable Read",
         "D": "Serializable"
       },
-      "correct_answer": "B",
-      "explanation": "Read Committed prevents dirty reads but allows non-repeatable reads.",
-      "id": "DB_017",
-      "subject": "Database Systems"
+      "correct_option": "B",
+      "explanation": "Read Committed prevents dirty reads but allows non-repeatable reads."
     },
     {
-      "topic": "Transactions",
+      "question_id": "DB_018",
       "concept": "Deadlock",
-      "bloom_level": "Analyze",
+      "learning_area": "Database Systems",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -3596,15 +3403,14 @@
         "C": "A failed transaction",
         "D": "A corrupt table"
       },
-      "correct_answer": "B",
-      "explanation": "Deadlock: two transactions hold locks each waiting for the other to release.",
-      "id": "DB_018",
-      "subject": "Database Systems"
+      "correct_option": "B",
+      "explanation": "Deadlock: two transactions hold locks each waiting for the other to release."
     },
     {
-      "topic": "Transactions",
+      "question_id": "DB_019",
       "concept": "Rollback",
-      "bloom_level": "Apply",
+      "learning_area": "Database Systems",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -3617,15 +3423,14 @@
         "C": "Deletes the table",
         "D": "Resets auto-increment"
       },
-      "correct_answer": "B",
-      "explanation": "ROLLBACK reverts all transaction changes to the previous state.",
-      "id": "DB_019",
-      "subject": "Database Systems"
+      "correct_option": "B",
+      "explanation": "ROLLBACK reverts all transaction changes to the previous state."
     },
     {
-      "topic": "Transactions",
+      "question_id": "DB_020",
       "concept": "COMMIT",
-      "bloom_level": "Remember",
+      "learning_area": "Database Systems",
+      "bloom_level": 1,
       "knowledge_type": "Factual",
       "difficulty": "easy",
       "irt_a": 0.8,
@@ -3638,15 +3443,14 @@
         "C": "Starts a new transaction",
         "D": "Locks the database"
       },
-      "correct_answer": "B",
-      "explanation": "COMMIT permanently persists all transaction changes.",
-      "id": "DB_020",
-      "subject": "Database Systems"
+      "correct_option": "B",
+      "explanation": "COMMIT permanently persists all transaction changes."
     },
     {
-      "topic": "Indexing",
+      "question_id": "DB_021",
       "concept": "Index Purpose",
-      "bloom_level": "Understand",
+      "learning_area": "Database Systems",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "easy",
       "irt_a": 1.0,
@@ -3659,15 +3463,14 @@
         "C": "Enforce uniqueness",
         "D": "Reduce table size"
       },
-      "correct_answer": "B",
-      "explanation": "Indexes allow faster row lookup without full table scans.",
-      "id": "DB_021",
-      "subject": "Database Systems"
+      "correct_option": "B",
+      "explanation": "Indexes allow faster row lookup without full table scans."
     },
     {
-      "topic": "Indexing",
+      "question_id": "DB_022",
       "concept": "B-Tree Index",
-      "bloom_level": "Understand",
+      "learning_area": "Database Systems",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -3680,15 +3483,14 @@
         "C": "Uses least memory",
         "D": "Only works with integers"
       },
-      "correct_answer": "B",
-      "explanation": "B-Trees provide balanced O(log n) access for both point lookups and range scans.",
-      "id": "DB_022",
-      "subject": "Database Systems"
+      "correct_option": "B",
+      "explanation": "B-Trees provide balanced O(log n) access for both point lookups and range scans."
     },
     {
-      "topic": "Indexing",
+      "question_id": "DB_023",
       "concept": "Index Trade-offs",
-      "bloom_level": "Evaluate",
+      "learning_area": "Database Systems",
+      "bloom_level": 5,
       "knowledge_type": "Metacognitive",
       "difficulty": "hard",
       "irt_a": 1.6,
@@ -3701,15 +3503,14 @@
         "C": "Too many indexes cause errors",
         "D": "Against SQL standards"
       },
-      "correct_answer": "B",
-      "explanation": "Every index must be updated on writes, increasing overhead.",
-      "id": "DB_023",
-      "subject": "Database Systems"
+      "correct_option": "B",
+      "explanation": "Every index must be updated on writes, increasing overhead."
     },
     {
-      "topic": "Query Optimization",
+      "question_id": "DB_024",
       "concept": "Query Plan",
-      "bloom_level": "Understand",
+      "learning_area": "Database Systems",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -3722,15 +3523,14 @@
         "C": "Table structure",
         "D": "Index list"
       },
-      "correct_answer": "B",
-      "explanation": "EXPLAIN shows the optimizer's execution plan \u2014 useful for finding bottlenecks.",
-      "id": "DB_024",
-      "subject": "Database Systems"
+      "correct_option": "B",
+      "explanation": "EXPLAIN shows the optimizer's execution plan \u2014 useful for finding bottlenecks."
     },
     {
-      "topic": "Query Optimization",
+      "question_id": "DB_025",
       "concept": "N+1 Problem",
-      "bloom_level": "Analyze",
+      "learning_area": "Database Systems",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -3743,15 +3543,14 @@
         "C": "N tables with 1 primary key",
         "D": "Running a query N+1 times for testing"
       },
-      "correct_answer": "B",
-      "explanation": "N+1: an ORM fetches N records then issues one query per record \u2014 N+1 total instead of 1 JOIN.",
-      "id": "DB_025",
-      "subject": "Database Systems"
+      "correct_option": "B",
+      "explanation": "N+1: an ORM fetches N records then issues one query per record \u2014 N+1 total instead of 1 JOIN."
     },
     {
-      "topic": "ER Diagrams",
+      "question_id": "DB_026",
       "concept": "Entity Shape",
-      "bloom_level": "Remember",
+      "learning_area": "Database Systems",
+      "bloom_level": 1,
       "knowledge_type": "Factual",
       "difficulty": "easy",
       "irt_a": 0.8,
@@ -3764,15 +3563,14 @@
         "C": "Rectangle",
         "D": "Triangle"
       },
-      "correct_answer": "C",
-      "explanation": "Entities are rectangles; diamonds represent relationships.",
-      "id": "DB_026",
-      "subject": "Database Systems"
+      "correct_option": "C",
+      "explanation": "Entities are rectangles; diamonds represent relationships."
     },
     {
-      "topic": "ER Diagrams",
+      "question_id": "DB_027",
       "concept": "Cardinality",
-      "bloom_level": "Understand",
+      "learning_area": "Database Systems",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -3785,15 +3583,14 @@
         "C": "Many-to-Many",
         "D": "Self-referencing"
       },
-      "correct_answer": "C",
-      "explanation": "Many-to-Many requires a junction table in relational databases.",
-      "id": "DB_027",
-      "subject": "Database Systems"
+      "correct_option": "C",
+      "explanation": "Many-to-Many requires a junction table in relational databases."
     },
     {
-      "topic": "NoSQL",
+      "question_id": "DB_028",
       "concept": "NoSQL Types",
-      "bloom_level": "Remember",
+      "learning_area": "Database Systems",
+      "bloom_level": 1,
       "knowledge_type": "Factual",
       "difficulty": "easy",
       "irt_a": 0.9,
@@ -3806,15 +3603,14 @@
         "C": "Document",
         "D": "Column-family"
       },
-      "correct_answer": "C",
-      "explanation": "Document databases (MongoDB) store JSON/BSON documents with flexible schema.",
-      "id": "DB_028",
-      "subject": "Database Systems"
+      "correct_option": "C",
+      "explanation": "Document databases (MongoDB) store JSON/BSON documents with flexible schema."
     },
     {
-      "topic": "NoSQL",
+      "question_id": "DB_029",
       "concept": "CAP Theorem",
-      "bloom_level": "Analyze",
+      "learning_area": "Database Systems",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -3827,15 +3623,14 @@
         "C": "Caching, Availability, Processing",
         "D": "Consistency, Accuracy, Persistence"
       },
-      "correct_answer": "A",
-      "explanation": "CAP: Consistency, Availability, Partition Tolerance \u2014 only 2 guaranteed simultaneously.",
-      "id": "DB_029",
-      "subject": "Database Systems"
+      "correct_option": "A",
+      "explanation": "CAP: Consistency, Availability, Partition Tolerance \u2014 only 2 guaranteed simultaneously."
     },
     {
-      "topic": "NoSQL",
+      "question_id": "DB_030",
       "concept": "SQL vs NoSQL",
-      "bloom_level": "Evaluate",
+      "learning_area": "Database Systems",
+      "bloom_level": 5,
       "knowledge_type": "Metacognitive",
       "difficulty": "hard",
       "irt_a": 1.6,
@@ -3848,15 +3643,14 @@
         "C": "Large volumes of unstructured data with flexible schema",
         "D": "When ACID compliance is critical"
       },
-      "correct_answer": "C",
-      "explanation": "NoSQL excels with unstructured data, horizontal scaling, and flexible schemas.",
-      "id": "DB_030",
-      "subject": "Database Systems"
+      "correct_option": "C",
+      "explanation": "NoSQL excels with unstructured data, horizontal scaling, and flexible schemas."
     },
     {
-      "topic": "Stored Procedures",
+      "question_id": "DB_031",
       "concept": "Definition",
-      "bloom_level": "Remember",
+      "learning_area": "Database Systems",
+      "bloom_level": 1,
       "knowledge_type": "Factual",
       "difficulty": "easy",
       "irt_a": 0.8,
@@ -3869,15 +3663,14 @@
         "C": "An index on a column",
         "D": "A database backup"
       },
-      "correct_answer": "B",
-      "explanation": "Stored procedures: precompiled SQL programs stored in the database.",
-      "id": "DB_031",
-      "subject": "Database Systems"
+      "correct_option": "B",
+      "explanation": "Stored procedures: precompiled SQL programs stored in the database."
     },
     {
-      "topic": "Stored Procedures",
+      "question_id": "DB_032",
       "concept": "Advantages",
-      "bloom_level": "Evaluate",
+      "learning_area": "Database Systems",
+      "bloom_level": 5,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.3,
@@ -3890,15 +3683,14 @@
         "C": "Replace all SQL queries",
         "D": "Auto-backup data"
       },
-      "correct_answer": "B",
-      "explanation": "Stored procedures reduce round trips and benefit from precompilation.",
-      "id": "DB_032",
-      "subject": "Database Systems"
+      "correct_option": "B",
+      "explanation": "Stored procedures reduce round trips and benefit from precompilation."
     },
     {
-      "topic": "Database Security",
+      "question_id": "DB_033",
       "concept": "SQL Injection",
-      "bloom_level": "Analyze",
+      "learning_area": "Database Systems",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -3911,15 +3703,14 @@
         "C": "Block all user input",
         "D": "Limit query length"
       },
-      "correct_answer": "B",
-      "explanation": "Parameterized queries treat user input strictly as data, not executable SQL.",
-      "id": "DB_033",
-      "subject": "Database Systems"
+      "correct_option": "B",
+      "explanation": "Parameterized queries treat user input strictly as data, not executable SQL."
     },
     {
-      "topic": "Database Security",
+      "question_id": "DB_034",
       "concept": "Least Privilege",
-      "bloom_level": "Evaluate",
+      "learning_area": "Database Systems",
+      "bloom_level": 5,
       "knowledge_type": "Metacognitive",
       "difficulty": "hard",
       "irt_a": 1.6,
@@ -3932,15 +3723,14 @@
         "C": "Sharing one account",
         "D": "Disabling all accounts"
       },
-      "correct_answer": "B",
-      "explanation": "Least privilege minimizes damage from compromised accounts.",
-      "id": "DB_034",
-      "subject": "Database Systems"
+      "correct_option": "B",
+      "explanation": "Least privilege minimizes damage from compromised accounts."
     },
     {
-      "topic": "Query Optimization",
+      "question_id": "DB_035",
       "concept": "Indexing Strategy",
-      "bloom_level": "Create",
+      "learning_area": "Database Systems",
+      "bloom_level": 6,
       "knowledge_type": "Metacognitive",
       "difficulty": "hard",
       "irt_a": 1.8,
@@ -3953,17 +3743,14 @@
         "C": "Composite index on (email, created_at)",
         "D": "No index needed"
       },
-      "correct_answer": "C",
-      "explanation": "Composite index on (email, created_at) supports WHERE filter and ORDER BY in one scan.",
-      "id": "DB_035",
-      "subject": "Database Systems"
+      "correct_option": "C",
+      "explanation": "Composite index on (email, created_at) supports WHERE filter and ORDER BY in one scan."
     },
     {
-      "id": "SQA_035",
-      "subject": "Software Quality Assurance",
-      "topic": "Test Automation",
+      "question_id": "SQA_035",
       "concept": "CI/CD Pipeline",
-      "bloom_level": "Analyze",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -3976,15 +3763,14 @@
         "C": "Only run before production release",
         "D": "Slow down the pipeline"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Automated tests in CI/CD give immediate feedback on every commit, catching regressions early."
     },
     {
-      "id": "SQA_036",
-      "subject": "Software Quality Assurance",
-      "topic": "Testing Fundamentals",
+      "question_id": "SQA_036",
       "concept": "Smoke Testing",
-      "bloom_level": "Understand",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "easy",
       "irt_a": 1.0,
@@ -3997,15 +3783,14 @@
         "C": "Performance testing under load",
         "D": "Security vulnerability scanning"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Smoke testing verifies the most critical functions work before investing in full testing."
     },
     {
-      "id": "SQA_037",
-      "subject": "Software Quality Assurance",
-      "topic": "Testing Fundamentals",
+      "question_id": "SQA_037",
       "concept": "Sanity Testing",
-      "bloom_level": "Understand",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -4018,15 +3803,14 @@
         "C": "Smoke is done by developers only",
         "D": "They are identical"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Sanity: narrow check on a specific area after a small change. Smoke: broad check of critical paths."
     },
     {
-      "id": "SQA_038",
-      "subject": "Software Quality Assurance",
-      "topic": "White Box Testing",
+      "question_id": "SQA_038",
       "concept": "Control Flow Testing",
-      "bloom_level": "Apply",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.3,
@@ -4039,15 +3823,14 @@
         "C": "UI layout",
         "D": "Network latency"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Control flow testing verifies correct execution paths through conditional and loop structures."
     },
     {
-      "id": "SQA_039",
-      "subject": "Software Quality Assurance",
-      "topic": "Performance Testing",
+      "question_id": "SQA_039",
       "concept": "Spike Testing",
-      "bloom_level": "Understand",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -4060,15 +3843,14 @@
         "C": "Security under normal conditions",
         "D": "Database query speed"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Spike testing checks how a system handles sudden, sharp increases in traffic or load."
     },
     {
-      "id": "SQA_040",
-      "subject": "Software Quality Assurance",
-      "topic": "Test Planning",
+      "question_id": "SQA_040",
       "concept": "Test Exit Criteria",
-      "bloom_level": "Evaluate",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 5,
       "knowledge_type": "Metacognitive",
       "difficulty": "hard",
       "irt_a": 1.6,
@@ -4081,15 +3863,14 @@
         "C": "To schedule daily meetings",
         "D": "To measure developer speed"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Exit criteria prevent premature or indefinite testing by defining measurable completion conditions."
     },
     {
-      "id": "SQA_041",
-      "subject": "Software Quality Assurance",
-      "topic": "Defect Management",
+      "question_id": "SQA_041",
       "concept": "Root Cause Analysis",
-      "bloom_level": "Analyze",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 4,
       "knowledge_type": "Procedural",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -4102,15 +3883,14 @@
         "C": "To reopen closed tickets",
         "D": "To estimate testing time"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "RCA identifies why a defect occurred so the process can be improved to prevent recurrence."
     },
     {
-      "id": "SQA_042",
-      "subject": "Software Quality Assurance",
-      "topic": "Testing Fundamentals",
+      "question_id": "SQA_042",
       "concept": "Alpha vs Beta Testing",
-      "bloom_level": "Understand",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -4123,15 +3903,14 @@
         "C": "Beta is done before alpha",
         "D": "Alpha only tests UI"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Alpha: internal team testing. Beta: external real users in actual use conditions."
     },
     {
-      "id": "SQA_043",
-      "subject": "Software Quality Assurance",
-      "topic": "Test Automation",
+      "question_id": "SQA_043",
       "concept": "Data-Driven Testing",
-      "bloom_level": "Apply",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.3,
@@ -4144,15 +3923,14 @@
         "C": "Testing database speed",
         "D": "Manual data entry testing"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Data-driven testing externalizes test data so the same test runs with multiple inputs."
     },
     {
-      "id": "SQA_044",
-      "subject": "Software Quality Assurance",
-      "topic": "White Box Testing",
+      "question_id": "SQA_044",
       "concept": "Data Flow Testing",
-      "bloom_level": "Analyze",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 4,
       "knowledge_type": "Procedural",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -4165,15 +3943,14 @@
         "C": "Network data transfer",
         "D": "Database schema changes"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Data flow testing tracks variables from definition to use to detect incorrect data handling."
     },
     {
-      "id": "SQA_045",
-      "subject": "Software Quality Assurance",
-      "topic": "Testing Fundamentals",
+      "question_id": "SQA_045",
       "concept": "IEEE 829 Standard",
-      "bloom_level": "Remember",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 1,
       "knowledge_type": "Factual",
       "difficulty": "easy",
       "irt_a": 0.8,
@@ -4186,15 +3963,14 @@
         "C": "Security requirements",
         "D": "Database design guidelines"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "IEEE 829 defines standard documentation for software testing including test plans, cases, and reports."
     },
     {
-      "id": "SQA_046",
-      "subject": "Software Quality Assurance",
-      "topic": "Performance Testing",
+      "question_id": "SQA_046",
       "concept": "Endurance Testing",
-      "bloom_level": "Understand",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -4207,15 +3983,14 @@
         "C": "Response to sudden spikes",
         "D": "Security under load"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Endurance testing checks for memory leaks and degradation over long run periods."
     },
     {
-      "id": "SQA_047",
-      "subject": "Software Quality Assurance",
-      "topic": "Black Box Testing",
+      "question_id": "SQA_047",
       "concept": "Use Case Testing",
-      "bloom_level": "Apply",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -4228,15 +4003,14 @@
         "C": "Database tables",
         "D": "Network diagrams"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Use case testing creates test scenarios from documented user-system interactions."
     },
     {
-      "id": "SQA_048",
-      "subject": "Software Quality Assurance",
-      "topic": "Test Automation",
+      "question_id": "SQA_048",
       "concept": "Keyword-Driven Testing",
-      "bloom_level": "Understand",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -4249,15 +4023,14 @@
         "C": "Test data values",
         "D": "HTML element IDs"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Keywords are action words (e.g., 'Click', 'Enter') mapping to automation functions, enabling non-programmers to write tests."
     },
     {
-      "id": "SQA_049",
-      "subject": "Software Quality Assurance",
-      "topic": "Testing Fundamentals",
+      "question_id": "SQA_049",
       "concept": "Test Effectiveness",
-      "bloom_level": "Evaluate",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 5,
       "knowledge_type": "Metacognitive",
       "difficulty": "hard",
       "irt_a": 1.6,
@@ -4270,15 +4043,14 @@
         "C": "Measure test execution speed",
         "D": "Count lines of test code"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Test effectiveness: how many defects are caught vs escaped, combined with meaningful coverage metrics."
     },
     {
-      "id": "SQA_050",
-      "subject": "Software Quality Assurance",
-      "topic": "Testing Fundamentals",
+      "question_id": "SQA_050",
       "concept": "Shift-Left Testing",
-      "bloom_level": "Create",
+      "learning_area": "Software Quality Assurance",
+      "bloom_level": 6,
       "knowledge_type": "Metacognitive",
       "difficulty": "hard",
       "irt_a": 1.8,
@@ -4291,15 +4063,14 @@
         "C": "Only test the UI",
         "D": "Skip unit testing to save time"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Shift-left: integrate testing earlier (requirements, design, unit) to catch defects when cheapest to fix."
     },
     {
-      "id": "SE_036",
-      "subject": "Software Engineering",
-      "topic": "Requirements Engineering",
+      "question_id": "SE_036",
       "concept": "Stakeholder Analysis",
-      "bloom_level": "Apply",
+      "learning_area": "Software Engineering",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -4312,15 +4083,14 @@
         "C": "To create UML diagrams",
         "D": "To estimate project cost only"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Stakeholder analysis ensures all impacted parties' requirements are captured and conflicts resolved."
     },
     {
-      "id": "SE_037",
-      "subject": "Software Engineering",
-      "topic": "System Design",
+      "question_id": "SE_037",
       "concept": "Design Principles",
-      "bloom_level": "Understand",
+      "learning_area": "Software Engineering",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -4333,15 +4103,14 @@
         "C": "Design Right Yesterday",
         "D": "Develop Reusable Yield"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "DRY: avoid duplicating logic. Every piece of knowledge should have a single authoritative representation."
     },
     {
-      "id": "SE_038",
-      "subject": "Software Engineering",
-      "topic": "Design Patterns",
+      "question_id": "SE_038",
       "concept": "Decorator Pattern",
-      "bloom_level": "Apply",
+      "learning_area": "Software Engineering",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -4354,15 +4123,14 @@
         "C": "Replace inheritance",
         "D": "Create multiple instances"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Decorator wraps objects to add responsibilities dynamically at runtime."
     },
     {
-      "id": "SE_039",
-      "subject": "Software Engineering",
-      "topic": "Software Architecture",
+      "question_id": "SE_039",
       "concept": "Layered Architecture",
-      "bloom_level": "Understand",
+      "learning_area": "Software Engineering",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -4375,15 +4143,14 @@
         "C": "Render UI",
         "D": "Manage network"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Business logic layer handles application rules and workflows, separate from UI and data."
     },
     {
-      "id": "SE_040",
-      "subject": "Software Engineering",
-      "topic": "Agile Methodology",
+      "question_id": "SE_040",
       "concept": "Story Points",
-      "bloom_level": "Apply",
+      "learning_area": "Software Engineering",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -4396,15 +4163,14 @@
         "C": "Number of bugs in a feature",
         "D": "Lines of code to write"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Story points measure relative size/complexity, not absolute time, enabling team velocity tracking."
     },
     {
-      "id": "SE_041",
-      "subject": "Software Engineering",
-      "topic": "Project Management",
+      "question_id": "SE_041",
       "concept": "Critical Path",
-      "bloom_level": "Analyze",
+      "learning_area": "Software Engineering",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -4417,15 +4183,14 @@
         "C": "Tasks that can be parallelized",
         "D": "The most expensive tasks"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Critical path: longest chain of dependent tasks; any delay on it delays the entire project."
     },
     {
-      "id": "SE_042",
-      "subject": "Software Engineering",
-      "topic": "SDLC",
+      "question_id": "SE_042",
       "concept": "Incremental Model",
-      "bloom_level": "Understand",
+      "learning_area": "Software Engineering",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -4438,15 +4203,14 @@
         "C": "Only to internal teams",
         "D": "Without testing"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Incremental: software delivered in pieces, each adding functionality to the previous increment."
     },
     {
-      "id": "SE_043",
-      "subject": "Software Engineering",
-      "topic": "Design Patterns",
+      "question_id": "SE_043",
       "concept": "Strategy Pattern",
-      "bloom_level": "Apply",
+      "learning_area": "Software Engineering",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -4459,15 +4223,14 @@
         "C": "Providing a simplified interface",
         "D": "Managing object lifecycle"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Strategy encapsulates algorithms and makes them swappable without changing the client."
     },
     {
-      "id": "SE_044",
-      "subject": "Software Engineering",
-      "topic": "Software Architecture",
+      "question_id": "SE_044",
       "concept": "API Design",
-      "bloom_level": "Evaluate",
+      "learning_area": "Software Engineering",
+      "bloom_level": 5,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.6,
@@ -4480,15 +4243,14 @@
         "C": "Requiring authentication",
         "D": "Using websockets"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "REST: stateless, resource-oriented URLs, standard verbs (GET, POST, PUT, DELETE)."
     },
     {
-      "id": "SE_045",
-      "subject": "Software Engineering",
-      "topic": "UML",
+      "question_id": "SE_045",
       "concept": "Component Diagram",
-      "bloom_level": "Understand",
+      "learning_area": "Software Engineering",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -4501,15 +4263,14 @@
         "C": "Database entity relationships",
         "D": "Class inheritance hierarchies"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Component diagrams show the architectural structure: components, interfaces, and dependencies."
     },
     {
-      "id": "SE_046",
-      "subject": "Software Engineering",
-      "topic": "Maintenance",
+      "question_id": "SE_046",
       "concept": "Refactoring",
-      "bloom_level": "Apply",
+      "learning_area": "Software Engineering",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -4522,15 +4283,14 @@
         "C": "Adding new features",
         "D": "Fixing bugs"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Refactoring improves internal code quality while preserving observable behavior."
     },
     {
-      "id": "SE_047",
-      "subject": "Software Engineering",
-      "topic": "Requirements Engineering",
+      "question_id": "SE_047",
       "concept": "Prototyping Approach",
-      "bloom_level": "Evaluate",
+      "learning_area": "Software Engineering",
+      "bloom_level": 5,
       "knowledge_type": "Metacognitive",
       "difficulty": "hard",
       "irt_a": 1.6,
@@ -4543,15 +4303,14 @@
         "C": "When budget is unlimited",
         "D": "When team is small"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Throwaway prototypes explore requirements only; evolutionary prototypes grow into the final product."
     },
     {
-      "id": "SE_048",
-      "subject": "Software Engineering",
-      "topic": "Project Management",
+      "question_id": "SE_048",
       "concept": "Team Structure",
-      "bloom_level": "Analyze",
+      "learning_area": "Software Engineering",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -4564,15 +4323,14 @@
         "C": "More testers means fewer bugs",
         "D": "Larger teams are always more productive"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Brooks's Law: new team members require onboarding time and increase communication overhead, slowing late projects further."
     },
     {
-      "id": "SE_049",
-      "subject": "Software Engineering",
-      "topic": "Agile Methodology",
+      "question_id": "SE_049",
       "concept": "Definition of Done",
-      "bloom_level": "Understand",
+      "learning_area": "Software Engineering",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -4585,15 +4343,14 @@
         "C": "The product backlog",
         "D": "The sprint goal"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "DoD: agreed criteria (coded, tested, reviewed, deployed) that must be met for a story to be done."
     },
     {
-      "id": "SE_050",
-      "subject": "Software Engineering",
-      "topic": "Software Architecture",
+      "question_id": "SE_050",
       "concept": "Scalability Design",
-      "bloom_level": "Create",
+      "learning_area": "Software Engineering",
+      "bloom_level": 6,
       "knowledge_type": "Metacognitive",
       "difficulty": "hard",
       "irt_a": 1.8,
@@ -4606,15 +4363,14 @@
         "C": "Add more RAM to existing server",
         "D": "Reduce features to reduce load"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Horizontal scaling distributes load across multiple instances; stateless services allow any instance to handle any request."
     },
     {
-      "id": "PL_034",
-      "subject": "Programming Languages",
-      "topic": "Variables and Types",
+      "question_id": "PL_034",
       "concept": "Null Safety",
-      "bloom_level": "Understand",
+      "learning_area": "Programming Languages",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -4627,15 +4383,14 @@
         "C": "Infinite loops",
         "D": "Type coercion errors"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Null safety forces explicit handling of null values at compile time, preventing NPE at runtime."
     },
     {
-      "id": "PL_035",
-      "subject": "Programming Languages",
-      "topic": "OOP Concepts",
+      "question_id": "PL_035",
       "concept": "Design by Contract",
-      "bloom_level": "Analyze",
+      "learning_area": "Programming Languages",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -4648,15 +4403,14 @@
         "C": "Database transaction rules",
         "D": "Network protocol specifications"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "DbC defines formal obligations (preconditions, postconditions, invariants) between caller and implementer."
     },
     {
-      "id": "PL_036",
-      "subject": "Programming Languages",
-      "topic": "Functional Programming",
+      "question_id": "PL_036",
       "concept": "Currying",
-      "bloom_level": "Understand",
+      "learning_area": "Programming Languages",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -4669,15 +4423,14 @@
         "C": "Sorting a collection",
         "D": "Memoizing results"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Currying: f(a, b) becomes f(a)(b) \u2014 each call returns a new function taking the next argument."
     },
     {
-      "id": "PL_037",
-      "subject": "Programming Languages",
-      "topic": "Memory Management",
+      "question_id": "PL_037",
       "concept": "Pointers",
-      "bloom_level": "Understand",
+      "learning_area": "Programming Languages",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -4690,15 +4443,14 @@
         "C": "A loop iterator",
         "D": "A function parameter"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "A pointer holds the memory address of another variable, enabling direct memory manipulation."
     },
     {
-      "id": "PL_038",
-      "subject": "Programming Languages",
-      "topic": "Concurrency",
+      "question_id": "PL_038",
       "concept": "Mutex",
-      "bloom_level": "Apply",
+      "learning_area": "Programming Languages",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -4711,15 +4463,14 @@
         "C": "Creating new threads",
         "D": "Measuring thread speed"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Mutex (mutual exclusion lock) prevents race conditions by allowing only one thread in a critical section."
     },
     {
-      "id": "PL_039",
-      "subject": "Programming Languages",
-      "topic": "Variables and Types",
+      "question_id": "PL_039",
       "concept": "Type Inference",
-      "bloom_level": "Understand",
+      "learning_area": "Programming Languages",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -4732,15 +4483,14 @@
         "C": "Manual type annotation",
         "D": "Dynamic casting"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Type inference: compiler deduces types (e.g., var/val in Kotlin, auto in C++) without explicit annotation."
     },
     {
-      "id": "PL_040",
-      "subject": "Programming Languages",
-      "topic": "Programming Languages",
+      "question_id": "PL_040",
       "concept": "Scripting Languages",
-      "bloom_level": "Understand",
+      "learning_area": "Programming Languages",
+      "bloom_level": 2,
       "knowledge_type": "Factual",
       "difficulty": "easy",
       "irt_a": 0.9,
@@ -4753,15 +4503,14 @@
         "C": "Python",
         "D": "Assembly"
       },
-      "correct_answer": "C",
+      "correct_option": "C",
       "explanation": "Python is an interpreted scripting language; C++ and Java are compiled."
     },
     {
-      "id": "PL_041",
-      "subject": "Programming Languages",
-      "topic": "OOP Concepts",
+      "question_id": "PL_041",
       "concept": "Composition over Inheritance",
-      "bloom_level": "Evaluate",
+      "learning_area": "Programming Languages",
+      "bloom_level": 5,
       "knowledge_type": "Metacognitive",
       "difficulty": "hard",
       "irt_a": 1.6,
@@ -4774,15 +4523,14 @@
         "C": "Composition is faster",
         "D": "Inheritance is deprecated"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Composition combines behaviors flexibly; deep inheritance creates rigid, brittle hierarchies."
     },
     {
-      "id": "PL_042",
-      "subject": "Programming Languages",
-      "topic": "Control Structures",
+      "question_id": "PL_042",
       "concept": "Generators",
-      "bloom_level": "Understand",
+      "learning_area": "Programming Languages",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -4795,15 +4543,14 @@
         "C": "A class that creates objects",
         "D": "A type of loop"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Generators use yield to produce values on-demand, enabling memory-efficient iteration over large sequences."
     },
     {
-      "id": "PL_043",
-      "subject": "Programming Languages",
-      "topic": "Functional Programming",
+      "question_id": "PL_043",
       "concept": "Monads",
-      "bloom_level": "Analyze",
+      "learning_area": "Programming Languages",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.7,
@@ -4816,15 +4563,14 @@
         "C": "Replace all loops",
         "D": "Optimize memory"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Monads wrap values with context (e.g., Maybe, IO) to chain effectful computations while maintaining purity."
     },
     {
-      "id": "PL_044",
-      "subject": "Programming Languages",
-      "topic": "Programming Languages",
+      "question_id": "PL_044",
       "concept": "Regular Expressions",
-      "bloom_level": "Apply",
+      "learning_area": "Programming Languages",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.3,
@@ -4837,15 +4583,14 @@
         "C": "Database querying",
         "D": "Memory allocation"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Regular expressions define search patterns for string matching, validation, and extraction."
     },
     {
-      "id": "PL_045",
-      "subject": "Programming Languages",
-      "topic": "Variables and Types",
+      "question_id": "PL_045",
       "concept": "Pass by Value vs Reference",
-      "bloom_level": "Analyze",
+      "learning_area": "Programming Languages",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -4858,15 +4603,14 @@
         "C": "Causes a compile error",
         "D": "Deletes the original variable"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Pass-by-value copies the value; changes to the copy don't affect the original."
     },
     {
-      "id": "PL_046",
-      "subject": "Programming Languages",
-      "topic": "Programming Languages",
+      "question_id": "PL_046",
       "concept": "Syntax vs Semantics",
-      "bloom_level": "Understand",
+      "learning_area": "Programming Languages",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -4879,15 +4623,14 @@
         "C": "Semantics is the grammar rules",
         "D": "Syntax defines runtime behavior"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Syntax: rules for valid code structure. Semantics: what the code means and does when executed."
     },
     {
-      "id": "PL_047",
-      "subject": "Programming Languages",
-      "topic": "Concurrency",
+      "question_id": "PL_047",
       "concept": "Async Await",
-      "bloom_level": "Apply",
+      "learning_area": "Programming Languages",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -4900,15 +4643,14 @@
         "C": "Memory management",
         "D": "Type checking"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "async/await makes async code readable and maintainable by flattening promise chains."
     },
     {
-      "id": "PL_048",
-      "subject": "Programming Languages",
-      "topic": "OOP Concepts",
+      "question_id": "PL_048",
       "concept": "SOLID - Open Closed",
-      "bloom_level": "Analyze",
+      "learning_area": "Programming Languages",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -4921,15 +4663,14 @@
         "C": "Open for testing, closed for deployment",
         "D": "Open-source only"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "OCP: extend behavior by adding new code (open for extension), not by changing existing code (closed for modification)."
     },
     {
-      "id": "PL_049",
-      "subject": "Programming Languages",
-      "topic": "Variables and Types",
+      "question_id": "PL_049",
       "concept": "Weak vs Strong Typing",
-      "bloom_level": "Understand",
+      "learning_area": "Programming Languages",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -4942,15 +4683,14 @@
         "C": "Returns null",
         "D": "Compilation fails"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Weakly typed languages coerce types implicitly; JavaScript gives '53', PHP gives 8 depending on context."
     },
     {
-      "id": "PL_050",
-      "subject": "Programming Languages",
-      "topic": "Functional Programming",
+      "question_id": "PL_050",
       "concept": "Lazy Evaluation",
-      "bloom_level": "Evaluate",
+      "learning_area": "Programming Languages",
+      "bloom_level": 5,
       "knowledge_type": "Metacognitive",
       "difficulty": "hard",
       "irt_a": 1.6,
@@ -4963,15 +4703,14 @@
         "C": "Eliminates recursion",
         "D": "Forces strict ordering of operations"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Lazy evaluation computes values only when needed, enabling infinite lists and avoiding unnecessary computation."
     },
     {
-      "id": "DB_036",
-      "subject": "Database Systems",
-      "topic": "SQL Basics",
+      "question_id": "DB_036",
       "concept": "HAVING Clause",
-      "bloom_level": "Apply",
+      "learning_area": "Database Systems",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -4984,15 +4723,14 @@
         "C": "HAVING is faster",
         "D": "WHERE only works with numbers"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "WHERE: pre-aggregation row filter. HAVING: post-aggregation group filter."
     },
     {
-      "id": "DB_037",
-      "subject": "Database Systems",
-      "topic": "SQL Basics",
+      "question_id": "DB_037",
       "concept": "UNION vs UNION ALL",
-      "bloom_level": "Understand",
+      "learning_area": "Database Systems",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -5005,15 +4743,14 @@
         "C": "UNION is faster",
         "D": "They are identical"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "UNION deduplicates results; UNION ALL retains all rows including duplicates, and is faster."
     },
     {
-      "id": "DB_038",
-      "subject": "Database Systems",
-      "topic": "Indexing",
+      "question_id": "DB_038",
       "concept": "Clustered vs Non-Clustered",
-      "bloom_level": "Analyze",
+      "learning_area": "Database Systems",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -5026,15 +4763,14 @@
         "C": "Non-clustered uses less space",
         "D": "They are implemented the same way"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Clustered index dictates physical row order (one per table). Non-clustered: separate structure with pointers to rows."
     },
     {
-      "id": "DB_039",
-      "subject": "Database Systems",
-      "topic": "Transactions",
+      "question_id": "DB_039",
       "concept": "Two-Phase Commit",
-      "bloom_level": "Understand",
+      "learning_area": "Database Systems",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -5047,15 +4783,14 @@
         "C": "Data is written twice for redundancy",
         "D": "Two indexes are created"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "2PC coordinates distributed transactions: prepare phase then commit/rollback phase across all nodes."
     },
     {
-      "id": "DB_040",
-      "subject": "Database Systems",
-      "topic": "Query Optimization",
+      "question_id": "DB_040",
       "concept": "Query Hints",
-      "bloom_level": "Evaluate",
+      "learning_area": "Database Systems",
+      "bloom_level": 5,
       "knowledge_type": "Metacognitive",
       "difficulty": "hard",
       "irt_a": 1.6,
@@ -5068,15 +4803,14 @@
         "C": "Never",
         "D": "When queries take over 1 second"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Query hints should be a last resort; they can become stale as data changes and inhibit optimizer improvements."
     },
     {
-      "id": "DB_041",
-      "subject": "Database Systems",
-      "topic": "Relational Model",
+      "question_id": "DB_041",
       "concept": "Functional Dependencies",
-      "bloom_level": "Analyze",
+      "learning_area": "Database Systems",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -5089,15 +4823,14 @@
         "C": "A and B are equal",
         "D": "B is the primary key"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "A \u2192 B: knowing A allows you to determine B uniquely \u2014 foundation of normalization theory."
     },
     {
-      "id": "DB_042",
-      "subject": "Database Systems",
-      "topic": "NoSQL",
+      "question_id": "DB_042",
       "concept": "Document vs Relational",
-      "bloom_level": "Evaluate",
+      "learning_area": "Database Systems",
+      "bloom_level": 5,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -5110,15 +4843,14 @@
         "C": "Better for financial data",
         "D": "Mandatory schema enforcement"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Document databases store nested data naturally (e.g., order with line items), avoiding multi-table JOINs."
     },
     {
-      "id": "DB_043",
-      "subject": "Database Systems",
-      "topic": "Database Security",
+      "question_id": "DB_043",
       "concept": "Views for Security",
-      "bloom_level": "Apply",
+      "learning_area": "Database Systems",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "medium",
       "irt_a": 1.3,
@@ -5131,15 +4863,14 @@
         "C": "Replace stored procedures",
         "D": "Speed up all queries"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Views present a filtered subset of data, hiding sensitive columns or rows from unauthorized users."
     },
     {
-      "id": "DB_044",
-      "subject": "Database Systems",
-      "topic": "Transactions",
+      "question_id": "DB_044",
       "concept": "Serializability",
-      "bloom_level": "Analyze",
+      "learning_area": "Database Systems",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -5152,15 +4883,14 @@
         "C": "Transactions are sorted alphabetically",
         "D": "All transactions have same priority"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Serializability: concurrent execution is equivalent to some sequential ordering \u2014 ensuring correctness."
     },
     {
-      "id": "DB_045",
-      "subject": "Database Systems",
-      "topic": "SQL Basics",
+      "question_id": "DB_045",
       "concept": "Window Functions",
-      "bloom_level": "Apply",
+      "learning_area": "Database Systems",
+      "bloom_level": 3,
       "knowledge_type": "Procedural",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -5173,15 +4903,14 @@
         "C": "Replace subqueries",
         "D": "Create new tables"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Window functions compute values over a window of rows while keeping individual rows in the result set."
     },
     {
-      "id": "DB_046",
-      "subject": "Database Systems",
-      "topic": "ER Diagrams",
+      "question_id": "DB_046",
       "concept": "Weak Entity",
-      "bloom_level": "Understand",
+      "learning_area": "Database Systems",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -5194,15 +4923,14 @@
         "C": "An entity with low cardinality",
         "D": "An entity without relationships"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Weak entities depend on a strong entity for identification; their key is partial without the owner's key."
     },
     {
-      "id": "DB_047",
-      "subject": "Database Systems",
-      "topic": "Normalization",
+      "question_id": "DB_047",
       "concept": "Normalization Goals",
-      "bloom_level": "Evaluate",
+      "learning_area": "Database Systems",
+      "bloom_level": 5,
       "knowledge_type": "Metacognitive",
       "difficulty": "hard",
       "irt_a": 1.6,
@@ -5215,15 +4943,14 @@
         "C": "Reduce number of tables",
         "D": "Speed up all SELECT queries"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Normalization removes redundant data and prevents insert, update, and delete anomalies."
     },
     {
-      "id": "DB_048",
-      "subject": "Database Systems",
-      "topic": "Query Optimization",
+      "question_id": "DB_048",
       "concept": "Statistics",
-      "bloom_level": "Understand",
+      "learning_area": "Database Systems",
+      "bloom_level": 2,
       "knowledge_type": "Conceptual",
       "difficulty": "medium",
       "irt_a": 1.2,
@@ -5236,15 +4963,14 @@
         "C": "Delete duplicate records",
         "D": "Monitor user activity"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Statistics provide data distribution information, helping the optimizer estimate plan costs accurately."
     },
     {
-      "id": "DB_049",
-      "subject": "Database Systems",
-      "topic": "NoSQL",
+      "question_id": "DB_049",
       "concept": "Eventually Consistent",
-      "bloom_level": "Analyze",
+      "learning_area": "Database Systems",
+      "bloom_level": 4,
       "knowledge_type": "Conceptual",
       "difficulty": "hard",
       "irt_a": 1.5,
@@ -5257,15 +4983,14 @@
         "C": "Consistency is never guaranteed",
         "D": "Only one node stores data"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Eventual consistency: replicas may temporarily differ but will converge given sufficient time without new writes."
     },
     {
-      "id": "DB_050",
-      "subject": "Database Systems",
-      "topic": "Database Security",
+      "question_id": "DB_050",
       "concept": "Encryption",
-      "bloom_level": "Create",
+      "learning_area": "Database Systems",
+      "bloom_level": 6,
       "knowledge_type": "Metacognitive",
       "difficulty": "hard",
       "irt_a": 1.8,
@@ -5278,7 +5003,7 @@
         "C": "Only require password for admin",
         "D": "Store data in files instead of DB"
       },
-      "correct_answer": "B",
+      "correct_option": "B",
       "explanation": "Defense in depth: encryption at rest/transit, least privilege, audit trails, and SQL injection prevention."
     }
   ]
