@@ -1,21 +1,24 @@
 """
 Diagnostic Agent
 ================
+
 Agent 1 of 4 in the LangGraph pipeline.
 
 Responsibilities:
 - Parse raw student responses
 - Map each response to concept × Bloom level
 - Run 3PL IRT estimation per group
-- Identify knowledge gaps at the COGNITIVE LEVEL (Bloom's redesign)
-- Build and persist KnowledgeProfile
-- Log to MongoDB
+- Identify knowledge gaps at the cognitive level
+- Build KnowledgeProfile
+- Attach the profile to AgentState
 """
 
 from __future__ import annotations
-import uuid
+
 import time
-from datetime import datetime
+import uuid
+from typing import Any
+
 from loguru import logger
 
 from agents.state import AgentState
@@ -31,91 +34,397 @@ from core.config import settings
 class DiagnosticAgent:
     """
     Bloom's Taxonomy-aware Diagnostic Agent.
-    Replaces raw percentage scoring with per-concept, per-level IRT analysis.
+
+    Converts raw student answers into DiagnosticQuestion objects
+    and sends them to the Bloom's + 3PL IRT engine.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.engine = BloomsKnowledgeGapEngine(
             theta_min=settings.THETA_MIN,
             theta_max=settings.THETA_MAX,
         )
 
     async def run(self, state: AgentState) -> AgentState:
-        logger.info(f"[DiagnosticAgent] Starting for student {state.student_id} "
-                    f"(cycle {state.feedback_cycle})")
+        logger.info(
+            f"[DiagnosticAgent] Starting for student={state.student_id} "
+            f"(cycle={state.feedback_cycle})"
+        )
 
-        start = time.time()
+        start_time = time.time()
 
         try:
-            # ── Step 1: Parse raw responses into DiagnosticQuestion objects ──
-            questions = self._parse_responses(state.raw_responses)
+            raw_responses = state.raw_responses or []
 
-            if not questions:
-                state.errors.append("DiagnosticAgent: No valid responses to process.")
+            if not isinstance(raw_responses, list):
+                state.errors.append(
+                    "DiagnosticAgent: raw_responses must be a list."
+                )
                 return state
 
-            logger.info(f"[DiagnosticAgent] Parsed {len(questions)} questions "
-                        f"across {len(set(q.concept for q in questions))} concepts")
+            if not raw_responses:
+                state.errors.append(
+                    "DiagnosticAgent: No responses were submitted."
+                )
+                return state
 
-            # ── Step 2: Run Bloom's Gap Engine ──
-            diagnostic_id = str(uuid.uuid4())
-            elapsed       = time.time() - start
-
-            knowledge_profile = self.engine.analyse(
-                student_id     = state.student_id,
-                diagnostic_id  = diagnostic_id,
-                questions      = questions,
-                time_sec       = elapsed,
-                feedback_cycle = state.feedback_cycle,
+            logger.info(
+                f"[DiagnosticAgent] Received "
+                f"{len(raw_responses)} raw responses"
             )
 
-            state.knowledge_profile    = knowledge_profile
-            state.diagnostic_complete  = True
+            # ----------------------------------------------------------
+            # Parse responses
+            # ----------------------------------------------------------
 
-            # ── Step 3: Log summary ──
+            questions = self._parse_responses(raw_responses)
+
+            if not questions:
+                state.errors.append(
+                    "DiagnosticAgent: No valid responses could be parsed."
+                )
+                return state
+
+            concepts = {q.concept for q in questions}
+            learning_areas = {
+                q.learning_area for q in questions
+            }
+
+            logger.info(
+                f"[DiagnosticAgent] Parsed {len(questions)} questions | "
+                f"concepts={len(concepts)} | "
+                f"learning_areas={len(learning_areas)}"
+            )
+
+            # ----------------------------------------------------------
+            # Run Bloom + IRT engine
+            # ----------------------------------------------------------
+
+            diagnostic_id = str(uuid.uuid4())
+
+            elapsed = time.time() - start_time
+
+            knowledge_profile = self.engine.analyse(
+                student_id=state.student_id,
+                diagnostic_id=diagnostic_id,
+                questions=questions,
+                time_sec=elapsed,
+                feedback_cycle=state.feedback_cycle,
+            )
+
+            # ----------------------------------------------------------
+            # Attach result to LangGraph state
+            # ----------------------------------------------------------
+
+            state.knowledge_profile = knowledge_profile
+            state.diagnostic_complete = True
+
+            # ----------------------------------------------------------
+            # Logging
+            # ----------------------------------------------------------
+
             self._log_summary(knowledge_profile)
 
-        except Exception as e:
-            logger.error(f"[DiagnosticAgent] Error: {e}")
-            state.errors.append(f"DiagnosticAgent: {str(e)}")
+            logger.success(
+                f"[DiagnosticAgent] Completed | "
+                f"student={state.student_id} | "
+                f"questions={len(questions)} | "
+                f"time={time.time() - start_time:.2f}s"
+            )
+
+        except Exception as exc:
+            logger.exception(
+                f"[DiagnosticAgent] Error for "
+                f"student={state.student_id}: {exc}"
+            )
+
+            state.errors.append(
+                f"DiagnosticAgent: {str(exc)}"
+            )
+
+            state.diagnostic_complete = False
 
         return state
 
-    def _parse_responses(self, raw: list[dict]) -> list[DiagnosticQuestion]:
-        """Convert raw API response dicts to typed DiagnosticQuestion objects."""
-        questions = []
-        for r in raw:
-            try:
-                bloom = BloomLevel(int(r.get("bloom_level", 1)))
-                params = IRTParameters(
-                    a=float(r.get("irt_a", 1.0)),
-                    b=float(r.get("irt_b", 0.0)),
-                    c=float(r.get("irt_c", 0.25)),
-                )
-                selected = r.get("selected_option", "")
-                correct  = r.get("correct_option",  "")
+    # ==============================================================
+    # RESPONSE PARSER
+    # ==============================================================
 
-                questions.append(DiagnosticQuestion(
-                    id             = str(r.get("question_id", uuid.uuid4())),
-                    concept        = r.get("concept",        "Unknown"),
-                    learning_area  = r.get("learning_area",  "General"),
-                    bloom_level    = bloom,
-                    irt_params     = params,
-                    selected_option = selected,
-                    correct_option  = correct,
-                    is_correct      = (selected == correct and selected != ""),
-                ))
-            except Exception as e:
-                logger.warning(f"[DiagnosticAgent] Skipping malformed response: {e}")
+    def _parse_responses(
+        self,
+        raw: list[dict[str, Any]],
+    ) -> list[DiagnosticQuestion]:
+        """
+        Convert raw API responses into DiagnosticQuestion objects.
+        """
+
+        questions: list[DiagnosticQuestion] = []
+
+        for index, response in enumerate(raw, start=1):
+
+            if not isinstance(response, dict):
+                logger.warning(
+                    f"[DiagnosticAgent] Skipping response #{index}: "
+                    f"expected dict, got "
+                    f"{type(response).__name__}"
+                )
+                continue
+
+            try:
+                # ------------------------------------------------------
+                # Question ID
+                # ------------------------------------------------------
+
+                question_id = str(
+                    response.get("question_id")
+                    or response.get("id")
+                    or uuid.uuid4()
+                )
+
+                # ------------------------------------------------------
+                # Concept
+                # ------------------------------------------------------
+
+                concept = str(
+                    response.get("concept")
+                    or response.get("topic")
+                    or "Unknown"
+                ).strip()
+
+                if not concept:
+                    concept = "Unknown"
+
+                # ------------------------------------------------------
+                # Learning area
+                # ------------------------------------------------------
+
+                learning_area = str(
+                    response.get("learning_area")
+                    or response.get("learningArea")
+                    or "General"
+                ).strip()
+
+                if not learning_area:
+                    learning_area = "General"
+
+                # ------------------------------------------------------
+                # Bloom level
+                # ------------------------------------------------------
+
+                bloom_value = response.get(
+                    "bloom_level",
+                    response.get("bloomLevel", 1),
+                )
+
+                bloom_level = self._parse_bloom_level(
+                    bloom_value
+                )
+
+                # ------------------------------------------------------
+                # IRT parameters
+                # ------------------------------------------------------
+
+                irt_params = IRTParameters(
+                    a=self._safe_float(
+                        response.get("irt_a"),
+                        1.0,
+                    ),
+                    b=self._safe_float(
+                        response.get("irt_b"),
+                        0.0,
+                    ),
+                    c=self._safe_float(
+                        response.get("irt_c"),
+                        0.20,
+                    ),
+                )
+
+                # ------------------------------------------------------
+                # Selected answer
+                # ------------------------------------------------------
+
+                selected_option = self._normalize_answer(
+                    response.get("selected_option")
+                )
+
+                # ------------------------------------------------------
+                # Correct answer
+                # ------------------------------------------------------
+
+                correct_option = self._normalize_answer(
+                    response.get("correct_option")
+                )
+
+                # ------------------------------------------------------
+                # Correctness
+                # ------------------------------------------------------
+
+                is_correct = (
+                    bool(selected_option)
+                    and bool(correct_option)
+                    and selected_option == correct_option
+                )
+
+                # ------------------------------------------------------
+                # Build DiagnosticQuestion
+                # ------------------------------------------------------
+
+                question = DiagnosticQuestion(
+                    id=question_id,
+                    concept=concept,
+                    learning_area=learning_area,
+                    bloom_level=bloom_level,
+                    irt_params=irt_params,
+                    selected_option=selected_option,
+                    correct_option=correct_option,
+                    is_correct=is_correct,
+                )
+
+                questions.append(question)
+
+            except Exception as exc:
+                logger.warning(
+                    f"[DiagnosticAgent] Skipping malformed "
+                    f"response #{index}: {exc}"
+                )
                 continue
 
         return questions
 
-    def _log_summary(self, profile) -> None:
-        logger.success(
-            f"[DiagnosticAgent] Complete | "
-            f"θ={profile.overall_theta:.3f} | "
-            f"Mastery={profile.overall_mastery:.1f}% | "
-            f"Critical gaps: {profile.critical_gaps} | "
-            f"Bloom summary: {profile.bloom_summary}"
+    # ==============================================================
+    # BLOOM LEVEL
+    # ==============================================================
+
+    @staticmethod
+    def _parse_bloom_level(value: Any) -> BloomLevel:
+        """
+        Supports:
+
+        1-6
+        "1"-"6"
+        Remember
+        Understand
+        Apply
+        Analyze
+        Evaluate
+        Create
+        """
+
+        if isinstance(value, BloomLevel):
+            return value
+
+        # Numeric value
+        try:
+            numeric_value = int(value)
+
+            if 1 <= numeric_value <= 6:
+                return BloomLevel(numeric_value)
+
+        except (TypeError, ValueError):
+            pass
+
+        # Text value
+        if isinstance(value, str):
+
+            normalized = value.strip().lower()
+
+            bloom_map = {
+                "remember": 1,
+                "understand": 2,
+                "apply": 3,
+                "analyze": 4,
+                "analyse": 4,
+                "evaluate": 5,
+                "create": 6,
+            }
+
+            if normalized in bloom_map:
+                return BloomLevel(
+                    bloom_map[normalized]
+                )
+
+        logger.warning(
+            f"[DiagnosticAgent] Invalid Bloom level "
+            f"'{value}'. Defaulting to Remember."
         )
+
+        return BloomLevel(1)
+
+    # ==============================================================
+    # ANSWER NORMALIZATION
+    # ==============================================================
+
+    @staticmethod
+    def _normalize_answer(value: Any) -> str:
+        """
+        Examples:
+
+        A   -> a
+        " B " -> b
+        None -> ""
+        """
+
+        if value is None:
+            return ""
+
+        return str(value).strip().lower()
+
+    # ==============================================================
+    # FLOAT CONVERSION
+    # ==============================================================
+
+    @staticmethod
+    def _safe_float(
+        value: Any,
+        default: float,
+    ) -> float:
+
+        try:
+            if value is None:
+                return default
+
+            return float(value)
+
+        except (TypeError, ValueError):
+            return default
+
+    # ==============================================================
+    # SUMMARY LOG
+    # ==============================================================
+
+    @staticmethod
+    def _log_summary(profile: Any) -> None:
+
+        try:
+            overall_theta = float(
+                getattr(profile, "overall_theta", 0.0)
+            )
+
+            overall_mastery = float(
+                getattr(profile, "overall_mastery", 0.0)
+            )
+
+            critical_gaps = getattr(
+                profile,
+                "critical_gaps",
+                [],
+            )
+
+            bloom_summary = getattr(
+                profile,
+                "bloom_summary",
+                {},
+            )
+
+            logger.success(
+                f"[DiagnosticAgent] Complete | "
+                f"theta={overall_theta:.3f} | "
+                f"Mastery={overall_mastery:.1f}% | "
+                f"Critical gaps={critical_gaps} | "
+                f"Bloom summary={bloom_summary}"
+            )
+
+        except Exception as exc:
+            logger.warning(
+                f"[DiagnosticAgent] Could not log summary: {exc}"
+            )

@@ -100,7 +100,7 @@ class QuestionOut(BaseModel):
 
 class DiagnosticSubmitRequest(BaseModel):
     answers:     dict[str, str]             # { "question_id": "selected_option_id" }
-    confidences: Optional[dict[str, int]]   # { "question_id": 1-5 }
+    confidences: Optional[dict[str, int]] = None  # { "question_id": 1-5 }
     time_sec:    float = 0.0
 
 class BloomLevelResult(BaseModel):

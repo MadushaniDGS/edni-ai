@@ -10,8 +10,6 @@ Responsibilities:
 - Prioritise by gap severity AND cognitive level
 - Output structured StudyPlan
 """
-
-
 from __future__ import annotations
 import uuid
 import json
