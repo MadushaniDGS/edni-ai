@@ -24,6 +24,7 @@ from api.routes.routes import (
     modules_router,
     resources_router,
     mentor_router,
+    knowledge_profile_router,
 )
 
 
@@ -102,6 +103,7 @@ PREFIX = "/api/v1"
 app.include_router(auth_router,       prefix=PREFIX)
 app.include_router(user_router,       prefix=PREFIX)
 app.include_router(diagnostic_router, prefix=PREFIX)
+app.include_router(knowledge_profile_router,prefix=PREFIX)
 app.include_router(planner_router,    prefix=PREFIX)
 app.include_router(tasks_router,      prefix=PREFIX)
 app.include_router(notif_router,      prefix=PREFIX)

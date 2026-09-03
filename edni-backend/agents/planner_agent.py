@@ -1,411 +1,1556 @@
-"""
-Planner Agent
-=============
-Agent 2 of 4 in the LangGraph pipeline.
-
-Responsibilities:
-- Read KnowledgeProfile from DiagnosticAgent
-- Generate a 16-week Bloom's Taxonomy-aware study plan
-- Apply Reflexion pattern (self-critique + revision)
-- Prioritise by gap severity AND cognitive level
-- Output structured StudyPlan
-"""
-from __future__ import annotations
-import uuid
 import json
+from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Optional, List, Dict, Any
 from loguru import logger
+import asyncio
+
 from langchain_groq import ChatGroq
 from langchain_core.messages import SystemMessage, HumanMessage
 
-from agents.state import AgentState, StudyPlan, StudyWeek
-from irt.blooms_gap_engine import (
-    KnowledgeProfile, ConceptGapProfile,
-    BloomLevel, BLOOM_LABELS, GapSeverity,
-)
 from core.config import settings
+from agents.state import AgentState
 
 
-# ─── Bloom Progression Strategy ───────────────────────────────────────────────
-# For each Bloom gap level, define which weeks to allocate remediation
-BLOOM_WEEK_STRATEGY = {
-    # If student gaps at Remember/Understand → address first (weeks 1-4)
-    BloomLevel.REMEMBER:   {"phase": "foundation", "week_range": (1, 4)},
-    BloomLevel.UNDERSTAND: {"phase": "foundation", "week_range": (1, 4)},
-    # Apply/Analyze gaps → mid-semester (weeks 5-10)
-    BloomLevel.APPLY:      {"phase": "application", "week_range": (5, 10)},
-    BloomLevel.ANALYZE:    {"phase": "application", "week_range": (5, 10)},
-    # Evaluate/Create gaps → advanced (weeks 11-16)
-    BloomLevel.EVALUATE:   {"phase": "advanced", "week_range": (11, 16)},
-    BloomLevel.CREATE:     {"phase": "advanced", "week_range": (11, 16)},
-}
+# ============================================================
+# DATA CLASSES
+# ============================================================
 
-prompt = """Generate a valid JSON study plan. 
-Return ONLY valid JSON with double quotes around all property names.
-No markdown, no code blocks, just pure JSON."""
+@dataclass
+class WeekPlan:
+    week_number: int
+    theme: str
+    concepts: List[str]
+    bloom_focus: List[str]
+    hours: float
+    tasks: List[Dict[str, Any]]
+    priority: str
+    milestone: str
+
+
+@dataclass
+class StudyPlan:
+    plan_id: str
+    student_id: str
+    weeks: List[WeekPlan]
+    total_hours: float
+    version: int = 1
+    critique_history: List[str] = field(default_factory=list)
+
+
+# ============================================================
+# PLANNER AGENT
+# ============================================================
 
 class PlannerAgent:
     """
-    Generates a personalised 16-week study plan using:
-    1. Bloom's Taxonomy gap prioritisation
-    2. LLM (Llama-3-70B via Groq) for natural language plan generation
-    3. Reflexion self-critique loop for quality assurance
+    Personalized 16-week study-plan generator.
+
+    Uses:
+    - Knowledge profile
+    - Bloom's Taxonomy
+    - Critical knowledge gaps
+    - Learning-area mastery
+    - LLM self-critique/refinement
     """
 
-    def __init__(self):
+    def __init__(
+        self,
+        groq_api_key: Optional[str] = None,
+        model_name: Optional[str] = None,
+        temperature: float = 0.2,
+    ):
+        """Initialize PlannerAgent with Groq LLM."""
+
+        # ----------------------------------------------------
+        # API KEY
+        # ----------------------------------------------------
+        api_key = groq_api_key or settings.GROQ_API_KEY
+
+        if not api_key:
+            raise ValueError(
+                "GROQ_API_KEY not found. "
+                "Check your .env and core/config.py."
+            )
+
+        # ----------------------------------------------------
+        # MODEL
+        # ----------------------------------------------------
+        model_name = model_name or settings.GROQ_MODEL
+
+        if not model_name:
+            model_name = "openai/gpt-oss-120b"
+
+        # ----------------------------------------------------
+        # LLM
+        # ----------------------------------------------------
         self.llm = ChatGroq(
-            api_key     = settings.GROQ_API_KEY,
-            model_name  = settings.GROQ_MODEL,
-            temperature = settings.LLM_TEMPERATURE,
-            max_tokens  = settings.LLM_MAX_TOKENS,
+            api_key=api_key,
+            model_name=model_name,
+            temperature=temperature,
+            max_tokens=8192,
         )
+
+        self.model_name = model_name
+
+        logger.info(
+            f"[PlannerAgent] Initialized with model: {model_name}"
+        )
+
+    # ========================================================
+    # MAIN RUN
+    # ========================================================
 
     async def run(self, state: AgentState) -> AgentState:
-        if not state.knowledge_profile:
-            state.errors.append("PlannerAgent: No knowledge profile available.")
-            return state
 
-        logger.info(f"[PlannerAgent] Generating 16-week plan for student {state.student_id}")
+        logger.info(
+            f"[PlannerAgent] Starting for "
+            f"student={state.student_id} "
+            f"| mastery={state.knowledge_profile.overall_mastery:.1f}%"
+        )
 
         try:
+
             profile = state.knowledge_profile
 
-            # ── Step 1: Structural plan skeleton from gap analysis ──
-            skeleton = self._build_skeleton(profile)
+            if not profile:
+                logger.error(
+                    "[PlannerAgent] No knowledge profile provided"
+                )
+                return state
 
-            # ── Step 2: LLM enrichment ──
-            enriched = await self._llm_enrich(skeleton, profile)
+            # ------------------------------------------------
+            # INITIAL PLAN
+            # ------------------------------------------------
 
-            # ── Step 3: Reflexion self-critique loop ──
-            for round_num in range(settings.REFLEXION_ROUNDS):
-                critique  = await self._critique(enriched, profile)
-                enriched  = await self._revise(enriched, critique, profile)
-                state.plan_critique = critique
-                logger.info(f"[PlannerAgent] Reflexion round {round_num + 1} complete")
+            logger.info(
+                "[PlannerAgent] Generating initial 16-week plan..."
+            )
 
-            # ── Step 4: Build final StudyPlan ──
-            state.study_plan   = enriched
-            state.plan_complete = True
-            logger.success(f"[PlannerAgent] Plan generated: {settings.SEMESTER_WEEKS} weeks, "
-                           f"{enriched.total_hours:.1f}h total")
+            initial_plan = await self._generate_initial_plan(
+                profile
+            )
+
+            # ------------------------------------------------
+            # REFLEXION
+            # ------------------------------------------------
+
+            logger.info(
+                "[PlannerAgent] Running self-critique loop..."
+            )
+
+            refined_plan = await self._reflexion_loop(
+                initial_plan,
+                profile
+            )
+
+            # ------------------------------------------------
+            # BUILD STUDY PLAN
+            # ------------------------------------------------
+
+            study_plan = self._build_study_plan(
+                refined_plan,
+                state.student_id
+            )
+
+            state.study_plan = study_plan
+
+            state.plan_critique = refined_plan.get(
+                "critique",
+                ""
+            )
+
+            logger.success(
+                f"[PlannerAgent] Complete | "
+                f"weeks={len(study_plan.weeks)} | "
+                f"hours={study_plan.total_hours} | "
+                f"critique_iterations="
+                f"{len(refined_plan.get('critique_history', []))}"
+            )
+
+            return state
 
         except Exception as e:
-            logger.error(f"[PlannerAgent] Error: {e}")
-            state.errors.append(f"PlannerAgent: {str(e)}")
-            # Fallback to structural plan without LLM
-            state.study_plan   = self._build_skeleton(state.knowledge_profile)
-            state.plan_complete = True
 
-        return state
+            logger.exception(
+                f"[PlannerAgent] Failed: {e}"
+            )
 
-    def _build_skeleton(self, profile: KnowledgeProfile) -> StudyPlan:
-        """
-        Build a deterministic 16-week skeleton based on:
-        1. Gap severity ordering
-        2. Bloom's Taxonomy level progression (foundation → application → advanced)
-        3. Prerequisite gap prioritisation
-        """
-        weeks: list[StudyWeek] = []
+            state.errors.append(
+                f"Planner failed: {str(e)}"
+            )
 
-        # Separate concepts by phase
-        foundation_concepts  = []   # CRITICAL gaps + prerequisite gaps
-        application_concepts = []   # HIGH/MEDIUM gaps at Apply/Analyze
-        advanced_concepts    = []   # MEDIUM/LOW gaps at Evaluate/Create
-        review_concepts      = []   # LOW/NONE gaps — maintenance
+            return state
 
-        for cp in profile.concepts:
-            if cp.prerequisite_gap or cp.highest_gap_severity == GapSeverity.CRITICAL:
-                foundation_concepts.append(cp)
-            elif cp.highest_gap_severity in [GapSeverity.HIGH, GapSeverity.MEDIUM]:
-                # Determine by which Bloom level has the worst gap
-                worst_level = cp.highest_gap_level
-                if worst_level and worst_level in [BloomLevel.APPLY, BloomLevel.ANALYZE]:
-                    application_concepts.append(cp)
-                else:
-                    advanced_concepts.append(cp)
-            else:
-                review_concepts.append(cp)
+    # ========================================================
+    # GENERATE INITIAL PLAN
+    # ========================================================
 
-        # ── Weeks 1-4: Foundation phase ──
-        weeks += self._build_phase_weeks(
-            concepts    = foundation_concepts,
-            week_start  = 1,
-            week_end    = 4,
-            phase_name  = "Foundation",
-            bloom_focus = [BloomLevel.REMEMBER, BloomLevel.UNDERSTAND],
-            theme_prefix = "Strengthen Foundations",
-        )
-
-        # ── Weeks 5-10: Application phase ──
-        weeks += self._build_phase_weeks(
-            concepts    = application_concepts + foundation_concepts,  # revisit
-            week_start  = 5,
-            week_end    = 10,
-            phase_name  = "Application",
-            bloom_focus = [BloomLevel.APPLY, BloomLevel.ANALYZE],
-            theme_prefix = "Build Application Skills",
-        )
-
-        # ── Weeks 11-14: Advanced phase ──
-        weeks += self._build_phase_weeks(
-            concepts    = advanced_concepts + application_concepts,
-            week_start  = 11,
-            week_end    = 14,
-            phase_name  = "Advanced",
-            bloom_focus = [BloomLevel.EVALUATE, BloomLevel.CREATE],
-            theme_prefix = "Master Higher-Order Thinking",
-        )
-
-        # ── Weeks 15-16: Consolidation and assessment ──
-        weeks.append(StudyWeek(
-            week_number = 15,
-            theme       = "Consolidation & Practice Exams",
-            concepts    = [cp.concept for cp in profile.concepts[:5]],
-            bloom_focus = [int(l) for l in BloomLevel],
-            hours       = 12.0,
-            tasks       = [{"activity": "Mock diagnostic assessment", "bloom_level": "All", "hours": 3},
-                           {"activity": "Review critical gap concepts", "bloom_level": "Analyze", "hours": 5},
-                           {"activity": "Peer study group", "bloom_level": "Evaluate", "hours": 4}],
-            priority    = "HIGH",
-            milestone   = "Mid-consolidation checkpoint",
-        ))
-        weeks.append(StudyWeek(
-            week_number = 16,
-            theme       = "Final Review & Mastery Verification",
-            concepts    = profile.critical_gaps or [cp.concept for cp in profile.concepts[:3]],
-            bloom_focus = [int(l) for l in BloomLevel],
-            hours       = 10.0,
-            tasks       = [{"activity": "Final diagnostic re-assessment", "bloom_level": "All", "hours": 2},
-                           {"activity": "Portfolio/project completion", "bloom_level": "Create", "hours": 5},
-                           {"activity": "Reflective learning journal", "bloom_level": "Evaluate", "hours": 3}],
-            priority    = "HIGH",
-            milestone   = "Semester mastery verification",
-        ))
-
-        total_hours = sum(w.hours for w in weeks)
-
-        return StudyPlan(
-            student_id  = profile.student_id,
-            plan_id     = str(uuid.uuid4()),
-            created_at  = datetime.utcnow().isoformat(),
-            weeks       = weeks,
-            total_hours = total_hours,
-            version     = 1,
-        )
-
-    def _build_phase_weeks(
+    async def _generate_initial_plan(
         self,
-        concepts:    list[ConceptGapProfile],
-        week_start:  int,
-        week_end:    int,
-        phase_name:  str,
-        bloom_focus: list[BloomLevel],
-        theme_prefix: str,
-    ) -> list[StudyWeek]:
-        """Distribute concepts across a phase's weeks."""
-        weeks = []
-        total_weeks = week_end - week_start + 1
+        profile
+    ) -> Dict[str, Any]:
 
-        if not concepts:
-            # Fill with general practice if no specific gaps
-            for wk in range(week_start, week_end + 1):
-                weeks.append(StudyWeek(
-                    week_number = wk,
-                    theme       = f"General Practice — {phase_name}",
-                    concepts    = [],
-                    bloom_focus = [int(l) for l in bloom_focus],
-                    hours       = 8.0,
-                    tasks       = [{"activity": "Practice exercises", "bloom_level": BLOOM_LABELS[bloom_focus[0]], "hours": 4},
-                                   {"activity": "Review notes", "bloom_level": BLOOM_LABELS[bloom_focus[0]], "hours": 2},
-                                   {"activity": "Quiz preparation", "bloom_level": BLOOM_LABELS[bloom_focus[-1]], "hours": 2}],
-                    priority    = "LOW",
-                ))
-            return weeks
+        context = self._build_profile_context(profile)
 
-        # Distribute concepts evenly across weeks
-        chunk_size = max(1, len(concepts) // total_weeks)
-        for i, wk in enumerate(range(week_start, week_end + 1)):
-            chunk_start = i * chunk_size
-            chunk_end   = chunk_start + chunk_size
-            week_concepts = concepts[chunk_start:chunk_end]
+        # ----------------------------------------------------
+        # SYSTEM PROMPT
+        # ----------------------------------------------------
 
-            if not week_concepts and concepts:
-                week_concepts = [concepts[-1]]
+        system_prompt = """
+You are an expert educational planner.
 
-            severity  = week_concepts[0].highest_gap_severity if week_concepts else "LOW"
-            hours     = 14.0 if severity == GapSeverity.CRITICAL else 10.0 if severity == GapSeverity.HIGH else 8.0
+Your task is to create a personalized 16-week academic
+study plan using the student's diagnostic knowledge profile.
 
-            tasks = []
-            for cp in week_concepts:
-                for bloom in bloom_focus:
-                    if int(bloom) in cp.bloom_results:
-                        result = cp.bloom_results[int(bloom)]
-                        if result.gap_severity in [GapSeverity.CRITICAL, GapSeverity.HIGH, GapSeverity.MEDIUM]:
-                            tasks.append({
-                                "concept":       cp.concept,
-                                "learning_area": cp.learning_area,
-                                "bloom_level":   BLOOM_LABELS[bloom],
-                                "activity":      f"{result.recommended_verbs[0].capitalize()} {cp.concept}",
-                                "resource_type": "Video" if bloom in [BloomLevel.REMEMBER, BloomLevel.UNDERSTAND] else "Exercise",
-                                "hours":         round(hours / max(len(week_concepts), 1), 1),
-                                "gap_severity":  result.gap_severity,
-                            })
+The plan MUST:
 
-            weeks.append(StudyWeek(
-                week_number = wk,
-                theme       = f"{theme_prefix}: {', '.join(cp.concept for cp in week_concepts[:2])}",
-                concepts    = [cp.concept for cp in week_concepts],
-                bloom_focus = [int(l) for l in bloom_focus],
-                hours       = hours,
-                tasks       = tasks or [{"activity": f"Study {week_concepts[0].concept if week_concepts else 'topic'}", "hours": hours}],
-                priority    = severity if severity != GapSeverity.NONE else "LOW",
-            ))
+1. Address the student's critical knowledge gaps.
+2. Prioritize weak concepts before advanced concepts.
+3. Progress logically through Bloom's Taxonomy.
+4. Begin with foundational knowledge.
+5. Gradually move toward Apply, Analyze, Evaluate and Create.
+6. Respect prerequisites between concepts.
+7. Allocate realistic study hours.
+8. Never exceed 20 hours per week.
+9. Include concrete learning activities.
+10. Include milestones for every week.
+11. Cover all major weak learning areas.
+12. Create exactly 16 weeks.
 
-        return weeks
+For every week provide:
 
-    async def _llm_enrich(self, skeleton: StudyPlan, profile: KnowledgeProfile) -> StudyPlan:
-        """Use LLM to enrich task descriptions with natural language guidance."""
-        profile_summary = self._profile_to_text(profile)
+- week_number
+- theme
+- concepts
+- bloom_focus
+- hours
+- tasks
+- priority
+- milestone
 
-        prompt = f"""You are an expert academic planner for undergraduate Software Engineering students.
+Every task MUST contain:
 
-Student Knowledge Profile:
-{profile_summary}
+- activity
+- concept
+- learning_area
+- bloom_level
+- hours
 
-I have a 16-week study plan skeleton. Enrich each week's tasks with:
-1. Specific, actionable study activities aligned to the Bloom's level
-2. Recommended resource types (video lectures, practice problems, articles)
-3. Estimated time allocations
-4. Clear learning objectives using Bloom's action verbs
+Bloom levels:
 
-Return ONLY valid JSON matching this structure:
+1 = Remember
+2 = Understand
+3 = Apply
+4 = Analyze
+5 = Evaluate
+6 = Create
+
+IMPORTANT OUTPUT RULE:
+
+Return ONLY a valid JSON object.
+
+Do NOT return Markdown.
+
+Do NOT use ```json.
+
+Do NOT add explanations.
+
+Do NOT add text before the JSON.
+
+Do NOT add text after the JSON.
+"""
+
+        # ----------------------------------------------------
+        # USER PROMPT
+        # ----------------------------------------------------
+
+        user_prompt = f"""
+Create a personalized 16-week study plan for this student.
+
+STUDENT KNOWLEDGE PROFILE
+=========================
+
+{context}
+
+The plan must contain exactly 16 weeks.
+
+Return this JSON structure:
+
 {{
   "weeks": [
     {{
       "week_number": 1,
-      "theme": "...",
-      "enriched_tasks": [
+      "theme": "Foundation of the weakest concepts",
+      "concepts": [
+        "Concept 1",
+        "Concept 2"
+      ],
+      "bloom_focus": [
+        "Remember",
+        "Understand"
+      ],
+      "hours": 15,
+      "tasks": [
         {{
-          "concept": "...",
-          "bloom_level": "Remember|Understand|Apply|Analyze|Evaluate|Create",
-          "activity": "specific activity description",
-          "resource_type": "Video|Article|Book|Exercise|Project",
-          "learning_objective": "By end of this task, student will be able to...",
-          "hours": 2.5
+          "activity": "Study the fundamental concepts",
+          "concept": "Concept 1",
+          "learning_area": "Learning Area",
+          "bloom_level": 1,
+          "hours": 2
+        }},
+        {{
+          "activity": "Complete practice exercises",
+          "concept": "Concept 1",
+          "learning_area": "Learning Area",
+          "bloom_level": 2,
+          "hours": 3
         }}
       ],
-      "weekly_goal": "One sentence describing the week's focus",
-      "success_metric": "How student knows they've mastered this week"
+      "priority": "HIGH",
+      "milestone": "Understand the fundamental concepts"
     }}
-  ]
+  ],
+  "total_hours": 240
 }}
 
-Student's critical gaps: {profile.critical_gaps}
-Overall mastery: {profile.overall_mastery:.1f}%"""
+IMPORTANT:
+
+- weeks MUST contain exactly 16 items.
+- Every week must contain at least one task.
+- Every task must have all required fields.
+- Total weekly hours should be realistic.
+- Maximum weekly hours = 20.
+- Critical gaps must be addressed.
+"""
 
         try:
-            response = await self.llm.ainvoke([
-                SystemMessage(content="You are an expert educational planner. Return only valid JSON."),
-                HumanMessage(content=prompt),
-            ])
 
-            enriched_data = json.loads(response.content)
-            # Merge enriched data back into skeleton weeks
-            enriched_map = {w["week_number"]: w for w in enriched_data.get("weeks", [])}
-            for week in skeleton.weeks:
-                if week.week_number in enriched_map:
-                    enriched = enriched_map[week.week_number]
-                    week.theme = enriched.get("theme", week.theme)
-                    if enriched.get("enriched_tasks"):
-                        week.tasks = enriched["enriched_tasks"]
+            messages = [
+                SystemMessage(
+                    content=system_prompt
+                ),
+                HumanMessage(
+                    content=user_prompt
+                ),
+            ]
+
+            logger.info(
+                "[PlannerAgent] Sending request to Groq..."
+            )
+
+            # ------------------------------------------------
+            # LLM CALL
+            # ------------------------------------------------
+
+            response = await asyncio.to_thread(
+                self.llm.invoke,
+                messages
+            )
+
+            # ------------------------------------------------
+            # DEBUG RESPONSE
+            # ------------------------------------------------
+
+            logger.info(
+                "[PlannerAgent] LLM response received"
+            )
+
+            logger.info(
+                f"[PlannerAgent] Response type: "
+                f"{type(response).__name__}"
+            )
+
+            logger.info(
+                f"[PlannerAgent] Content type: "
+                f"{type(response.content).__name__}"
+            )
+
+            logger.info(
+                f"[PlannerAgent] Response metadata: "
+                f"{getattr(response, 'response_metadata', {})}"
+            )
+
+            # ------------------------------------------------
+            # EXTRACT CONTENT
+            # ------------------------------------------------
+
+            content = response.content
+
+            if isinstance(content, str):
+
+                response_text = content.strip()
+
+            elif isinstance(content, list):
+
+                parts = []
+
+                for block in content:
+
+                    if isinstance(block, dict):
+
+                        text = block.get("text")
+
+                        if text:
+                            parts.append(str(text))
+
+                    elif hasattr(block, "text"):
+
+                        text = getattr(
+                            block,
+                            "text",
+                            None
+                        )
+
+                        if text:
+                            parts.append(str(text))
+
+                    else:
+
+                        parts.append(
+                            str(block)
+                        )
+
+                response_text = "".join(parts).strip()
+
+            else:
+
+                response_text = str(content).strip()
+
+            # ------------------------------------------------
+            # RESPONSE LENGTH
+            # ------------------------------------------------
+
+            logger.info(
+                f"[PlannerAgent] Response length: "
+                f"{len(response_text)} characters"
+            )
+
+            # ------------------------------------------------
+            # EMPTY RESPONSE
+            # ------------------------------------------------
+
+            if not response_text:
+
+                logger.error(
+                    "[PlannerAgent] Groq returned "
+                    "an EMPTY response."
+                )
+
+                logger.error(
+                    f"[PlannerAgent] Full response object: "
+                    f"{response}"
+                )
+
+                raise ValueError(
+                    "Groq returned an empty response. "
+                    "The model may have stopped before "
+                    "generating content."
+                )
+
+            # ------------------------------------------------
+            # SHOW FIRST PART FOR DEBUGGING
+            # ------------------------------------------------
+
+            logger.info(
+                "[PlannerAgent] Response preview:\n"
+                + response_text[:3000]
+            )
+
+            # ------------------------------------------------
+            # PARSE JSON
+            # ------------------------------------------------
+
+            plan = self._parse_plan_json(
+                response_text
+            )
+
+            # ------------------------------------------------
+            # VALIDATE
+            # ------------------------------------------------
+
+            if not isinstance(plan, dict):
+
+                raise ValueError(
+                    "Planner returned invalid JSON object."
+                )
+
+            weeks = plan.get("weeks")
+
+            if not weeks:
+
+                raise ValueError(
+                    "LLM returned JSON but "
+                    "no study plan weeks were found."
+                )
+
+            if not isinstance(weeks, list):
+
+                raise ValueError(
+                    "'weeks' must be a list."
+                )
+
+            logger.info(
+                f"[PlannerAgent] Generated initial plan "
+                f"with {len(weeks)} weeks"
+            )
+
+            return plan
 
         except Exception as e:
-            logger.warning(f"[PlannerAgent] LLM enrichment failed: {e} — using skeleton")
 
-        return skeleton
+            logger.error(
+                f"[PlannerAgent] Failed to generate plan: {e}"
+            )
 
-    async def _critique(self, plan: StudyPlan, profile: KnowledgeProfile) -> str:
-        """Reflexion Step 1: Self-critique of the generated plan."""
-        plan_summary = "\n".join(
-            f"Week {w.week_number}: {w.theme} ({w.hours}h, priority={w.priority})"
-            for w in plan.weeks
+            raise
+
+    # ========================================================
+    # REFLEXION LOOP
+    # ========================================================
+
+    async def _reflexion_loop(
+        self,
+        plan: Dict[str, Any],
+        profile
+    ) -> Dict[str, Any]:
+
+        critique_history = []
+
+        current_plan = plan
+
+        # ----------------------------------------------------
+        # TWO ITERATIONS
+        # ----------------------------------------------------
+
+        for iteration in range(2):
+
+            logger.info(
+                f"[PlannerAgent] "
+                f"Critique iteration {iteration + 1}/2"
+            )
+
+            critique = await self._critique_plan(
+                current_plan,
+                profile
+            )
+
+            critique_history.append(
+                critique.get("summary", "")
+            )
+
+            # ------------------------------------------------
+            # CHECK IMPROVEMENT
+            # ------------------------------------------------
+
+            needs_improvement = critique.get(
+                "needs_improvement",
+                False
+            )
+
+            if not needs_improvement:
+
+                logger.info(
+                    "[PlannerAgent] "
+                    "Plan passed self-critique."
+                )
+
+                break
+
+            # ------------------------------------------------
+            # REFINE
+            # ------------------------------------------------
+
+            logger.info(
+                "[PlannerAgent] Refining study plan..."
+            )
+
+            current_plan = await self._refine_plan(
+                current_plan,
+                critique,
+                profile
+            )
+
+        # ----------------------------------------------------
+        # FINAL CRITIQUE
+        # ----------------------------------------------------
+
+        final_critique = await self._generate_final_critique(
+            current_plan,
+            profile
         )
 
-        prompt = f"""Review this 16-week study plan for a Software Engineering student.
+        current_plan["critique"] = final_critique
 
-Student Profile:
-- Overall mastery: {profile.overall_mastery:.1f}%
-- Critical gaps: {profile.critical_gaps}
-- Bloom's Taxonomy summary: {profile.bloom_summary}
+        current_plan["critique_history"] = (
+            critique_history
+        )
 
-Generated Plan:
-{plan_summary}
+        return current_plan
 
-Critique the plan across these dimensions:
-1. Gap prioritisation — are critical gaps addressed early enough?
-2. Bloom's progression — does it follow Remember→Understand→Apply→Analyze→Evaluate→Create?
-3. Workload balance — are weekly hours realistic (max {settings.MAX_HOURS_PER_WEEK}h)?
-4. Coverage — are all identified gaps addressed across the 16 weeks?
-5. Prerequisite sequencing — are foundational concepts covered before advanced ones?
+    # ========================================================
+    # CRITIQUE PLAN
+    # ========================================================
 
-Be specific and concise. List exactly what should be changed."""
+    async def _critique_plan(
+        self,
+        plan: Dict[str, Any],
+        profile
+    ) -> Dict[str, Any]:
 
-        response = await self.llm.ainvoke([
-            SystemMessage(content="You are a critical educational planner reviewer."),
-            HumanMessage(content=prompt),
-        ])
-        return response.content
+        plan_json = json.dumps(
+            plan,
+            indent=2
+        )
 
-    async def _revise(self, plan: StudyPlan, critique: str, profile: KnowledgeProfile) -> StudyPlan:
-        """Reflexion Step 2: Revise plan based on critique."""
-        prompt = f"""Revise this 16-week study plan based on the critique below.
+        profile_context = self._build_profile_context(
+            profile
+        )
 
-Critique:
-{critique}
+        system_prompt = """
+You are an expert educational plan evaluator.
 
-Critical gaps to prioritise: {profile.critical_gaps}
-Max hours per week: {settings.MAX_HOURS_PER_WEEK}
+Evaluate the provided 16-week study plan.
 
-Return ONLY JSON with the revised week themes and hour allocations:
-{{
-  "revisions": [
-    {{ "week_number": 1, "theme": "...", "hours": 10.0, "priority": "HIGH" }}
-  ]
-}}"""
+Check:
+
+1. Critical knowledge gaps are addressed.
+2. Weak learning areas receive sufficient attention.
+3. Bloom progression is logical.
+4. Prerequisites are respected.
+5. Weekly workload is realistic.
+6. No week exceeds 20 hours.
+7. Tasks are concrete and actionable.
+8. Every task contains required metadata.
+9. The plan progresses from foundation to advanced skills.
+10. The plan contains exactly 16 weeks.
+
+Return ONLY valid JSON.
+
+Required format:
+
+{
+  "strengths": [],
+  "weaknesses": [],
+  "needs_improvement": true,
+  "suggestions": [],
+  "summary": "..."
+}
+"""
+
+        user_prompt = f"""
+STUDENT PROFILE:
+
+{profile_context}
+
+CURRENT STUDY PLAN:
+
+{plan_json}
+
+Evaluate this plan.
+"""
 
         try:
-            response = await self.llm.ainvoke([
-                SystemMessage(content="You are an educational planner. Return only valid JSON."),
-                HumanMessage(content=prompt),
-            ])
-            revisions = json.loads(response.content).get("revisions", [])
-            rev_map   = {r["week_number"]: r for r in revisions}
-            for week in plan.weeks:
-                if week.week_number in rev_map:
-                    rev = rev_map[week.week_number]
-                    week.theme    = rev.get("theme",    week.theme)
-                    week.hours    = min(rev.get("hours", week.hours), settings.MAX_HOURS_PER_WEEK)
-                    week.priority = rev.get("priority", week.priority)
-            plan.total_hours = sum(w.hours for w in plan.weeks)
-            plan.version    += 1
+
+            response = await asyncio.to_thread(
+                self.llm.invoke,
+                [
+                    SystemMessage(
+                        content=system_prompt
+                    ),
+                    HumanMessage(
+                        content=user_prompt
+                    ),
+                ]
+            )
+
+            response_text = self._extract_response_text(
+                response
+            )
+
+            if not response_text:
+
+                logger.warning(
+                    "[PlannerAgent] "
+                    "Critique returned empty response."
+                )
+
+                return {
+                    "strengths": [],
+                    "weaknesses": [],
+                    "needs_improvement": False,
+                    "suggestions": [],
+                    "summary": ""
+                }
+
+            result = self._parse_json_response(
+                response_text
+            )
+
+            return result
+
         except Exception as e:
-            logger.warning(f"[PlannerAgent] Revision failed: {e}")
 
-        return plan
+            logger.error(
+                f"[PlannerAgent] Critique failed: {e}"
+            )
 
-    def _profile_to_text(self, profile: KnowledgeProfile) -> str:
-        lines = [
-            f"Overall Mastery: {profile.overall_mastery:.1f}% (θ={profile.overall_theta:.3f})",
-            f"Critical Gaps: {', '.join(profile.critical_gaps) or 'None'}",
-            f"Bloom's Taxonomy Mastery:",
-        ]
-        from irt.blooms_gap_engine import BLOOM_LABELS
-        for level, mastery in sorted(profile.bloom_summary.items()):
-            label = BLOOM_LABELS.get(level, f"Level {level}")
-            lines.append(f"  {level}. {label}: {mastery:.1f}%")
-        lines.append("Top Priority Concepts:")
-        for cp in profile.concepts[:5]:
-            lines.append(f"  - {cp.concept} ({cp.learning_area}): "
-                         f"{cp.overall_mastery:.1f}% | "
-                         f"Gap: {cp.highest_gap_severity} at {BLOOM_LABELS.get(cp.highest_gap_level, 'N/A')}")
-        return "\n".join(lines)
+            return {
+                "strengths": [],
+                "weaknesses": [],
+                "needs_improvement": False,
+                "suggestions": [],
+                "summary": ""
+            }
+
+    # ========================================================
+    # REFINE PLAN
+    # ========================================================
+
+    async def _refine_plan(
+        self,
+        plan: Dict[str, Any],
+        critique: Dict[str, Any],
+        profile
+    ) -> Dict[str, Any]:
+
+        plan_json = json.dumps(
+            plan,
+            indent=2
+        )
+
+        critique_json = json.dumps(
+            critique,
+            indent=2
+        )
+
+        profile_context = self._build_profile_context(
+            profile
+        )
+
+        system_prompt = """
+You are an expert educational planner.
+
+Improve the existing study plan based on the critique.
+
+Rules:
+
+- Keep exactly 16 weeks.
+- Keep all required fields.
+- Address all critical knowledge gaps.
+- Preserve useful parts of the original plan.
+- Improve weak areas identified by the critique.
+- Maintain logical Bloom progression.
+- Respect prerequisites.
+- Maximum 20 hours per week.
+- Keep tasks concrete and actionable.
+
+Return ONLY valid JSON.
+
+Do not use Markdown.
+Do not include explanations.
+"""
+
+        user_prompt = f"""
+STUDENT PROFILE:
+
+{profile_context}
+
+CURRENT PLAN:
+
+{plan_json}
+
+CRITIQUE:
+
+{critique_json}
+
+Return the improved 16-week plan.
+"""
+
+        response = await asyncio.to_thread(
+            self.llm.invoke,
+            [
+                SystemMessage(
+                    content=system_prompt
+                ),
+                HumanMessage(
+                    content=user_prompt
+                ),
+            ]
+        )
+
+        response_text = self._extract_response_text(
+            response
+        )
+
+        if not response_text:
+
+            logger.warning(
+                "[PlannerAgent] "
+                "Refinement returned empty response. "
+                "Keeping previous plan."
+            )
+
+            return plan
+
+        try:
+
+            refined = self._parse_plan_json(
+                response_text
+            )
+
+            if not refined.get("weeks"):
+
+                logger.warning(
+                    "[PlannerAgent] "
+                    "Refined plan has no weeks. "
+                    "Keeping previous plan."
+                )
+
+                return plan
+
+            return refined
+
+        except Exception as e:
+
+            logger.warning(
+                f"[PlannerAgent] "
+                f"Failed to parse refined plan: {e}"
+            )
+
+            return plan
+
+    # ========================================================
+    # FINAL CRITIQUE
+    # ========================================================
+
+    async def _generate_final_critique(
+        self,
+        plan: Dict[str, Any],
+        profile
+    ) -> str:
+
+        plan_json = json.dumps(
+            plan,
+            indent=2
+        )
+
+        prompt = f"""
+Provide a concise final critique of this personalized
+16-week study plan.
+
+Mention:
+
+- major strengths
+- how critical gaps are addressed
+- Bloom progression
+- workload realism
+- expected learning outcome
+
+STUDENT PROFILE:
+
+{self._build_profile_context(profile)}
+
+STUDY PLAN:
+
+{plan_json}
+
+Return a concise paragraph.
+"""
+
+        try:
+
+            response = await asyncio.to_thread(
+                self.llm.invoke,
+                [
+                    SystemMessage(
+                        content=(
+                            "You are an expert "
+                            "educational evaluator."
+                        )
+                    ),
+                    HumanMessage(
+                        content=prompt
+                    ),
+                ]
+            )
+
+            return self._extract_response_text(
+                response
+            )
+
+        except Exception as e:
+
+            logger.warning(
+                f"[PlannerAgent] "
+                f"Final critique failed: {e}"
+            )
+
+            return ""
+
+    # ========================================================
+    # BUILD PROFILE CONTEXT
+    # ========================================================
+
+    def _build_profile_context(
+        self,
+        profile
+    ) -> str:
+
+        # ----------------------------------------------------
+        # SAFE CRITICAL GAPS
+        # ----------------------------------------------------
+
+        critical_gaps = (
+            profile.critical_gaps
+            if profile.critical_gaps
+            else []
+        )
+
+        # ----------------------------------------------------
+        # SAFE BLOOM SUMMARY
+        # ----------------------------------------------------
+
+        bloom_summary = (
+            profile.bloom_summary
+            if profile.bloom_summary
+            else {}
+        )
+
+        # ----------------------------------------------------
+        # SAFE LEARNING AREAS
+        # ----------------------------------------------------
+
+        learning_area_summary = (
+            profile.learning_area_summary
+            if profile.learning_area_summary
+            else {}
+        )
+
+        # ----------------------------------------------------
+        # ACCURACY
+        # ----------------------------------------------------
+
+        if profile.total_questions:
+
+            accuracy = (
+                profile.correct_answers
+                / profile.total_questions
+                * 100
+            )
+
+        else:
+
+            accuracy = 0.0
+
+        return f"""
+Mastery Level:
+{profile.overall_mastery:.1f}%
+
+Theta (Ability):
+{profile.overall_theta:.2f}
+
+Critical Knowledge Gaps:
+{', '.join(critical_gaps)}
+
+Bloom's Level Mastery:
+{json.dumps(bloom_summary, indent=2)}
+
+Learning Area Mastery:
+{json.dumps(learning_area_summary, indent=2)}
+
+Total Questions:
+{profile.total_questions}
+
+Correct Answers:
+{profile.correct_answers}
+
+Accuracy:
+{accuracy:.1f}%
+"""
+
+    # ========================================================
+    # EXTRACT RESPONSE TEXT
+    # ========================================================
+
+    def _extract_response_text(
+        self,
+        response
+    ) -> str:
+
+        if response is None:
+
+            return ""
+
+        content = getattr(
+            response,
+            "content",
+            response
+        )
+
+        # ----------------------------------------------------
+        # STRING
+        # ----------------------------------------------------
+
+        if isinstance(content, str):
+
+            return content.strip()
+
+        # ----------------------------------------------------
+        # LIST
+        # ----------------------------------------------------
+
+        if isinstance(content, list):
+
+            parts = []
+
+            for block in content:
+
+                if isinstance(block, str):
+
+                    parts.append(block)
+
+                elif isinstance(block, dict):
+
+                    text = block.get(
+                        "text"
+                    )
+
+                    if text:
+
+                        parts.append(
+                            str(text)
+                        )
+
+                elif hasattr(block, "text"):
+
+                    text = getattr(
+                        block,
+                        "text",
+                        None
+                    )
+
+                    if text:
+
+                        parts.append(
+                            str(text)
+                        )
+
+            return "".join(parts).strip()
+
+        # ----------------------------------------------------
+        # OTHER
+        # ----------------------------------------------------
+
+        return str(content).strip()
+
+    # ========================================================
+    # PARSE PLAN JSON
+    # ========================================================
+
+    def _parse_plan_json(
+        self,
+        response_text: str
+    ) -> Dict[str, Any]:
+
+        if not response_text:
+
+            raise ValueError(
+                "LLM returned an empty response."
+            )
+
+        text = response_text.strip()
+
+        # ----------------------------------------------------
+        # 1. DIRECT JSON
+        # ----------------------------------------------------
+
+        try:
+
+            result = json.loads(text)
+
+            if isinstance(result, dict):
+
+                return result
+
+        except json.JSONDecodeError:
+            pass
+
+        # ----------------------------------------------------
+        # 2. ```json ... ```
+        # ----------------------------------------------------
+
+        lower_text = text.lower()
+
+        if "```json" in lower_text:
+
+            start_marker = lower_text.find(
+                "```json"
+            )
+
+            start = start_marker + len(
+                "```json"
+            )
+
+            end = text.find(
+                "```",
+                start
+            )
+
+            if end != -1:
+
+                json_text = text[
+                    start:end
+                ].strip()
+
+                try:
+
+                    result = json.loads(
+                        json_text
+                    )
+
+                    if isinstance(
+                        result,
+                        dict
+                    ):
+
+                        return result
+
+                except json.JSONDecodeError as e:
+
+                    logger.warning(
+                        "[PlannerAgent] "
+                        f"Markdown JSON parse failed: {e}"
+                    )
+
+        # ----------------------------------------------------
+        # 3. GENERIC CODE BLOCK
+        # ----------------------------------------------------
+
+        if "```" in text:
+
+            first = text.find("```")
+
+            start = text.find(
+                "\n",
+                first
+            )
+
+            if start != -1:
+
+                start += 1
+
+                end = text.find(
+                    "```",
+                    start
+                )
+
+                if end != -1:
+
+                    json_text = text[
+                        start:end
+                    ].strip()
+
+                    try:
+
+                        result = json.loads(
+                            json_text
+                        )
+
+                        if isinstance(
+                            result,
+                            dict
+                        ):
+
+                            return result
+
+                    except json.JSONDecodeError:
+                        pass
+
+        # ----------------------------------------------------
+        # 4. EXTRACT FIRST { ... }
+        # ----------------------------------------------------
+
+        start = text.find("{")
+
+        end = text.rfind("}")
+
+        if start != -1 and end > start:
+
+            json_text = text[
+                start:end + 1
+            ]
+
+            try:
+
+                result = json.loads(
+                    json_text
+                )
+
+                if isinstance(
+                    result,
+                    dict
+                ):
+
+                    return result
+
+            except json.JSONDecodeError as e:
+
+                logger.error(
+                    "[PlannerAgent] "
+                    f"Extracted JSON is invalid: {e}"
+                )
+
+                logger.error(
+                    "[PlannerAgent] "
+                    f"Response was:\n"
+                    f"{text[:5000]}"
+                )
+
+        # ----------------------------------------------------
+        # FAILURE
+        # ----------------------------------------------------
+
+        logger.error(
+            "[PlannerAgent] "
+            "Failed to parse plan JSON."
+        )
+
+        logger.error(
+            f"[PlannerAgent] Raw response:\n"
+            f"{text[:5000]}"
+        )
+
+        raise ValueError(
+            "Could not parse plan JSON from response"
+        )
+
+    # ========================================================
+    # GENERIC JSON PARSER
+    # ========================================================
+
+    def _parse_json_response(
+        self,
+        response_text: str
+    ) -> Dict[str, Any]:
+
+        if not response_text:
+
+            return {}
+
+        text = response_text.strip()
+
+        # ----------------------------------------------------
+        # DIRECT JSON
+        # ----------------------------------------------------
+
+        try:
+
+            result = json.loads(text)
+
+            if isinstance(
+                result,
+                dict
+            ):
+
+                return result
+
+        except json.JSONDecodeError:
+            pass
+
+        # ----------------------------------------------------
+        # MARKDOWN JSON
+        # ----------------------------------------------------
+
+        lower_text = text.lower()
+
+        if "```json" in lower_text:
+
+            start_marker = lower_text.find(
+                "```json"
+            )
+
+            start = start_marker + len(
+                "```json"
+            )
+
+            end = text.find(
+                "```",
+                start
+            )
+
+            if end != -1:
+
+                json_text = text[
+                    start:end
+                ].strip()
+
+                try:
+
+                    result = json.loads(
+                        json_text
+                    )
+
+                    if isinstance(
+                        result,
+                        dict
+                    ):
+
+                        return result
+
+                except json.JSONDecodeError:
+                    pass
+
+        # ----------------------------------------------------
+        # GENERIC CODE BLOCK
+        # ----------------------------------------------------
+
+        if "```" in text:
+
+            first = text.find("```")
+
+            start = text.find(
+                "\n",
+                first
+            )
+
+            if start != -1:
+
+                start += 1
+
+                end = text.find(
+                    "```",
+                    start
+                )
+
+                if end != -1:
+
+                    json_text = text[
+                        start:end
+                    ].strip()
+
+                    try:
+
+                        result = json.loads(
+                            json_text
+                        )
+
+                        if isinstance(
+                            result,
+                            dict
+                        ):
+
+                            return result
+
+                    except json.JSONDecodeError:
+                        pass
+
+        # ----------------------------------------------------
+        # EXTRACT JSON OBJECT
+        # ----------------------------------------------------
+
+        start = text.find("{")
+
+        end = text.rfind("}")
+
+        if start != -1 and end > start:
+
+            json_text = text[
+                start:end + 1
+            ]
+
+            try:
+
+                result = json.loads(
+                    json_text
+                )
+
+                if isinstance(
+                    result,
+                    dict
+                ):
+
+                    return result
+
+            except json.JSONDecodeError:
+                pass
+
+        return {}
+
+    # ========================================================
+    # BUILD STUDY PLAN
+    # ========================================================
+
+    def _build_study_plan(
+        self,
+        plan_data: Dict[str, Any],
+        student_id: str
+    ) -> StudyPlan:
+
+        weeks = []
+
+        # ----------------------------------------------------
+        # READ WEEKS
+        # ----------------------------------------------------
+
+        for week_data in plan_data.get(
+            "weeks",
+            []
+        ):
+
+            if not isinstance(
+                week_data,
+                dict
+            ):
+
+                continue
+
+            # ------------------------------------------------
+            # TASKS
+            # ------------------------------------------------
+
+            tasks = week_data.get(
+                "tasks",
+                []
+            )
+
+            if not isinstance(
+                tasks,
+                list
+            ):
+
+                tasks = []
+
+            # ------------------------------------------------
+            # CONCEPTS
+            # ------------------------------------------------
+
+            concepts = week_data.get(
+                "concepts",
+                []
+            )
+
+            if not isinstance(
+                concepts,
+                list
+            ):
+
+                concepts = []
+
+            # ------------------------------------------------
+            # BLOOM
+            # ------------------------------------------------
+
+            bloom_focus = week_data.get(
+                "bloom_focus",
+                []
+            )
+
+            if not isinstance(
+                bloom_focus,
+                list
+            ):
+
+                bloom_focus = []
+
+            # ------------------------------------------------
+            # WEEK
+            # ------------------------------------------------
+
+            week = WeekPlan(
+                week_number=int(
+                    week_data.get(
+                        "week_number",
+                        len(weeks) + 1
+                    )
+                ),
+
+                theme=str(
+                    week_data.get(
+                        "theme",
+                        ""
+                    )
+                ),
+
+                concepts=[
+                    str(x)
+                    for x in concepts
+                ],
+
+                bloom_focus=[
+                    str(x)
+                    for x in bloom_focus
+                ],
+
+                hours=float(
+                    week_data.get(
+                        "hours",
+                        0
+                    )
+                ),
+
+                tasks=tasks,
+
+                priority=str(
+                    week_data.get(
+                        "priority",
+                        "MEDIUM"
+                    )
+                ),
+
+                milestone=str(
+                    week_data.get(
+                        "milestone",
+                        ""
+                    )
+                )
+            )
+
+            weeks.append(week)
+
+        # ----------------------------------------------------
+        # TOTAL HOURS
+        # ----------------------------------------------------
+
+        total_hours = plan_data.get(
+            "total_hours"
+        )
+
+        if total_hours is None:
+
+            total_hours = sum(
+                week.hours
+                for week in weeks
+            )
+
+        # ----------------------------------------------------
+        # PLAN ID
+        # ----------------------------------------------------
+
+        plan_id = (
+            f"plan_{student_id}_"
+            f"{int(datetime.utcnow().timestamp())}"
+        )
+
+        # ----------------------------------------------------
+        # RETURN
+        # ----------------------------------------------------
+
+        return StudyPlan(
+            plan_id=plan_id,
+            student_id=student_id,
+            weeks=weeks,
+            total_hours=float(
+                total_hours
+            ),
+            version=int(
+                plan_data.get(
+                    "version",
+                    1
+                )
+            ),
+            critique_history=plan_data.get(
+                "critique_history",
+                []
+            )
+        )

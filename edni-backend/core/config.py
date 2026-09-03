@@ -12,8 +12,8 @@ class Settings(BaseSettings):
 
     # ── Security ──────────────────────────────────────────────────────
     SECRET_KEY:            str = "change-me-in-production"
-    JWT_ACCESS_EXPIRE_MIN: int = 15
-    JWT_REFRESH_EXPIRE_DAYS: int = 7
+    JWT_ACCESS_EXPIRE_MIN: int = 60 * 24 * 30  # 30 days
+    JWT_REFRESH_EXPIRE_DAYS: int = 30
     ALGORITHM:             str = "HS256"
 
     # ── Databases ─────────────────────────────────────────────────────
