@@ -1,340 +1,1283 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import apiClient from "@/lib/apiClient";
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import axios from 'axios';
 
-// ─── Sidebar ──────────────────────────────────────────────────────────────────
-function Sidebar({ active, setActive }: { active: string; setActive: (id: string) => void }) {
-  const NAV_ITEMS = [
-    { id: "account", icon: "👤", label: "Account" },
-    { id: "notifications", icon: "🔔", label: "Notifications" },
-    { id: "appearance", icon: "🎨", label: "Appearance" },
-  ];
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1';
 
-  return (
-    <aside style={{
-      width: 240, minHeight: "100vh", background: "white",
-      borderRight: "1px solid #F0F0F0",
-      display: "flex", flexDirection: "column",
-      position: "fixed", left: 0, top: 0, bottom: 0, zIndex: 40,
-    }}>
-      <div style={{ padding: "22px 20px 28px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-          <div style={{
-            width: 32, height: 32, borderRadius: 8,
-            background: "linear-gradient(135deg,#6C63FF,#4F46E5)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 13, color: "white", fontWeight: 800,
-          }}>E</div>
-          <div style={{ fontSize: 15, fontWeight: 800, color: "#4F46E5" }}>Edni AI</div>
-        </div>
-      </div>
-      <nav style={{ flex: 1, padding: "0 12px" }}>
-        {NAV_ITEMS.map((item) => {
-          const on = active === item.id;
-          return (
-            <button key={item.id} onClick={() => setActive(item.id)} style={{
-              display: "flex", alignItems: "center", gap: 12,
-              padding: "10px 12px", borderRadius: 10, border: "none",
-              background: on ? "#EEF2FF" : "transparent",
-              color: on ? "#4F46E5" : "#6B7280",
-              fontSize: 13.5, fontWeight: on ? 700 : 500,
-              cursor: "pointer", width: "100%",
-              borderLeft: on ? "3px solid #4F46E5" : "3px solid transparent",
-            }}>
-              <span style={{ fontSize: 16 }}>{item.icon}</span>
-              {item.label}
-            </button>
-          );
-        })}
-      </nav>
-    </aside>
-  );
+const COLORS = {
+  primary: "#6C63FF",
+  primaryHover: "#4F46E5",
+  secondary: "#A855F7",
+  accent: "#EC4899",
+  bgDark: "#0F172A",
+  bgCard: "#1E293B",
+  bgLight: "#F8FAFC",
+  textPrimary: "#111827",
+  textSecondary: "#6B7280",
+  textMuted: "#9CA3AF",
+  borderLight: "#E5E7EB",
+  borderDark: "#334155",
+  success: "#10B981",
+  warning: "#F59E0B",
+  error: "#EF4444",
+};
+
+interface Settings {
+  notifications_email: boolean;
+  notifications_push: boolean;
+  notifications_sms: boolean;
+  weekly_report: boolean;
+  daily_goal_hours: number;
+  difficulty_level: 'beginner' | 'intermediate' | 'advanced';
+  learning_pace: 'slow' | 'balanced' | 'fast';
+  theme: 'light' | 'dark';
+  language: 'en' | 'es' | 'fr';
+  font_size: 'small' | 'normal' | 'large';
 }
 
-// ─── Toggle ───────────────────────────────────────────────────────────────────
-function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button onClick={() => onChange(!value)} style={{
-      width: 46, height: 26, borderRadius: 13, border: "none",
-      background: value ? "#4F46E5" : "#E5E7EB",
-      position: "relative", cursor: "pointer", transition: "background 0.25s", flexShrink: 0,
-    }}>
-      <div style={{
-        width: 20, height: 20, borderRadius: "50%", background: "white",
-        position: "absolute", top: 3,
-        left: value ? 23 : 3,
-        transition: "left 0.25s",
-        boxShadow: "0 1px 4px rgba(0,0,0,0.18)",
-      }} />
-    </button>
-  );
-}
-
-// ─── Input Field ──────────────────────────────────────────────────────────────
-function InputField({ label, value, onChange, type = "text" }: {
-  label: string; value: string; onChange: (v: string) => void;
-  type?: string;
-}) {
-  const [focused, setFocused] = useState(false);
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <label style={{ fontSize: 12.5, fontWeight: 600, color: "#374151" }}>{label}</label>
-      <input
-        type={type} value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
-        style={{
-          padding: "10px 13px", border: `1.5px solid ${focused ? "#6C63FF" : "#E5E7EB"}`,
-          borderRadius: 9, fontSize: 13.5, color: "#111827", outline: "none",
-          boxShadow: focused ? "0 0 0 3px rgba(108,99,255,0.10)" : "none",
-          transition: "all 0.2s",
-        }}
-      />
-    </div>
-  );
-}
-
-// ─── Setting Row ──────────────────────────────────────────────────────────────
-function SettingRow({ label, desc, children }: { label: string; desc?: string; children: React.ReactNode }) {
-  return (
-    <div style={{
-      display: "flex", justifyContent: "space-between", alignItems: "center",
-      padding: "18px 0", borderBottom: "1px solid #F0F0F0",
-    }}>
-      <div>
-        <div style={{ fontSize: 14, fontWeight: 600, color: "#111827", marginBottom: desc ? 3 : 0 }}>{label}</div>
-        {desc && <div style={{ fontSize: 12.5, color: "#9CA3AF" }}>{desc}</div>}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-// ─── Section Card ─────────────────────────────────────────────────────────────
-function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div style={{
-      background: "white", borderRadius: 16, border: "1.5px solid #E5E7EB",
-      marginBottom: 20, padding: "24px", overflow: "hidden",
-    }}>
-      <div style={{ fontSize: 15, fontWeight: 800, color: "#111827", marginBottom: 20 }}>{title}</div>
-      {children}
-    </div>
-  );
-}
-
-// ─── Account Panel ────────────────────────────────────────────────────────────
-function AccountPanel() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [institution, setInst] = useState("");
+export default function SettingsPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [activeTab, setActiveTab] = useState<'notifications' | 'learning' | 'display' | 'data'>('notifications');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    current_password: '',
+    new_password: '',
+    confirm_password: '',
+  });
+
+  const [settings, setSettings] = useState<Settings>({
+    notifications_email: true,
+    notifications_push: true,
+    notifications_sms: false,
+    weekly_report: true,
+    daily_goal_hours: 2,
+    difficulty_level: 'intermediate',
+    learning_pace: 'balanced',
+    theme: 'light',
+    language: 'en',
+    font_size: 'normal',
+  });
 
   useEffect(() => {
-    apiClient.get("/auth/me")
-      .then((res) => {
-        setName(`${res.data.first_name} ${res.data.last_name}`);
-        setEmail(res.data.email);
-        setInst(res.data.institution || "");
-      })
-      .catch(() => { });
+    fetchSettings();
   }, []);
 
-  const handleSave = async () => {
-    setSaving(true);
-    setError("");
+  const fetchSettings = async () => {
     try {
-      const [firstName, ...rest] = name.trim().split(" ");
-      await apiClient.put("/auth/me", {
-        first_name: firstName,
-        last_name: rest.join(" "),
-        institution,
+      const token = localStorage.getItem('edni_access');
+      if (!token) {
+        router.push('/login');
+        return;
+      }
+
+      const res = await axios.get(`${API_URL}/user/settings`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 2000);
+
+      setSettings(res.data);
+      setError('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save");
+      console.error('Failed to fetch settings:', err);
+      // Use default settings for demo
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveSettings = async () => {
+    setSaving(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const token = localStorage.getItem('edni_access');
+      await axios.put(`${API_URL}/user/settings`, settings, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setSuccess('Settings saved successfully!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      console.error('Failed to save settings:', err);
+      setError('Failed to save settings. Please try again.');
     } finally {
       setSaving(false);
     }
   };
 
-  return (
-    <>
-      <SectionCard title="Personal Information">
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
-          <InputField label="Full Name" value={name} onChange={setName} />
-          <InputField label="Email" value={email} onChange={setEmail} type="email" />
-        </div>
-        <InputField label="Institution" value={institution} onChange={setInst} />
-        {error && <p style={{ fontSize: 12.5, color: "#EF4444", margin: "10px 0 0" }}>{error}</p>}
-        {success && <p style={{ fontSize: 12.5, color: "#059669", margin: "10px 0 0" }}>✓ Saved!</p>}
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          style={{
-            marginTop: 16, padding: "10px 24px", borderRadius: 10,
-            border: "none", background: success ? "#10B981" : "linear-gradient(135deg,#6C63FF,#4F46E5)",
-            color: "white", fontSize: 14, fontWeight: 700, cursor: saving ? "wait" : "pointer",
-            opacity: saving ? 0.6 : 1,
-          }}
-        >
-          {saving ? "Saving..." : success ? "✓ Saved" : "Save Changes"}
-        </button>
-      </SectionCard>
-    </>
-  );
-}
-
-// ─── Notifications Panel ───────────────────────────────────────────────────────
-function NotificationsPanel() {
-  const [settings, setSettings] = useState({
-    studyReminders: true,
-    weeklyReport: true,
-    achievementAlerts: true,
-    pushNotifs: true,
-    emailDigest: false,
-  });
-
-  const toggle = (key: keyof typeof settings) => {
-    setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
-
-  return (
-    <>
-      <SectionCard title="Learning Alerts">
-        <SettingRow label="Study Reminders" desc="Daily nudges to keep your study streak alive.">
-          <Toggle value={settings.studyReminders} onChange={() => toggle("studyReminders")} />
-        </SettingRow>
-        <SettingRow label="Weekly Progress Report" desc="Summary of your achievements every Monday.">
-          <Toggle value={settings.weeklyReport} onChange={() => toggle("weeklyReport")} />
-        </SettingRow>
-        <SettingRow label="Achievement Alerts" desc="Get notified when you unlock a new badge.">
-          <Toggle value={settings.achievementAlerts} onChange={() => toggle("achievementAlerts")} />
-        </SettingRow>
-      </SectionCard>
-
-      <SectionCard title="Delivery Channels">
-        <SettingRow label="Push Notifications" desc="In-app and browser push alerts.">
-          <Toggle value={settings.pushNotifs} onChange={() => toggle("pushNotifs")} />
-        </SettingRow>
-        <SettingRow label="Email Digest" desc="Receive a daily summary by email.">
-          <Toggle value={settings.emailDigest} onChange={() => toggle("emailDigest")} />
-        </SettingRow>
-      </SectionCard>
-    </>
-  );
-}
-
-// ─── Appearance Panel ──────────────────────────────────────────────────────────
-function AppearancePanel() {
-  const [theme, setTheme] = useState("Light");
-  const [accent, setAccent] = useState("#4F46E5");
-
-  const accents = ["#4F46E5", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6"];
-
-  return (
-    <>
-      <SectionCard title="Theme">
-        <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
-          {["Light", "Dark", "System"].map((t) => (
-            <button key={t} onClick={() => setTheme(t)} style={{
-              flex: 1, padding: "16px 12px", borderRadius: 12, cursor: "pointer",
-              border: `2px solid ${theme === t ? "#4F46E5" : "#E5E7EB"}`,
-              background: theme === t ? "#EEF2FF" : "#F9FAFB",
-              display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
-            }}>
-              <span style={{ fontSize: 24 }}>{t === "Light" ? "☀️" : t === "Dark" ? "🌙" : "💻"}</span>
-              <span style={{ fontSize: 13, fontWeight: theme === t ? 700 : 500, color: theme === t ? "#4F46E5" : "#6B7280" }}>{t}</span>
-            </button>
-          ))}
-        </div>
-      </SectionCard>
-
-      <SectionCard title="Accent Color">
-        <div style={{ display: "flex", gap: 12 }}>
-          {accents.map((c) => (
-            <button key={c} onClick={() => setAccent(c)} style={{
-              width: 40, height: 40, borderRadius: "50%", border: "none",
-              background: c, cursor: "pointer",
-              boxShadow: accent === c ? `0 0 0 3px white, 0 0 0 5px ${c}` : "none",
-            }} />
-          ))}
-        </div>
-      </SectionCard>
-    </>
-  );
-}
-
-// ─── Main Page ────────────────────────────────────────────────────────────────
-export default function SettingsPage() {
-  const router = useRouter();
-  const [tab, setTab] = useState("account");
-
-  useEffect(() => {
-    if (!localStorage.getItem("edni_access")) {
-      router.push("/login");
+  const handleToggleSetting = (key: keyof Settings) => {
+    if (typeof settings[key] === 'boolean') {
+      setSettings((prev) => ({
+        ...prev,
+        [key]: !prev[key],
+      }));
     }
-  }, [router]);
-
-  const panels: Record<string, React.ReactNode> = {
-    account: <AccountPanel />,
-    notifications: <NotificationsPanel />,
-    appearance: <AppearancePanel />,
   };
 
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (passwordForm.new_password !== passwordForm.confirm_password) {
+      setError('New passwords do not match');
+      return;
+    }
+
+    if (passwordForm.new_password.length < 8) {
+      setError('Password must be at least 8 characters');
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const token = localStorage.getItem('edni_access');
+      await axios.post(
+        `${API_URL}/user/change-password`,
+        {
+          current_password: passwordForm.current_password,
+          new_password: passwordForm.new_password,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setSuccess('Password changed successfully!');
+      setPasswordForm({ current_password: '', new_password: '', confirm_password: '' });
+      setShowPasswordChange(false);
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      console.error('Failed to change password:', err);
+      setError('Failed to change password. Please check your current password.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setSaving(true);
+    setError('');
+
+    try {
+      const token = localStorage.getItem('edni_access');
+      await axios.delete(`${API_URL}/user/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      localStorage.removeItem('edni_access');
+      localStorage.removeItem('edni-storage');
+      router.push('/login');
+    } catch (err) {
+      console.error('Failed to delete account:', err);
+      setError('Failed to delete account. Please try again.');
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        backgroundColor: COLORS.bgLight,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            width: 40,
+            height: 40,
+            borderRadius: '50%',
+            border: `3px solid ${COLORS.borderLight}`,
+            borderTop: `3px solid ${COLORS.primary}`,
+            margin: '0 auto 1rem',
+            animation: 'spin 1s linear infinite',
+          }} />
+          <p style={{ color: COLORS.textMuted }}>Loading settings...</p>
+        </div>
+        <style>{`
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
   return (
-    <div style={{ fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif", background: "#F7F8FC", minHeight: "100vh", display: "flex" }}>
-      <Sidebar active={tab} setActive={setTab} />
-
-      <main style={{ marginLeft: 240, flex: 1, display: "flex", flexDirection: "column" }}>
-
-        {/* Top bar */}
+    <div style={{
+      minHeight: '100vh',
+      backgroundColor: COLORS.bgLight,
+    }}>
+      {/* Header */}
+      <div style={{
+        background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryHover})`,
+        color: 'white',
+        padding: '3rem 2rem',
+        textAlign: 'center',
+        boxShadow: '0 4px 20px rgba(108,99,255,0.2)',
+      }}>
         <div style={{
-          display: "flex", alignItems: "center",
-          padding: "0 32px", height: 64, borderBottom: "1px solid #F0F0F0",
-          background: "white", position: "sticky", top: 0, zIndex: 30,
+          maxWidth: '1200px',
+          margin: '0 auto',
         }}>
-          <h1 style={{ fontSize: 20, fontWeight: 800, color: "#111827", margin: 0 }}>Settings</h1>
-          <div style={{ marginLeft: "auto" }}>
-            <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg,#6C63FF,#4F46E5)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 800 }}>
-              A
-            </div>
+          <h1 style={{
+            fontSize: '2.5rem',
+            fontWeight: 800,
+            margin: 0,
+            marginBottom: '0.5rem',
+          }}>⚙️ Settings</h1>
+          <p style={{
+            fontSize: '1.1rem',
+            opacity: 0.9,
+            margin: 0,
+          }}>Customize your learning experience</p>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div style={{
+        maxWidth: '1200px',
+        margin: '0 auto',
+        padding: '2rem',
+      }}>
+        {/* Alerts */}
+        {error && (
+          <div style={{
+            backgroundColor: '#FEF2F2',
+            border: `1.5px solid ${COLORS.error}`,
+            borderRadius: 12,
+            padding: '1rem',
+            marginBottom: '1.5rem',
+            color: COLORS.error,
+            fontWeight: 500,
+          }}>
+            ⚠️ {error}
+          </div>
+        )}
+
+        {success && (
+          <div style={{
+            backgroundColor: '#F0FDF4',
+            border: `1.5px solid ${COLORS.success}`,
+            borderRadius: 12,
+            padding: '1rem',
+            marginBottom: '1.5rem',
+            color: COLORS.success,
+            fontWeight: 500,
+          }}>
+            ✓ {success}
+          </div>
+        )}
+
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '250px 1fr',
+          gap: '2rem',
+        }}>
+          {/* Sidebar Navigation */}
+          <div style={{
+            background: 'white',
+            borderRadius: 12,
+            padding: '1.5rem',
+            height: 'fit-content',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+          }}>
+            <nav style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 0,
+            }}>
+              {[
+                { id: 'notifications', icon: '🔔', label: 'Notifications' },
+                { id: 'learning', icon: '📚', label: 'Learning' },
+                { id: 'display', icon: '🎨', label: 'Display' },
+                { id: 'data', icon: '📁', label: 'Data & Privacy' },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  style={{
+                    padding: '1rem',
+                    textAlign: 'left',
+                    background: activeTab === tab.id ? `linear-gradient(135deg, rgba(108,99,255,0.1), rgba(168,85,247,0.1))` : 'transparent',
+                    border: 'none',
+                    borderLeft: activeTab === tab.id ? `3px solid ${COLORS.primary}` : '3px solid transparent',
+                    borderRadius: 0,
+                    color: activeTab === tab.id ? COLORS.primary : COLORS.textSecondary,
+                    fontWeight: activeTab === tab.id ? 700 : 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    fontSize: '0.95rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                  }}
+                >
+                  <span style={{ fontSize: '1.25rem' }}>{tab.icon}</span>
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          {/* Content Area */}
+          <div style={{
+            background: 'white',
+            borderRadius: 12,
+            padding: '2rem',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+          }}>
+            {/* Notifications Tab */}
+            {activeTab === 'notifications' && (
+              <div>
+                <h2 style={{
+                  fontSize: '1.5rem',
+                  fontWeight: 700,
+                  color: COLORS.textPrimary,
+                  margin: '0 0 2rem 0',
+                }}>Notification Preferences</h2>
+
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '1.5rem',
+                }}>
+                  {/* Email Notifications */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '1.5rem',
+                    backgroundColor: COLORS.bgLight,
+                    borderRadius: 10,
+                    border: `1.5px solid ${COLORS.borderLight}`,
+                  }}>
+                    <div>
+                      <h3 style={{
+                        fontSize: '1rem',
+                        fontWeight: 700,
+                        color: COLORS.textPrimary,
+                        margin: '0 0 0.25rem 0',
+                      }}>Email Notifications</h3>
+                      <p style={{
+                        fontSize: '0.875rem',
+                        color: COLORS.textMuted,
+                        margin: 0,
+                      }}>Receive updates about your learning progress</p>
+                    </div>
+                    <label style={{
+                      position: 'relative',
+                      width: 50,
+                      height: 26,
+                      cursor: 'pointer',
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={settings.notifications_email}
+                        onChange={() => handleToggleSetting('notifications_email')}
+                        style={{
+                          display: 'none',
+                        }}
+                      />
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: 50,
+                          height: 26,
+                          background: settings.notifications_email ? COLORS.primary : COLORS.borderLight,
+                          borderRadius: 13,
+                          transition: 'background 0.3s',
+                        }}
+                      />
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 2,
+                          left: settings.notifications_email ? 26 : 2,
+                          width: 22,
+                          height: 22,
+                          background: 'white',
+                          borderRadius: '50%',
+                          transition: 'left 0.3s',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                        }}
+                      />
+                    </label>
+                  </div>
+
+                  {/* Push Notifications */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '1.5rem',
+                    backgroundColor: COLORS.bgLight,
+                    borderRadius: 10,
+                    border: `1.5px solid ${COLORS.borderLight}`,
+                  }}>
+                    <div>
+                      <h3 style={{
+                        fontSize: '1rem',
+                        fontWeight: 700,
+                        color: COLORS.textPrimary,
+                        margin: '0 0 0.25rem 0',
+                      }}>Push Notifications</h3>
+                      <p style={{
+                        fontSize: '0.875rem',
+                        color: COLORS.textMuted,
+                        margin: 0,
+                      }}>Get instant alerts on your device</p>
+                    </div>
+                    <label style={{
+                      position: 'relative',
+                      width: 50,
+                      height: 26,
+                      cursor: 'pointer',
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={settings.notifications_push}
+                        onChange={() => handleToggleSetting('notifications_push')}
+                        style={{
+                          display: 'none',
+                        }}
+                      />
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: 50,
+                          height: 26,
+                          background: settings.notifications_push ? COLORS.primary : COLORS.borderLight,
+                          borderRadius: 13,
+                          transition: 'background 0.3s',
+                        }}
+                      />
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 2,
+                          left: settings.notifications_push ? 26 : 2,
+                          width: 22,
+                          height: 22,
+                          background: 'white',
+                          borderRadius: '50%',
+                          transition: 'left 0.3s',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                        }}
+                      />
+                    </label>
+                  </div>
+
+                  {/* SMS Notifications */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '1.5rem',
+                    backgroundColor: COLORS.bgLight,
+                    borderRadius: 10,
+                    border: `1.5px solid ${COLORS.borderLight}`,
+                  }}>
+                    <div>
+                      <h3 style={{
+                        fontSize: '1rem',
+                        fontWeight: 700,
+                        color: COLORS.textPrimary,
+                        margin: '0 0 0.25rem 0',
+                      }}>SMS Alerts</h3>
+                      <p style={{
+                        fontSize: '0.875rem',
+                        color: COLORS.textMuted,
+                        margin: 0,
+                      }}>Receive important updates via SMS</p>
+                    </div>
+                    <label style={{
+                      position: 'relative',
+                      width: 50,
+                      height: 26,
+                      cursor: 'pointer',
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={settings.notifications_sms}
+                        onChange={() => handleToggleSetting('notifications_sms')}
+                        style={{
+                          display: 'none',
+                        }}
+                      />
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: 50,
+                          height: 26,
+                          background: settings.notifications_sms ? COLORS.primary : COLORS.borderLight,
+                          borderRadius: 13,
+                          transition: 'background 0.3s',
+                        }}
+                      />
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 2,
+                          left: settings.notifications_sms ? 26 : 2,
+                          width: 22,
+                          height: 22,
+                          background: 'white',
+                          borderRadius: '50%',
+                          transition: 'left 0.3s',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                        }}
+                      />
+                    </label>
+                  </div>
+
+                  {/* Weekly Report */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '1.5rem',
+                    backgroundColor: COLORS.bgLight,
+                    borderRadius: 10,
+                    border: `1.5px solid ${COLORS.borderLight}`,
+                  }}>
+                    <div>
+                      <h3 style={{
+                        fontSize: '1rem',
+                        fontWeight: 700,
+                        color: COLORS.textPrimary,
+                        margin: '0 0 0.25rem 0',
+                      }}>Weekly Progress Report</h3>
+                      <p style={{
+                        fontSize: '0.875rem',
+                        color: COLORS.textMuted,
+                        margin: 0,
+                      }}>Receive weekly summary of your learning progress</p>
+                    </div>
+                    <label style={{
+                      position: 'relative',
+                      width: 50,
+                      height: 26,
+                      cursor: 'pointer',
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={settings.weekly_report}
+                        onChange={() => handleToggleSetting('weekly_report')}
+                        style={{
+                          display: 'none',
+                        }}
+                      />
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: 50,
+                          height: 26,
+                          background: settings.weekly_report ? COLORS.primary : COLORS.borderLight,
+                          borderRadius: 13,
+                          transition: 'background 0.3s',
+                        }}
+                      />
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 2,
+                          left: settings.weekly_report ? 26 : 2,
+                          width: 22,
+                          height: 22,
+                          background: 'white',
+                          borderRadius: '50%',
+                          transition: 'left 0.3s',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Learning Tab */}
+            {activeTab === 'learning' && (
+              <div>
+                <h2 style={{
+                  fontSize: '1.5rem',
+                  fontWeight: 700,
+                  color: COLORS.textPrimary,
+                  margin: '0 0 2rem 0',
+                }}>Learning Preferences</h2>
+
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '2rem',
+                }}>
+                  {/* Daily Goal */}
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '1rem',
+                      fontWeight: 700,
+                      color: COLORS.textPrimary,
+                      marginBottom: '0.75rem',
+                    }}>Daily Learning Goal (hours)</label>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '1.5rem',
+                    }}>
+                      <input
+                        type="range"
+                        min="1"
+                        max="8"
+                        step="0.5"
+                        value={settings.daily_goal_hours}
+                        onChange={(e) =>
+                          setSettings((prev) => ({
+                            ...prev,
+                            daily_goal_hours: parseFloat(e.target.value),
+                          }))
+                        }
+                        style={{
+                          flex: 1,
+                          height: 6,
+                          borderRadius: 3,
+                          background: COLORS.borderLight,
+                          outline: 'none',
+                          WebkitAppearance: 'none',
+                        }}
+                      />
+                      <div style={{
+                        fontSize: '1.5rem',
+                        fontWeight: 700,
+                        color: COLORS.primary,
+                        minWidth: '60px',
+                        textAlign: 'right',
+                      }}>
+                        {settings.daily_goal_hours}h
+                      </div>
+                    </div>
+                    <p style={{
+                      fontSize: '0.875rem',
+                      color: COLORS.textMuted,
+                      marginTop: '0.5rem',
+                      margin: '0.5rem 0 0 0',
+                    }}>Set your target daily study time</p>
+                  </div>
+
+                  {/* Difficulty Level */}
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '1rem',
+                      fontWeight: 700,
+                      color: COLORS.textPrimary,
+                      marginBottom: '0.75rem',
+                    }}>Difficulty Level</label>
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(3, 1fr)',
+                      gap: '1rem',
+                    }}>
+                      {['beginner', 'intermediate', 'advanced'].map((level) => (
+                        <button
+                          key={level}
+                          onClick={() =>
+                            setSettings((prev) => ({
+                              ...prev,
+                              difficulty_level: level as any,
+                            }))
+                          }
+                          style={{
+                            padding: '1rem',
+                            background:
+                              settings.difficulty_level === level
+                                ? `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryHover})`
+                                : 'white',
+                            color: settings.difficulty_level === level ? 'white' : COLORS.textPrimary,
+                            border: `1.5px solid ${settings.difficulty_level === level ? COLORS.primary : COLORS.borderLight}`,
+                            borderRadius: 10,
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            textTransform: 'capitalize',
+                            transition: 'all 0.2s',
+                          }}
+                        >
+                          {level}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Learning Pace */}
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '1rem',
+                      fontWeight: 700,
+                      color: COLORS.textPrimary,
+                      marginBottom: '0.75rem',
+                    }}>Learning Pace</label>
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(3, 1fr)',
+                      gap: '1rem',
+                    }}>
+                      {['slow', 'balanced', 'fast'].map((pace) => (
+                        <button
+                          key={pace}
+                          onClick={() =>
+                            setSettings((prev) => ({
+                              ...prev,
+                              learning_pace: pace as any,
+                            }))
+                          }
+                          style={{
+                            padding: '1rem',
+                            background:
+                              settings.learning_pace === pace
+                                ? `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryHover})`
+                                : 'white',
+                            color: settings.learning_pace === pace ? 'white' : COLORS.textPrimary,
+                            border: `1.5px solid ${settings.learning_pace === pace ? COLORS.primary : COLORS.borderLight}`,
+                            borderRadius: 10,
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            textTransform: 'capitalize',
+                            transition: 'all 0.2s',
+                          }}
+                        >
+                          {pace}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Display Tab */}
+            {activeTab === 'display' && (
+              <div>
+                <h2 style={{
+                  fontSize: '1.5rem',
+                  fontWeight: 700,
+                  color: COLORS.textPrimary,
+                  margin: '0 0 2rem 0',
+                }}>Display Settings</h2>
+
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '2rem',
+                }}>
+                  {/* Theme */}
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '1rem',
+                      fontWeight: 700,
+                      color: COLORS.textPrimary,
+                      marginBottom: '0.75rem',
+                    }}>Theme</label>
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(2, 1fr)',
+                      gap: '1rem',
+                    }}>
+                      {['light', 'dark'].map((theme) => (
+                        <button
+                          key={theme}
+                          onClick={() =>
+                            setSettings((prev) => ({
+                              ...prev,
+                              theme: theme as any,
+                            }))
+                          }
+                          style={{
+                            padding: '1rem',
+                            background:
+                              settings.theme === theme
+                                ? `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryHover})`
+                                : 'white',
+                            color: settings.theme === theme ? 'white' : COLORS.textPrimary,
+                            border: `1.5px solid ${settings.theme === theme ? COLORS.primary : COLORS.borderLight}`,
+                            borderRadius: 10,
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            textTransform: 'capitalize',
+                            transition: 'all 0.2s',
+                          }}
+                        >
+                          {theme === 'light' ? '☀️' : '🌙'} {theme}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Language */}
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '1rem',
+                      fontWeight: 700,
+                      color: COLORS.textPrimary,
+                      marginBottom: '0.75rem',
+                    }}>Language</label>
+                    <select
+                      value={settings.language}
+                      onChange={(e) =>
+                        setSettings((prev) => ({
+                          ...prev,
+                          language: e.target.value as any,
+                        }))
+                      }
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem 1rem',
+                        border: `1.5px solid ${COLORS.borderLight}`,
+                        borderRadius: 10,
+                        fontSize: '1rem',
+                        fontFamily: 'inherit',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <option value="en">English</option>
+                      <option value="es">Español</option>
+                      <option value="fr">Français</option>
+                    </select>
+                  </div>
+
+                  {/* Font Size */}
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '1rem',
+                      fontWeight: 700,
+                      color: COLORS.textPrimary,
+                      marginBottom: '0.75rem',
+                    }}>Font Size</label>
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(3, 1fr)',
+                      gap: '1rem',
+                    }}>
+                      {['small', 'normal', 'large'].map((size) => (
+                        <button
+                          key={size}
+                          onClick={() =>
+                            setSettings((prev) => ({
+                              ...prev,
+                              font_size: size as any,
+                            }))
+                          }
+                          style={{
+                            padding: '1rem',
+                            background:
+                              settings.font_size === size
+                                ? `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryHover})`
+                                : 'white',
+                            color: settings.font_size === size ? 'white' : COLORS.textPrimary,
+                            border: `1.5px solid ${settings.font_size === size ? COLORS.primary : COLORS.borderLight}`,
+                            borderRadius: 10,
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            fontSize: size === 'small' ? '0.875rem' : size === 'normal' ? '1rem' : '1.125rem',
+                            textTransform: 'capitalize',
+                            transition: 'all 0.2s',
+                          }}
+                        >
+                          A
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Data & Privacy Tab */}
+            {activeTab === 'data' && (
+              <div>
+                <h2 style={{
+                  fontSize: '1.5rem',
+                  fontWeight: 700,
+                  color: COLORS.textPrimary,
+                  margin: '0 0 2rem 0',
+                }}>Data & Privacy</h2>
+
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '1.5rem',
+                }}>
+                  {/* Change Password */}
+                  <div style={{
+                    padding: '1.5rem',
+                    background: COLORS.bgLight,
+                    borderRadius: 10,
+                    border: `1.5px solid ${COLORS.borderLight}`,
+                  }}>
+                    {!showPasswordChange ? (
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}>
+                        <div>
+                          <h3 style={{
+                            fontSize: '1rem',
+                            fontWeight: 700,
+                            color: COLORS.textPrimary,
+                            margin: '0 0 0.25rem 0',
+                          }}>Change Password</h3>
+                          <p style={{
+                            fontSize: '0.875rem',
+                            color: COLORS.textMuted,
+                            margin: 0,
+                          }}>Update your account password</p>
+                        </div>
+                        <button
+                          onClick={() => setShowPasswordChange(true)}
+                          style={{
+                            padding: '0.75rem 1.5rem',
+                            background: COLORS.primary,
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: 8,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.9')}
+                          onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
+                        >
+                          Change
+                        </button>
+                      </div>
+                    ) : (
+                      <form onSubmit={handleChangePassword} style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '1rem',
+                      }}>
+                        <input
+                          type="password"
+                          placeholder="Current Password"
+                          value={passwordForm.current_password}
+                          onChange={(e) =>
+                            setPasswordForm((prev) => ({
+                              ...prev,
+                              current_password: e.target.value,
+                            }))
+                          }
+                          style={{
+                            padding: '0.75rem 1rem',
+                            border: `1.5px solid ${COLORS.borderLight}`,
+                            borderRadius: 8,
+                            fontSize: '1rem',
+                            fontFamily: 'inherit',
+                          }}
+                        />
+                        <input
+                          type="password"
+                          placeholder="New Password"
+                          value={passwordForm.new_password}
+                          onChange={(e) =>
+                            setPasswordForm((prev) => ({
+                              ...prev,
+                              new_password: e.target.value,
+                            }))
+                          }
+                          style={{
+                            padding: '0.75rem 1rem',
+                            border: `1.5px solid ${COLORS.borderLight}`,
+                            borderRadius: 8,
+                            fontSize: '1rem',
+                            fontFamily: 'inherit',
+                          }}
+                        />
+                        <input
+                          type="password"
+                          placeholder="Confirm Password"
+                          value={passwordForm.confirm_password}
+                          onChange={(e) =>
+                            setPasswordForm((prev) => ({
+                              ...prev,
+                              confirm_password: e.target.value,
+                            }))
+                          }
+                          style={{
+                            padding: '0.75rem 1rem',
+                            border: `1.5px solid ${COLORS.borderLight}`,
+                            borderRadius: 8,
+                            fontSize: '1rem',
+                            fontFamily: 'inherit',
+                          }}
+                        />
+                        <div style={{
+                          display: 'flex',
+                          gap: '1rem',
+                        }}>
+                          <button
+                            type="submit"
+                            disabled={saving}
+                            style={{
+                              flex: 1,
+                              padding: '0.75rem',
+                              background: COLORS.primary,
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: 8,
+                              fontWeight: 600,
+                              cursor: saving ? 'not-allowed' : 'pointer',
+                              opacity: saving ? 0.7 : 1,
+                            }}
+                          >
+                            {saving ? 'Saving...' : 'Save'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowPasswordChange(false)}
+                            style={{
+                              flex: 1,
+                              padding: '0.75rem',
+                              background: 'transparent',
+                              color: COLORS.textSecondary,
+                              border: `1.5px solid ${COLORS.borderLight}`,
+                              borderRadius: 8,
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    )}
+                  </div>
+
+                  {/* Export Data */}
+                  <div style={{
+                    padding: '1.5rem',
+                    background: COLORS.bgLight,
+                    borderRadius: 10,
+                    border: `1.5px solid ${COLORS.borderLight}`,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}>
+                    <div>
+                      <h3 style={{
+                        fontSize: '1rem',
+                        fontWeight: 700,
+                        color: COLORS.textPrimary,
+                        margin: '0 0 0.25rem 0',
+                      }}>Export Learning Data</h3>
+                      <p style={{
+                        fontSize: '0.875rem',
+                        color: COLORS.textMuted,
+                        margin: 0,
+                      }}>Download your profile and learning data as JSON</p>
+                    </div>
+                    <button
+                      onClick={() => alert('Exporting your data...')}
+                      style={{
+                        padding: '0.75rem 1.5rem',
+                        background: 'transparent',
+                        color: COLORS.primary,
+                        border: `1.5px solid ${COLORS.primary}`,
+                        borderRadius: 8,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = COLORS.primary;
+                        e.currentTarget.style.color = 'white';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.color = COLORS.primary;
+                      }}
+                    >
+                      📥 Export
+                    </button>
+                  </div>
+
+                  {/* Delete Account */}
+                  <div style={{
+                    padding: '1.5rem',
+                    background: '#FEF2F2',
+                    borderRadius: 10,
+                    border: `1.5px solid ${COLORS.error}`,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}>
+                    <div>
+                      <h3 style={{
+                        fontSize: '1rem',
+                        fontWeight: 700,
+                        color: COLORS.error,
+                        margin: '0 0 0.25rem 0',
+                      }}>Delete Account</h3>
+                      <p style={{
+                        fontSize: '0.875rem',
+                        color: COLORS.error,
+                        margin: 0,
+                        opacity: 0.7,
+                      }}>Permanently delete your account and all data</p>
+                    </div>
+                    <button
+                      onClick={() => setShowDeleteConfirm(true)}
+                      style={{
+                        padding: '0.75rem 1.5rem',
+                        background: COLORS.error,
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: 8,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.9')}
+                      onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
+                    >
+                      🗑️ Delete
+                    </button>
+                  </div>
+
+                  {/* Delete Confirmation Modal */}
+                  {showDeleteConfirm && (
+                    <div style={{
+                      position: 'fixed',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      background: 'rgba(0,0,0,0.5)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      zIndex: 1000,
+                    }}>
+                      <div style={{
+                        background: 'white',
+                        borderRadius: 12,
+                        padding: '2rem',
+                        maxWidth: '400px',
+                        boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+                      }}>
+                        <h2 style={{
+                          fontSize: '1.5rem',
+                          fontWeight: 700,
+                          color: COLORS.error,
+                          margin: '0 0 1rem 0',
+                        }}>Delete Account?</h2>
+                        <p style={{
+                          color: COLORS.textPrimary,
+                          marginBottom: '2rem',
+                        }}>
+                          This action cannot be undone. All your data will be permanently deleted.
+                        </p>
+                        <div style={{
+                          display: 'flex',
+                          gap: '1rem',
+                        }}>
+                          <button
+                            onClick={() => setShowDeleteConfirm(false)}
+                            style={{
+                              flex: 1,
+                              padding: '0.75rem',
+                              background: 'transparent',
+                              color: COLORS.textPrimary,
+                              border: `1.5px solid ${COLORS.borderLight}`,
+                              borderRadius: 8,
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={handleDeleteAccount}
+                            disabled={saving}
+                            style={{
+                              flex: 1,
+                              padding: '0.75rem',
+                              background: COLORS.error,
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: 8,
+                              fontWeight: 600,
+                              cursor: saving ? 'not-allowed' : 'pointer',
+                              opacity: saving ? 0.7 : 1,
+                            }}
+                          >
+                            {saving ? 'Deleting...' : 'Delete'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Save Button */}
+            {activeTab !== 'data' && (
+              <div style={{
+                marginTop: '2rem',
+                paddingTop: '2rem',
+                borderTop: `1px solid ${COLORS.borderLight}`,
+                display: 'flex',
+                gap: '1rem',
+              }}>
+                <button
+                  onClick={handleSaveSettings}
+                  disabled={saving}
+                  style={{
+                    flex: 1,
+                    padding: '1rem',
+                    background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryHover})`,
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: 10,
+                    fontWeight: 700,
+                    fontSize: '1rem',
+                    cursor: saving ? 'not-allowed' : 'pointer',
+                    opacity: saving ? 0.7 : 1,
+                    transition: 'all 0.2s',
+                    boxShadow: `0 4px 15px rgba(108,99,255,0.3)`,
+                  }}
+                  onMouseEnter={(e) => !saving && (e.currentTarget.style.opacity = '0.9')}
+                  onMouseLeave={(e) => !saving && (e.currentTarget.style.opacity = '1')}
+                >
+                  {saving ? '💾 Saving...' : '💾 Save Settings'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
-
-        {/* Content */}
-        <div style={{ flex: 1, padding: "32px" }}>
-          <div style={{ maxWidth: 700 }}>
-            <h2 style={{ fontSize: 22, fontWeight: 800, color: "#111827", margin: "0 0 20px 0" }}>
-              {tab === "account" ? "Account" : tab === "notifications" ? "Notifications" : "Appearance"}
-            </h2>
-            <div key={tab} style={{ animation: "fadeUp 0.25s ease" }}>
-              {panels[tab]}
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div style={{
-          padding: "16px 32px", borderTop: "1px solid #F0F0F0",
-          background: "white", textAlign: "center",
-        }}>
-          <span style={{ fontSize: 12, color: "#9CA3AF" }}>© 2024 Edni AI Academy</span>
-        </div>
-      </main>
-
-      <style>{`
-        * { box-sizing: border-box; }
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(10px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
+      </div>
     </div>
   );
 }

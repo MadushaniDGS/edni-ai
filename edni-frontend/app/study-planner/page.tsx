@@ -2,767 +2,889 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1';
+import TopBar from '@/components/TopBar';
+import Sidebar from '@/components/Sidebar';
 
-interface Task {
-  id: string;
-  title: string;
-  description: string;
-  difficulty: string;
-  estimated_hours: number;
-  order: number;
-}
-
-interface StudyWeek {
-  week_number: number;
-  phase: string;
-  theme: string;
-  tasks: Task[];
-}
-
-interface StudyPlan {
-  id: string;
-  student_id: string;
-  weeks: StudyWeek[];
-  created_at: string;
-  total_weeks: number;
-}
-
-// Color palette
 const COLORS = {
-  primary: "#6C63FF",
-  primaryHover: "#4F46E5",
-  secondary: "#A855F7",
-  accent: "#EC4899",
-  bgDark: "#0F172A",
-  bgCard: "#1E293B",
-  textPrimary: "#F8FAFC",
-  textSecondary: "#94A3B8",
-  borderDark: "#334155",
-  success: "#22C55E",
+  primary: '#6366f1',
+  bg: '#ffffff',
+  textPrimary: '#1f2937',
+  textSecondary: '#6b7280',
+  textMuted: '#9ca3af',
+  border: '#e5e7eb',
+  success: '#10b981',
+  warning: '#f59e0b',
+  error: '#ef4444',
 };
 
-// Spinner component
-function Spinner() {
-  return (
-    <div style={{
-      width: 40,
-      height: 40,
-      border: `3px solid ${COLORS.borderDark}`,
-      borderTop: `3px solid ${COLORS.primary}`,
-      borderRadius: '50%',
-      animation: 'spin 1s linear infinite',
-    }} />
-  );
-}
-
-// Badge component
-function Badge({ difficulty }: { difficulty: string }) {
-  const badgeStyles: Record<string, React.CSSProperties> = {
-    hard: {
-      background: 'rgba(239, 68, 68, 0.15)',
-      color: '#FCA5A5',
-      borderLeft: `3px solid #EF4444`,
-    },
-    medium: {
-      background: 'rgba(245, 158, 11, 0.15)',
-      color: '#FBBF24',
-      borderLeft: `3px solid #F59E0B`,
-    },
-    easy: {
-      background: 'rgba(34, 197, 94, 0.15)',
-      color: '#86EFAC',
-      borderLeft: `3px solid #22C55E`,
-    },
-  };
-
-  return (
-    <span style={{
-      fontSize: '0.75rem',
-      padding: '0.25rem 0.5rem',
-      borderRadius: '0.25rem',
-      ...badgeStyles[difficulty],
-    }}>
-      {difficulty.toUpperCase()}
-    </span>
-  );
+interface WeekPlan {
+  week: number;
+  title: string;
+  topics: string[];
+  status: 'completed' | 'in-progress' | 'upcoming';
+  progress: number;
+  estimatedHours: number;
 }
 
 export default function StudyPlannerPage() {
   const router = useRouter();
+
+  const [expandedWeek, setExpandedWeek] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [plan, setPlan] = useState<StudyPlan | null>(null);
-  const [selectedWeek, setSelectedWeek] = useState(0);
-  const [completedTasks, setCompletedTasks] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    const fetchPlan = async () => {
-      try {
-        const token = localStorage.getItem('edni_access');
-        if (!token) {
-          router.push('/login');
-          return;
-        }
+    const token = localStorage.getItem('edni_access');
 
-        const res = await axios.get(`${API_URL}/planner`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+    if (!token) {
+      router.push('/login');
+      return;
+    }
 
-        setPlan(res.data);
-        setError('');
-      } catch (err) {
-        console.error('Failed to fetch study plan:', err);
-        setError('Failed to load study plan');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPlan();
+    setLoading(false);
   }, [router]);
 
-  const toggleTaskComplete = (taskId: string) => {
-    const updated = new Set(completedTasks);
-    if (updated.has(taskId)) {
-      updated.delete(taskId);
-    } else {
-      updated.add(taskId);
+  const weeks: WeekPlan[] = [
+    {
+      week: 1,
+      title: 'Foundations: Variables & Data Types',
+      topics: ['Primitive Types', 'Variable Scope', 'Type Conversion', 'Constants'],
+      status: 'completed',
+      progress: 100,
+      estimatedHours: 6,
+    },
+    {
+      week: 2,
+      title: 'Control Flow: Loops & Conditionals',
+      topics: ['If/Else Statements', 'Switch Cases', 'For Loops', 'While Loops'],
+      status: 'completed',
+      progress: 100,
+      estimatedHours: 8,
+    },
+    {
+      week: 3,
+      title: 'Functions & Scope',
+      topics: [
+        'Function Definition',
+        'Parameters & Returns',
+        'Scope & Closure',
+        'Higher-Order Functions',
+      ],
+      status: 'in-progress',
+      progress: 60,
+      estimatedHours: 7,
+    },
+    {
+      week: 4,
+      title: 'Arrays & Collections',
+      topics: [
+        'Array Operations',
+        'Iteration Methods',
+        'Slicing & Splicing',
+        'Searching & Sorting',
+      ],
+      status: 'in-progress',
+      progress: 35,
+      estimatedHours: 9,
+    },
+    {
+      week: 5,
+      title: 'String Manipulation',
+      topics: ['String Methods', 'Regular Expressions', 'Text Processing', 'Encoding'],
+      status: 'upcoming',
+      progress: 0,
+      estimatedHours: 6,
+    },
+    {
+      week: 6,
+      title: 'Objects & Dictionaries',
+      topics: [
+        'Object Creation',
+        'Property Access',
+        'Nested Objects',
+        'Serialization',
+      ],
+      status: 'upcoming',
+      progress: 0,
+      estimatedHours: 8,
+    },
+    {
+      week: 7,
+      title: 'Basic Algorithms: Searching & Sorting',
+      topics: ['Linear Search', 'Binary Search', 'Bubble Sort', 'Quick Sort'],
+      status: 'upcoming',
+      progress: 0,
+      estimatedHours: 10,
+    },
+    {
+      week: 8,
+      title: 'Algorithm Complexity Analysis',
+      topics: [
+        'Big O Notation',
+        'Time Complexity',
+        'Space Complexity',
+        'Trade-offs',
+      ],
+      status: 'upcoming',
+      progress: 0,
+      estimatedHours: 7,
+    },
+    {
+      week: 9,
+      title: 'Recursion & Backtracking',
+      topics: [
+        'Recursive Functions',
+        'Base Cases',
+        'Call Stack',
+        'Backtracking Patterns',
+      ],
+      status: 'upcoming',
+      progress: 0,
+      estimatedHours: 9,
+    },
+    {
+      week: 10,
+      title: 'Data Structures: Lists & Stacks',
+      topics: [
+        'Linked Lists',
+        'Stack Implementation',
+        'Queue Implementation',
+        'Deque',
+      ],
+      status: 'upcoming',
+      progress: 0,
+      estimatedHours: 10,
+    },
+    {
+      week: 11,
+      title: 'Trees & Graph Fundamentals',
+      topics: [
+        'Binary Trees',
+        'Tree Traversal',
+        'Graph Representation',
+        'DFS & BFS',
+      ],
+      status: 'upcoming',
+      progress: 0,
+      estimatedHours: 11,
+    },
+    {
+      week: 12,
+      title: 'Advanced Algorithms: Graphs',
+      topics: [
+        'Shortest Path',
+        'Minimum Spanning Tree',
+        'Topological Sort',
+        'Cycle Detection',
+      ],
+      status: 'upcoming',
+      progress: 0,
+      estimatedHours: 10,
+    },
+    {
+      week: 13,
+      title: 'Dynamic Programming Basics',
+      topics: [
+        'Memoization',
+        'Overlapping Subproblems',
+        'Optimal Substructure',
+        'Classic Problems',
+      ],
+      status: 'upcoming',
+      progress: 0,
+      estimatedHours: 12,
+    },
+    {
+      week: 14,
+      title: 'Object-Oriented Programming',
+      topics: [
+        'Classes & Objects',
+        'Inheritance',
+        'Polymorphism',
+        'Design Patterns',
+      ],
+      status: 'upcoming',
+      progress: 0,
+      estimatedHours: 10,
+    },
+    {
+      week: 15,
+      title: 'Integration & Design Patterns',
+      topics: [
+        'Refactoring',
+        'Design Patterns',
+        'Testing Strategies',
+        'Documentation',
+      ],
+      status: 'upcoming',
+      progress: 0,
+      estimatedHours: 8,
+    },
+    {
+      week: 16,
+      title: 'Capstone Review & Assessment',
+      topics: [
+        'Comprehensive Review',
+        'Problem Solving',
+        'Final Assessment',
+        'Next Steps',
+      ],
+      status: 'upcoming',
+      progress: 0,
+      estimatedHours: 6,
+    },
+  ];
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return {
+          bg: '#ecfdf5',
+          border: '#d1fae5',
+          text: '#065f46',
+        };
+
+      case 'in-progress':
+        return {
+          bg: '#eff6ff',
+          border: '#bfdbfe',
+          text: '#1e40af',
+        };
+
+      case 'upcoming':
+        return {
+          bg: '#fafafa',
+          border: '#e5e7eb',
+          text: '#6b7280',
+        };
+
+      default:
+        return {
+          bg: '#ffffff',
+          border: COLORS.border,
+          text: COLORS.textPrimary,
+        };
     }
-    setCompletedTasks(updated);
   };
 
-  const currentWeek = plan?.weeks[selectedWeek];
-  const progressPercent = currentWeek
-    ? Math.round(
-      (currentWeek.tasks.filter((t) => completedTasks.has(t.id)).length /
-        currentWeek.tasks.length) *
-      100
-    )
-    : 0;
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return '✓';
 
-  const phaseColors: Record<string, string> = {
-    Foundation: COLORS.primaryHover,
-    Intermediate: COLORS.secondary,
-    Advanced: COLORS.accent,
+      case 'in-progress':
+        return '↗';
+
+      case 'upcoming':
+        return '○';
+
+      default:
+        return '?';
+    }
   };
+
+  const totalHours = weeks.reduce(
+    (sum, week) => sum + week.estimatedHours,
+    0
+  );
+
+  const completedWeeks = weeks.filter(
+    (week) => week.status === 'completed'
+  ).length;
+
+  const inProgressWeeks = weeks.filter(
+    (week) => week.status === 'in-progress'
+  ).length;
+
+  const overallProgress =
+    ((completedWeeks + inProgressWeeks * 0.5) / weeks.length) * 100;
 
   if (loading) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        backgroundColor: COLORS.bgDark,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}>
-        <div style={{
+      <div
+        style={{
+          minHeight: '100vh',
+          backgroundColor: COLORS.bg,
           display: 'flex',
-          flexDirection: 'column',
           alignItems: 'center',
-          gap: '1rem',
-        }}>
-          <Spinner />
-          <p style={{ color: COLORS.textSecondary }}>Loading your study plan...</p>
+          justifyContent: 'center',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '1rem',
+          }}
+        >
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              border: `3px solid ${COLORS.border}`,
+              borderTop: `3px solid ${COLORS.primary}`,
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+            }}
+          />
+
+          <p style={{ color: COLORS.textMuted }}>
+            Loading study plan...
+          </p>
         </div>
+
         <style>{`
           @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+            from {
+              transform: rotate(0deg);
+            }
+            to {
+              transform: rotate(360deg);
+            }
           }
         `}</style>
       </div>
     );
   }
 
-  if (error || !plan) {
-    return (
-      <div style={{
+  return (
+    <div
+      style={{
         minHeight: '100vh',
-        backgroundColor: COLORS.bgDark,
-        padding: '1.5rem',
-      }}>
-        <div style={{ maxWidth: '56rem', margin: '0 auto' }}>
-          <div style={{
-            background: COLORS.bgCard,
-            border: `1px solid ${COLORS.borderDark}`,
-            borderRadius: 12,
-            padding: '2rem',
-          }}>
-            <h2 style={{
-              fontSize: '1.5rem',
-              fontWeight: 700,
-              color: '#EF4444',
-              marginBottom: '1rem',
-            }}>Unable to Load Study Plan</h2>
-            <p style={{
-              color: COLORS.textSecondary,
-              marginBottom: '1.5rem',
-            }}>
-              {error || 'No study plan found. Complete the diagnostic assessment first.'}
+        backgroundColor: COLORS.bg,
+      }}
+    >
+      {/* Sidebar */}
+      <Sidebar />
+
+      {/* Main Content */}
+      <div
+        style={{
+          marginLeft: 240,
+          minHeight: '100vh',
+        }}
+      >
+        {/* Top Bar */}
+        <TopBar title="Study Planner" />
+
+        {/* Page Header */}
+        <div
+          style={{
+            backgroundColor: '#ffffff',
+            borderBottom: `1px solid ${COLORS.border}`,
+          }}
+        >
+          <div
+            style={{
+              maxWidth: '1280px',
+              margin: '0 auto',
+              padding: '1.5rem 2rem',
+            }}
+          >
+            <h1
+              style={{
+                fontSize: '1.875rem',
+                fontWeight: 700,
+                margin: 0,
+                marginBottom: '0.5rem',
+                color: COLORS.textPrimary,
+              }}
+            >
+              📅 16-Week Study Plan
+            </h1>
+
+            <p
+              style={{
+                color: COLORS.textMuted,
+                margin: 0,
+                fontSize: '0.875rem',
+              }}
+            >
+              Personalized learning path from fundamentals to mastery
             </p>
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <button
-                onClick={() => router.push('/diagnostic')}
-                style={{
-                  padding: '0.75rem 1.5rem',
-                  background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryHover})`,
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: 10,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  boxShadow: `0 4px 15px rgba(108, 99, 255, 0.3)`,
-                  transition: 'all 0.2s',
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
-                onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-              >
-                📊 Take Diagnostic
-              </button>
-              <button
-                onClick={() => router.push('/dashboard')}
-                style={{
-                  padding: '0.75rem 1.5rem',
-                  background: 'transparent',
-                  color: COLORS.textSecondary,
-                  border: `1.5px solid ${COLORS.borderDark}`,
-                  borderRadius: 10,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = COLORS.primary;
-                  e.currentTarget.style.color = COLORS.primary;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = COLORS.borderDark;
-                  e.currentTarget.style.color = COLORS.textSecondary;
-                }}
-              >
-                Back to Dashboard
-              </button>
-            </div>
           </div>
         </div>
-      </div>
-    );
-  }
 
-  return (
-    <div style={{ minHeight: '100vh', backgroundColor: COLORS.bgDark }}>
-      {/* Header */}
-      <div style={{
-        backgroundColor: 'rgba(30, 41, 59, 0.5)',
-        backdropFilter: 'blur(12px)',
-        borderBottom: `1px solid ${COLORS.borderDark}`,
-        position: 'sticky',
-        top: 0,
-        zIndex: 40,
-      }}>
-        <div style={{
-          maxWidth: '1280px',
-          margin: '0 auto',
-          padding: '1.5rem',
-          paddingLeft: '2rem',
-          paddingRight: '2rem',
-        }}>
-          <h1 style={{
-            fontSize: '1.875rem',
-            fontWeight: 700,
-            color: COLORS.textPrimary,
-            marginBottom: '0.5rem',
-          }}>16-Week Study Plan</h1>
-          <p style={{ color: COLORS.textSecondary }}>Personalized roadmap to mastery</p>
-        </div>
-      </div>
+        {/* Main Content */}
+        <div
+          style={{
+            maxWidth: '1280px',
+            margin: '0 auto',
+            padding: '2rem',
+          }}
+        >
+          {/* Progress Overview */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns:
+                'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: '1.5rem',
+              marginBottom: '2rem',
+            }}
+          >
+            {/* Overall Progress */}
+            <div
+              style={{
+                backgroundColor: '#ffffff',
+                border: `1px solid ${COLORS.border}`,
+                borderRadius: 12,
+                padding: '1.5rem',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+              }}
+            >
+              <p
+                style={{
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  color: COLORS.textMuted,
+                  margin: 0,
+                  textTransform: 'uppercase',
+                }}
+              >
+                Overall Progress
+              </p>
 
-      {/* Main content */}
-      <div style={{
-        maxWidth: '1280px',
-        margin: '0 auto',
-        padding: '2rem',
-        paddingLeft: '2rem',
-        paddingRight: '2rem',
-      }}>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 2fr',
-          gap: '1.5rem',
-        }}>
-          {/* Week timeline sidebar */}
-          <div>
-            <div style={{
-              background: COLORS.bgCard,
-              border: `1px solid ${COLORS.borderDark}`,
-              borderRadius: 12,
-              padding: '1.5rem',
-              position: 'sticky',
-              top: '6rem',
-              maxHeight: 'calc(100vh - 8rem)',
-              overflowY: 'auto',
-            }}>
-              <h3 style={{
-                fontSize: '1.125rem',
-                fontWeight: 700,
-                color: COLORS.textPrimary,
-                marginBottom: '1rem',
-              }}>Weeks</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {plan.weeks.map((week) => (
+              <p
+                style={{
+                  fontSize: '2rem',
+                  fontWeight: 700,
+                  margin: '0.5rem 0',
+                  color: COLORS.primary,
+                }}
+              >
+                {Math.round(overallProgress)}%
+              </p>
+
+              <div
+                style={{
+                  height: 6,
+                  backgroundColor: COLORS.border,
+                  borderRadius: 3,
+                  overflow: 'hidden',
+                  marginTop: '0.75rem',
+                }}
+              >
+                <div
+                  style={{
+                    height: '100%',
+                    width: `${overallProgress}%`,
+                    backgroundColor: COLORS.primary,
+                    transition: 'width 0.3s ease',
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Weeks Completed */}
+            <div
+              style={{
+                backgroundColor: '#ffffff',
+                border: `1px solid ${COLORS.border}`,
+                borderRadius: 12,
+                padding: '1.5rem',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+              }}
+            >
+              <p
+                style={{
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  color: COLORS.textMuted,
+                  margin: 0,
+                  textTransform: 'uppercase',
+                }}
+              >
+                Weeks Completed
+              </p>
+
+              <p
+                style={{
+                  fontSize: '2rem',
+                  fontWeight: 700,
+                  margin: '0.5rem 0',
+                  color: COLORS.success,
+                }}
+              >
+                {completedWeeks}/{weeks.length}
+              </p>
+
+              <p
+                style={{
+                  fontSize: '0.75rem',
+                  color: COLORS.textMuted,
+                  margin: 0,
+                }}
+              >
+                On track
+              </p>
+            </div>
+
+            {/* Total Hours */}
+            <div
+              style={{
+                backgroundColor: '#ffffff',
+                border: `1px solid ${COLORS.border}`,
+                borderRadius: 12,
+                padding: '1.5rem',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+              }}
+            >
+              <p
+                style={{
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  color: COLORS.textMuted,
+                  margin: 0,
+                  textTransform: 'uppercase',
+                }}
+              >
+                Total Hours
+              </p>
+
+              <p
+                style={{
+                  fontSize: '2rem',
+                  fontWeight: 700,
+                  margin: '0.5rem 0',
+                  color: COLORS.textPrimary,
+                }}
+              >
+                {totalHours}h
+              </p>
+
+              <p
+                style={{
+                  fontSize: '0.75rem',
+                  color: COLORS.textMuted,
+                  margin: 0,
+                }}
+              >
+                Recommended commitment
+              </p>
+            </div>
+          </div>
+
+          {/* Week Timeline */}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem',
+            }}
+          >
+            {weeks.map((week) => {
+              const statusColor = getStatusColor(week.status);
+              const isExpanded = expandedWeek === week.week;
+
+              return (
+                <div
+                  key={week.week}
+                  style={{
+                    backgroundColor: '#ffffff',
+                    border: `1.5px solid ${statusColor.border}`,
+                    borderRadius: 12,
+                    overflow: 'hidden',
+                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  {/* Week Header */}
                   <button
-                    key={week.week_number}
-                    onClick={() => setSelectedWeek(week.week_number - 1)}
+                    onClick={() =>
+                      setExpandedWeek(
+                        isExpanded ? null : week.week
+                      )
+                    }
                     style={{
                       width: '100%',
-                      textAlign: 'left',
-                      padding: '0.75rem',
-                      borderRadius: '0.5rem',
-                      border: selectedWeek === week.week_number - 1
-                        ? `1px solid ${COLORS.primary}`
-                        : `1px solid transparent`,
-                      backgroundColor: selectedWeek === week.week_number - 1
-                        ? 'rgba(108, 99, 255, 0.1)'
-                        : 'transparent',
-                      color: selectedWeek === week.week_number - 1
-                        ? COLORS.primary
-                        : COLORS.textSecondary,
-                      fontWeight: selectedWeek === week.week_number - 1 ? 600 : 400,
+                      padding: '1.5rem',
+                      backgroundColor: statusColor.bg,
+                      border: 'none',
                       cursor: 'pointer',
+                      textAlign: 'left',
                       transition: 'all 0.2s',
                     }}
                     onMouseEnter={(e) => {
-                      if (selectedWeek !== week.week_number - 1) {
-                        e.currentTarget.style.backgroundColor = 'rgba(108, 99, 255, 0.05)';
-                      }
+                      e.currentTarget.style.backgroundColor =
+                        statusColor.border;
                     }}
                     onMouseLeave={(e) => {
-                      if (selectedWeek !== week.week_number - 1) {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                      }
+                      e.currentTarget.style.backgroundColor =
+                        statusColor.bg;
                     }}
                   >
-                    <p style={{ fontWeight: 600, margin: 0 }}>Week {week.week_number}</p>
-                    <p style={{
-                      fontSize: '0.75rem',
-                      color: COLORS.textSecondary,
-                      margin: '0.25rem 0 0 0',
-                    }}>{week.phase}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Main content area */}
-          <div>
-            {currentWeek ? (
-              <>
-                {/* Week overview */}
-                <div style={{
-                  background: COLORS.bgCard,
-                  border: `1px solid ${COLORS.borderDark}`,
-                  borderRadius: 12,
-                  padding: '2rem',
-                  marginBottom: '1.5rem',
-                }}>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginBottom: '1.5rem',
-                  }}>
-                    <div>
-                      <h2 style={{
-                        fontSize: '1.5rem',
-                        fontWeight: 700,
-                        color: COLORS.textPrimary,
-                        margin: 0,
-                      }}>
-                        Week {currentWeek.week_number}
-                      </h2>
-                      <p style={{
-                        color: phaseColors[currentWeek.phase],
-                        fontSize: '0.875rem',
-                        fontWeight: 600,
-                        margin: '0.5rem 0 0 0',
-                      }}>
-                        {currentWeek.phase} Phase
-                      </p>
-                    </div>
-                    <div style={{
-                      padding: '0.75rem 1.5rem',
-                      background: phaseColors[currentWeek.phase],
-                      color: 'white',
-                      borderRadius: 10,
-                      fontWeight: 700,
-                      fontSize: '0.875rem',
-                    }}>
-                      {progressPercent}% Complete
-                    </div>
-                  </div>
-
-                  <p style={{
-                    color: COLORS.textSecondary,
-                    margin: '0 0 1.5rem 0',
-                  }}>
-                    Focus on mastering key concepts this week
-                  </p>
-
-                  {/* Progress bar */}
-                  <div style={{ marginBottom: '1.5rem' }}>
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      marginBottom: '0.5rem',
-                    }}>
-                      <p style={{
-                        fontSize: '0.875rem',
-                        fontWeight: 600,
-                        color: COLORS.textPrimary,
-                        margin: 0,
-                      }}>Weekly Progress</p>
-                      <span style={{
-                        fontSize: '0.875rem',
-                        color: COLORS.primary,
-                        fontWeight: 700,
-                      }}>{progressPercent}%</span>
-                    </div>
-                    <div style={{
-                      width: '100%',
-                      backgroundColor: 'rgba(30, 41, 59, 0.5)',
-                      borderRadius: '9999px',
-                      height: '0.75rem',
-                      overflow: 'hidden',
-                    }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '1rem',
+                        justifyContent: 'space-between',
+                      }}
+                    >
                       <div
                         style={{
-                          height: '100%',
-                          borderRadius: '9999px',
-                          background: phaseColors[currentWeek.phase],
-                          width: `${progressPercent}%`,
-                          transition: 'width 0.3s ease',
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Task stats */}
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(3, 1fr)',
-                    gap: '1rem',
-                    paddingTop: '1rem',
-                    borderTop: `1px solid ${COLORS.borderDark}`,
-                  }}>
-                    <div>
-                      <p style={{
-                        fontSize: '0.75rem',
-                        color: COLORS.textSecondary,
-                        margin: '0 0 0.25rem 0',
-                      }}>Total Tasks</p>
-                      <p style={{
-                        fontSize: '1.5rem',
-                        fontWeight: 700,
-                        color: COLORS.textPrimary,
-                        margin: 0,
-                      }}>{currentWeek.tasks.length}</p>
-                    </div>
-                    <div>
-                      <p style={{
-                        fontSize: '0.75rem',
-                        color: COLORS.textSecondary,
-                        margin: '0 0 0.25rem 0',
-                      }}>Completed</p>
-                      <p style={{
-                        fontSize: '1.5rem',
-                        fontWeight: 700,
-                        color: COLORS.success,
-                        margin: 0,
-                      }}>{completedTasks.size}</p>
-                    </div>
-                    <div>
-                      <p style={{
-                        fontSize: '0.75rem',
-                        color: COLORS.textSecondary,
-                        margin: '0 0 0.25rem 0',
-                      }}>Est. Hours</p>
-                      <p style={{
-                        fontSize: '1.5rem',
-                        fontWeight: 700,
-                        color: COLORS.textPrimary,
-                        margin: 0,
-                      }}>
-                        {currentWeek.tasks.reduce((sum, t) => sum + t.estimated_hours, 0)}h
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Tasks list */}
-                <div style={{
-                  background: COLORS.bgCard,
-                  border: `1px solid ${COLORS.borderDark}`,
-                  borderRadius: 12,
-                  padding: '2rem',
-                  marginBottom: '1.5rem',
-                }}>
-                  <h3 style={{
-                    fontSize: '1.125rem',
-                    fontWeight: 700,
-                    color: COLORS.textPrimary,
-                    marginBottom: '1.5rem',
-                    margin: 0,
-                  }}>Tasks</h3>
-                  <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.75rem',
-                    marginTop: '1.5rem',
-                  }}>
-                    {currentWeek.tasks.map((task, idx) => (
-                      <div
-                        key={task.id}
-                        style={{
-                          padding: '1rem',
-                          border: `2px solid ${completedTasks.has(task.id)
-                            ? 'rgba(34, 197, 94, 0.3)'
-                            : COLORS.borderDark
-                            }`,
-                          backgroundColor: completedTasks.has(task.id)
-                            ? 'rgba(34, 197, 94, 0.05)'
-                            : 'rgba(30, 41, 59, 0.3)',
-                          borderRadius: '0.5rem',
-                          transition: 'all 0.2s',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.borderColor = COLORS.primary;
-                          e.currentTarget.style.backgroundColor = 'rgba(108, 99, 255, 0.05)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.borderColor = completedTasks.has(task.id)
-                            ? 'rgba(34, 197, 94, 0.3)'
-                            : COLORS.borderDark;
-                          e.currentTarget.style.backgroundColor = completedTasks.has(task.id)
-                            ? 'rgba(34, 197, 94, 0.05)'
-                            : 'rgba(30, 41, 59, 0.3)';
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '1rem',
+                          flex: 1,
                         }}
                       >
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'flex-start',
-                          gap: '0.75rem',
-                        }}>
-                          <input
-                            type="checkbox"
-                            checked={completedTasks.has(task.id)}
-                            onChange={() => toggleTaskComplete(task.id)}
+                        {/* Status Icon */}
+                        <div
+                          style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: 8,
+                            backgroundColor: statusColor.border,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 700,
+                            color: statusColor.text,
+                            fontSize: '1.25rem',
+                          }}
+                        >
+                          {getStatusIcon(week.status)}
+                        </div>
+
+                        {/* Week Info */}
+                        <div style={{ flex: 1 }}>
+                          <div
                             style={{
-                              marginTop: '0.25rem',
-                              accentColor: COLORS.primary,
-                              width: 18,
-                              height: 18,
-                              cursor: 'pointer',
-                            }}
-                          />
-                          <div style={{ flex: 1 }}>
-                            <p
-                              style={{
-                                fontWeight: 600,
-                                color: completedTasks.has(task.id)
-                                  ? COLORS.textSecondary
-                                  : COLORS.textPrimary,
-                                textDecoration: completedTasks.has(task.id)
-                                  ? 'line-through'
-                                  : 'none',
-                                margin: 0,
-                              }}
-                            >
-                              {idx + 1}. {task.title}
-                            </p>
-                            <p style={{
-                              fontSize: '0.875rem',
-                              color: COLORS.textSecondary,
-                              marginTop: '0.25rem',
-                              margin: '0.25rem 0 0 0',
-                            }}>{task.description}</p>
-                            <div style={{
                               display: 'flex',
                               alignItems: 'center',
                               gap: '0.5rem',
-                              marginTop: '0.75rem',
-                            }}>
-                              <Badge difficulty={task.difficulty} />
-                              <span style={{
+                              marginBottom: '0.25rem',
+                            }}
+                          >
+                            <h3
+                              style={{
+                                fontWeight: 700,
+                                margin: 0,
+                                color: COLORS.textPrimary,
+                                fontSize: '1rem',
+                              }}
+                            >
+                              Week {week.week}: {week.title}
+                            </h3>
+
+                            <span
+                              style={{
                                 fontSize: '0.75rem',
-                                color: COLORS.textSecondary,
-                              }}>⏱️ {task.estimated_hours}h</span>
-                            </div>
+                                fontWeight: 600,
+                                padding: '0.25rem 0.5rem',
+                                backgroundColor: statusColor.border,
+                                color: statusColor.text,
+                                borderRadius: 4,
+                              }}
+                            >
+                              {week.status === 'completed'
+                                ? 'Completed'
+                                : week.status === 'in-progress'
+                                  ? 'In Progress'
+                                  : 'Upcoming'}
+                            </span>
                           </div>
+
+                          <p
+                            style={{
+                              fontSize: '0.875rem',
+                              color: COLORS.textMuted,
+                              margin: 0,
+                            }}
+                          >
+                            {week.estimatedHours}h estimated
+                          </p>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
 
-                {/* Navigation buttons */}
-                <div style={{
-                  display: 'flex',
-                  gap: '1rem',
-                  marginTop: '1.5rem',
-                }}>
-                  <button
-                    onClick={() => setSelectedWeek(Math.max(0, selectedWeek - 1))}
-                    disabled={selectedWeek === 0}
-                    style={{
-                      flex: 1,
-                      padding: '0.75rem',
-                      background: 'transparent',
-                      color: selectedWeek === 0 ? COLORS.textSecondary : COLORS.textPrimary,
-                      border: `1.5px solid ${COLORS.borderDark}`,
-                      borderRadius: 10,
-                      fontWeight: 600,
-                      cursor: selectedWeek === 0 ? 'not-allowed' : 'pointer',
-                      opacity: selectedWeek === 0 ? 0.5 : 1,
-                      transition: 'all 0.2s',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (selectedWeek > 0) {
-                        e.currentTarget.style.borderColor = COLORS.primary;
-                        e.currentTarget.style.color = COLORS.primary;
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (selectedWeek > 0) {
-                        e.currentTarget.style.borderColor = COLORS.borderDark;
-                        e.currentTarget.style.color = COLORS.textPrimary;
-                      }
-                    }}
-                  >
-                    ← Previous Week
-                  </button>
-                  <button
-                    onClick={() => setSelectedWeek(Math.min(plan.weeks.length - 1, selectedWeek + 1))}
-                    disabled={selectedWeek === plan.weeks.length - 1}
-                    style={{
-                      flex: 1,
-                      padding: '0.75rem',
-                      background: 'transparent',
-                      color: selectedWeek === plan.weeks.length - 1 ? COLORS.textSecondary : COLORS.textPrimary,
-                      border: `1.5px solid ${COLORS.borderDark}`,
-                      borderRadius: 10,
-                      fontWeight: 600,
-                      cursor: selectedWeek === plan.weeks.length - 1 ? 'not-allowed' : 'pointer',
-                      opacity: selectedWeek === plan.weeks.length - 1 ? 0.5 : 1,
-                      transition: 'all 0.2s',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (selectedWeek < plan.weeks.length - 1) {
-                        e.currentTarget.style.borderColor = COLORS.primary;
-                        e.currentTarget.style.color = COLORS.primary;
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (selectedWeek < plan.weeks.length - 1) {
-                        e.currentTarget.style.borderColor = COLORS.borderDark;
-                        e.currentTarget.style.color = COLORS.textPrimary;
-                      }
-                    }}
-                  >
-                    Next Week →
-                  </button>
-                </div>
+                      {/* Progress */}
+                      {week.status !== 'upcoming' && (
+                        <div
+                          style={{
+                            marginRight: '1rem',
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: 60,
+                              height: 6,
+                              backgroundColor: COLORS.border,
+                              borderRadius: 3,
+                              overflow: 'hidden',
+                              marginBottom: '0.25rem',
+                            }}
+                          >
+                            <div
+                              style={{
+                                height: '100%',
+                                width: `${week.progress}%`,
+                                backgroundColor: COLORS.success,
+                                transition: 'width 0.3s ease',
+                              }}
+                            />
+                          </div>
 
-                {/* Quick actions */}
-                <div style={{
-                  marginTop: '3rem',
-                  padding: '1.5rem',
-                  background: `linear-gradient(to right, rgba(108, 99, 255, 0.1), rgba(168, 85, 247, 0.1))`,
-                  border: `1px solid rgba(108, 99, 255, 0.2)`,
-                  borderRadius: 12,
-                }}>
-                  <h3 style={{
-                    fontSize: '1.125rem',
-                    fontWeight: 700,
-                    color: COLORS.textPrimary,
-                    marginBottom: '1rem',
-                    margin: 0,
-                  }}>Need help?</h3>
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(1, 1fr)',
-                    gap: '1rem',
-                    marginTop: '1rem',
-                  }}>
-                    {[
-                      {
-                        icon: '📖',
-                        title: 'Access Resources',
-                        desc: 'Learning materials for this week',
-                        route: '/learning-resources',
-                      },
-                      {
-                        icon: '🤖',
-                        title: 'Chat with Mentor',
-                        desc: 'Get personalized guidance',
-                        route: '/mentor',
-                      },
-                      {
-                        icon: '📊',
-                        title: 'View Analytics',
-                        desc: 'Track your progress',
-                        route: '/dashboard',
-                      },
-                    ].map((action) => (
-                      <button
-                        key={action.route}
-                        onClick={() => router.push(action.route)}
+                          <p
+                            style={{
+                              fontSize: '0.75rem',
+                              color: COLORS.textMuted,
+                              margin: 0,
+                              textAlign: 'center',
+                            }}
+                          >
+                            {week.progress}%
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Expand Icon */}
+                      <div
                         style={{
-                          padding: '1rem',
-                          backgroundColor: 'rgba(30, 41, 59, 0.5)',
-                          border: `1px solid ${COLORS.borderDark}`,
-                          borderRadius: 10,
-                          textAlign: 'center',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.borderColor = COLORS.primary;
-                          e.currentTarget.style.backgroundColor = 'rgba(108, 99, 255, 0.1)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.borderColor = COLORS.borderDark;
-                          e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.5)';
+                          fontSize: '1.5rem',
+                          transition: 'transform 0.2s',
+                          transform: isExpanded
+                            ? 'rotate(180deg)'
+                            : 'rotate(0deg)',
                         }}
                       >
-                        <p style={{
-                          fontSize: '1.5rem',
-                          margin: '0 0 0.5rem 0',
-                        }}>{action.icon}</p>
-                        <p style={{
-                          fontWeight: 600,
-                          fontSize: '0.875rem',
-                          color: COLORS.textPrimary,
-                          margin: 0,
-                        }}>{action.title}</p>
-                        <p style={{
-                          fontSize: '0.75rem',
-                          color: COLORS.textSecondary,
-                          margin: '0.25rem 0 0 0',
-                        }}>{action.desc}</p>
-                      </button>
-                    ))}
-                  </div>
+                        ▼
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Expanded Content */}
+                  {isExpanded && (
+                    <div
+                      style={{
+                        padding: '1.5rem',
+                        borderTop: `1px solid ${COLORS.border}`,
+                        backgroundColor: '#fafafa',
+                      }}
+                    >
+                      <div style={{ marginBottom: '1.5rem' }}>
+                        <h4
+                          style={{
+                            fontSize: '0.875rem',
+                            fontWeight: 700,
+                            color: COLORS.textMuted,
+                            margin: '0 0 0.75rem 0',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
+                          }}
+                        >
+                          Topics to Cover
+                        </h4>
+
+                        <div
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns:
+                              'repeat(auto-fill, minmax(150px, 1fr))',
+                            gap: '0.75rem',
+                          }}
+                        >
+                          {week.topics.map((topic, idx) => (
+                            <div
+                              key={idx}
+                              style={{
+                                padding: '0.75rem',
+                                backgroundColor: '#ffffff',
+                                border: `1px solid ${COLORS.border}`,
+                                borderRadius: 8,
+                                fontSize: '0.875rem',
+                                color: COLORS.textPrimary,
+                                fontWeight: 500,
+                              }}
+                            >
+                              • {topic}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Learning Resources Button */}
+                      {week.status !== 'completed' && (
+                        <button
+                          onClick={() =>
+                            router.push('/learning-resources')
+                          }
+                          style={{
+                            width: '100%',
+                            padding: '0.75rem 1.5rem',
+                            backgroundColor: COLORS.primary,
+                            color: '#ffffff',
+                            border: 'none',
+                            borderRadius: 8,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor =
+                              '#4f46e5';
+                            e.currentTarget.style.transform =
+                              'translateY(-2px)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor =
+                              COLORS.primary;
+                            e.currentTarget.style.transform =
+                              'translateY(0)';
+                          }}
+                        >
+                          📚 Access Learning Resources
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
-              </>
-            ) : null}
+              );
+            })}
+          </div>
+
+          {/* Footer */}
+          <div
+            style={{
+              marginTop: '2rem',
+              padding: '2rem',
+              backgroundColor: '#f9fafb',
+              borderRadius: 12,
+              border: `1px solid ${COLORS.border}`,
+              textAlign: 'center',
+            }}
+          >
+            <p
+              style={{
+                color: COLORS.textMuted,
+                margin: 0,
+                fontSize: '0.875rem',
+              }}
+            >
+              💡 Tip: Stay consistent with your study schedule to
+              maintain your learning momentum and achieve mastery.
+            </p>
           </div>
         </div>
       </div>
+
+      <style>{`
+        * {
+          box-sizing: border-box;
+        }
+
+        @keyframes spin {
+          from {
+            transform: rotate(0deg);
+          }
+
+          to {
+            transform: rotate(360deg);
+          }
+        }
+      `}</style>
     </div>
   );
 }

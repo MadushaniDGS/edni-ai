@@ -132,7 +132,12 @@ export default function LoginPage() {
         semester: data.user?.semester ?? "Fall Semester",
       };
 
-      login(userPayload);
+      // 1. Auth context update
+      await login(userPayload);
+
+      // 2. Explicit Redirect Trigger
+      router.push("/dashboard");
+
     } catch {
       setError("Cannot connect to server. Make sure the backend is running on port 8000.");
     } finally {
@@ -143,6 +148,7 @@ export default function LoginPage() {
   const handleGuestLogin = () => {
     localStorage.setItem("edni_access", "demo_guest_token_123");
     loginAsGuest();
+    router.push("/dashboard"); // Added guest redirect
   };
 
   const handleForgot = async () => {

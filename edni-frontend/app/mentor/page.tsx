@@ -3,21 +3,23 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import TopBar from '@/components/TopBar';
+import Sidebar from '@/components/Sidebar';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1';
 
 const COLORS = {
-  primary: "#6C63FF",
-  primaryHover: "#4F46E5",
+  primary: "#4F46E5",
+  primaryHover: "#4338CA",
   secondary: "#A855F7",
   accent: "#EC4899",
-  bgDark: "#0F172A",
-  bgCard: "#1E293B",
-  bgLight: "#F8FAFC",
-  textPrimary: "#F8FAFC",
-  textSecondary: "#94A3B8",
-  textMuted: "#64748B",
-  borderDark: "#334155",
+  bgDark: "#f9fafb",
+  bgCard: "#ffffff",
+  bgLight: "#F9FAFB",
+  textPrimary: "#111827",
+  textSecondary: "#6B7280",
+  textMuted: "#9CA3AF",
+  borderDark: "#E5E7EB",
   success: "#10B981",
   warning: "#F59E0B",
   error: "#EF4444",
@@ -76,7 +78,7 @@ export default function MentorPage() {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        const userData = await axios.get(`${API_URL}/user/me`, {
+        const userData = await axios.get(`${API_URL}/user/auth/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -215,470 +217,481 @@ export default function MentorPage() {
       display: 'flex',
       flexDirection: 'column',
     }}>
-      {/* Header */}
-      <div style={{
-        backgroundColor: 'rgba(30, 41, 59, 0.5)',
-        backdropFilter: 'blur(12px)',
-        borderBottom: `1px solid ${COLORS.borderDark}`,
-      }}>
+      {/* Fixed Sidebar */}
+      <Sidebar />
+
+      {/* Top Bar */}
+      <TopBar title="AI Mentor" />
+
+      {/* Main Content - Offset by sidebar width (240px) */}
+      <div style={{ marginLeft: '240px', paddingTop: '64px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+        {/* Header */}
         <div style={{
-          maxWidth: '1280px',
-          margin: '0 auto',
-          padding: '1rem 2rem',
+          backgroundColor: COLORS.bgCard,
+          borderBottom: `1px solid ${COLORS.borderDark}`,
+          position: 'sticky',
+          top: '64px',
+          zIndex: 30,
         }}>
           <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
+            maxWidth: '1280px',
+            margin: '0 auto',
+            padding: '1rem 2rem',
           }}>
-            <div>
-              <h1 style={{
-                fontSize: '1.5rem',
-                fontWeight: 700,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                margin: 0,
-                color: COLORS.textPrimary,
-              }}>
-                🤖 AI Mentor
-              </h1>
-              <p style={{
-                fontSize: '0.875rem',
-                color: COLORS.textMuted,
-                marginTop: '0.25rem',
-                margin: '0.25rem 0 0 0',
-              }}>
-                {context?.student_name}, your personalized learning companion
-              </p>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <p style={{
-                fontSize: '0.875rem',
-                color: COLORS.textMuted,
-                margin: 0,
-              }}>Current Mastery</p>
-              <p style={{
-                fontSize: '1.5rem',
-                fontWeight: 700,
-                color: COLORS.primary,
-                margin: '0.25rem 0 0 0',
-              }}>
-                {context?.overall_mastery}%
-              </p>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}>
+              <div>
+                <h1 style={{
+                  fontSize: '1.5rem',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  margin: 0,
+                  color: COLORS.textPrimary,
+                }}>
+                  🤖 AI Mentor
+                </h1>
+                <p style={{
+                  fontSize: '0.875rem',
+                  color: COLORS.textMuted,
+                  margin: '0.25rem 0 0 0',
+                }}>
+                  {context?.student_name}, your personalized learning companion
+                </p>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <p style={{
+                  fontSize: '0.875rem',
+                  color: COLORS.textMuted,
+                  margin: 0,
+                }}>Current Mastery</p>
+                <p style={{
+                  fontSize: '1.5rem',
+                  fontWeight: 700,
+                  color: COLORS.primary,
+                  margin: '0.25rem 0 0 0',
+                }}>
+                  {context?.overall_mastery}%
+                </p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Chat container */}
-      <div style={{
-        flex: 1,
-        overflowY: 'auto',
-      }}>
+        {/* Chat container */}
         <div style={{
-          maxWidth: '1280px',
-          margin: '0 auto',
-          padding: '1.5rem 2rem',
-          width: '100%',
+          flex: 1,
+          overflowY: 'auto',
         }}>
           <div style={{
-            maxWidth: '48rem',
+            maxWidth: '1280px',
             margin: '0 auto',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1rem',
+            padding: '1.5rem 2rem',
+            width: '100%',
           }}>
-            {messages.length === 1 && (
-              <div style={{
-                textAlign: 'center',
-                paddingTop: '3rem',
-                paddingBottom: '3rem',
-              }}>
-                <p style={{ fontSize: '2.25rem', marginBottom: '1rem' }}>🎓</p>
-                <h2 style={{
-                  fontSize: '1.5rem',
-                  fontWeight: 700,
-                  marginBottom: '0.5rem',
-                  color: COLORS.textPrimary,
-                  margin: '0 0 0.5rem 0',
-                }}>Welcome to Your AI Mentor</h2>
-                <p style={{
-                  color: COLORS.textMuted,
-                  marginBottom: '2rem',
-                  margin: '0 0 2rem 0',
+            <div style={{
+              maxWidth: '48rem',
+              margin: '0 auto',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem',
+            }}>
+              {messages.length === 1 && (
+                <div style={{
+                  textAlign: 'center',
+                  paddingTop: '3rem',
+                  paddingBottom: '3rem',
                 }}>
-                  Ask questions about any concept. I'll guide you using Socratic questions
-                  to deepen your understanding.
-                </p>
-
-                {/* Critical gaps reminder */}
-                {context?.critical_gaps && context.critical_gaps.length > 0 && (
-                  <div style={{
-                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                    border: `1px solid rgba(239, 68, 68, 0.2)`,
-                    borderRadius: 8,
-                    padding: '1rem',
+                  <p style={{ fontSize: '2.25rem', marginBottom: '1rem' }}>🎓</p>
+                  <h2 style={{
+                    fontSize: '1.5rem',
+                    fontWeight: 700,
+                    marginBottom: '0.5rem',
+                    color: COLORS.textPrimary,
+                    margin: '0 0 0.5rem 0',
+                  }}>Welcome to Your AI Mentor</h2>
+                  <p style={{
+                    color: COLORS.textMuted,
                     marginBottom: '2rem',
-                    textAlign: 'left',
+                    margin: '0 0 2rem 0',
                   }}>
-                    <p style={{
-                      fontWeight: 600,
-                      marginBottom: '0.5rem',
-                      color: COLORS.error,
-                      margin: '0 0 0.5rem 0',
-                    }}>📌 Your Priority Areas</p>
+                    Ask questions about any concept. I'll guide you using Socratic questions
+                    to deepen your understanding.
+                  </p>
+
+                  {/* Critical gaps reminder */}
+                  {context?.critical_gaps && context.critical_gaps.length > 0 && (
+                    <div style={{
+                      backgroundColor: 'rgba(239, 68, 68, 0.05)',
+                      border: `1px solid rgba(239, 68, 68, 0.2)`,
+                      borderRadius: 8,
+                      padding: '1rem',
+                      marginBottom: '2rem',
+                      textAlign: 'left',
+                    }}>
+                      <p style={{
+                        fontWeight: 600,
+                        marginBottom: '0.5rem',
+                        color: COLORS.error,
+                        margin: '0 0 0.5rem 0',
+                      }}>📌 Your Priority Areas</p>
+                      <p style={{
+                        fontSize: '0.875rem',
+                        color: COLORS.textMuted,
+                        marginBottom: '0.75rem',
+                        margin: '0 0 0.75rem 0',
+                      }}>
+                        Based on your diagnostic, focus on:
+                      </p>
+                      <div style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '0.5rem',
+                      }}>
+                        {context.critical_gaps.map((gap, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => setInputValue(`Can you help me understand ${gap}?`)}
+                            style={{
+                              fontSize: '0.875rem',
+                              padding: '0.5rem 0.75rem',
+                              backgroundColor: '#F9FAFB',
+                              color: COLORS.textPrimary,
+                              border: `1px solid ${COLORS.borderDark}`,
+                              borderRadius: 6,
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                              textAlign: 'left',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = '#F3F4F6';
+                              e.currentTarget.style.borderColor = COLORS.primary;
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = '#F9FAFB';
+                              e.currentTarget.style.borderColor = COLORS.borderDark;
+                            }}
+                          >
+                            {gap} →
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Suggested questions */}
+                  <div style={{ textAlign: 'left' }}>
                     <p style={{
                       fontSize: '0.875rem',
-                      color: COLORS.textMuted,
+                      fontWeight: 600,
                       marginBottom: '0.75rem',
+                      color: COLORS.textMuted,
                       margin: '0 0 0.75rem 0',
-                    }}>
-                      Based on your diagnostic, focus on:
-                    </p>
+                    }}>Or try one of these:</p>
                     <div style={{
                       display: 'flex',
-                      flexWrap: 'wrap',
+                      flexDirection: 'column',
                       gap: '0.5rem',
                     }}>
-                      {context.critical_gaps.map((gap, idx) => (
+                      {suggestedQuestions.map((q, idx) => (
                         <button
                           key={idx}
-                          onClick={() => setInputValue(`Can you help me understand ${gap}?`)}
+                          onClick={() => setInputValue(q)}
                           style={{
-                            fontSize: '0.875rem',
-                            padding: '0.5rem 0.75rem',
-                            backgroundColor: 'rgba(30, 41, 59, 0.5)',
+                            width: '100%',
+                            textAlign: 'left',
+                            padding: '0.75rem',
+                            backgroundColor: '#F9FAFB',
                             color: COLORS.textPrimary,
                             border: `1px solid ${COLORS.borderDark}`,
-                            borderRadius: 6,
+                            borderRadius: 8,
                             cursor: 'pointer',
                             transition: 'all 0.2s',
-                            textAlign: 'left',
                           }}
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.7)';
+                            e.currentTarget.style.backgroundColor = '#F3F4F6';
                             e.currentTarget.style.borderColor = COLORS.primary;
                           }}
                           onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.5)';
+                            e.currentTarget.style.backgroundColor = '#F9FAFB';
                             e.currentTarget.style.borderColor = COLORS.borderDark;
                           }}
                         >
-                          {gap} →
+                          <p style={{
+                            fontSize: '0.875rem',
+                            color: COLORS.textPrimary,
+                            margin: 0,
+                          }}>{q}</p>
                         </button>
                       ))}
                     </div>
                   </div>
-                )}
-
-                {/* Suggested questions */}
-                <div style={{ textAlign: 'left' }}>
-                  <p style={{
-                    fontSize: '0.875rem',
-                    fontWeight: 600,
-                    marginBottom: '0.75rem',
-                    color: COLORS.textMuted,
-                    margin: '0 0 0.75rem 0',
-                  }}>Or try one of these:</p>
-                  <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.5rem',
-                  }}>
-                    {suggestedQuestions.map((q, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => setInputValue(q)}
-                        style={{
-                          width: '100%',
-                          textAlign: 'left',
-                          padding: '0.75rem',
-                          backgroundColor: 'rgba(30, 41, 59, 0.3)',
-                          color: COLORS.textPrimary,
-                          border: `1px solid rgba(51, 65, 85, 0.3)`,
-                          borderRadius: 8,
-                          cursor: 'pointer',
-                          transition: 'all 0.2s',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.5)';
-                          e.currentTarget.style.borderColor = 'rgba(108, 99, 255, 0.5)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.3)';
-                          e.currentTarget.style.borderColor = 'rgba(51, 65, 85, 0.3)';
-                        }}
-                      >
-                        <p style={{
-                          fontSize: '0.875rem',
-                          color: COLORS.textPrimary,
-                          margin: 0,
-                        }}>{q}</p>
-                      </button>
-                    ))}
-                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {messages.map((message, idx) => (
-              <div
-                key={idx}
-                style={{
+              {messages.map((message, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    display: 'flex',
+                    gap: '1rem',
+                    justifyContent: message.role === 'user' ? 'flex-end' : 'flex-start',
+                    animation: 'fadeUp 0.3s ease-out',
+                  }}
+                >
+                  {message.role === 'assistant' && (
+                    <div style={{
+                      flexShrink: 0,
+                      width: '2rem',
+                      height: '2rem',
+                      borderRadius: '50%',
+                      backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '1.125rem',
+                      border: `1px solid rgba(79, 70, 229, 0.2)`,
+                    }}>
+                      🤖
+                    </div>
+                  )}
+
+                  <div
+                    style={{
+                      maxWidth: '32rem',
+                      padding: '0.75rem 1rem',
+                      borderRadius: 8,
+                      backgroundColor: message.role === 'user' ? COLORS.primary : COLORS.bgCard,
+                      color: message.role === 'user' ? 'white' : COLORS.textPrimary,
+                      border: message.role === 'user' ? 'none' : `1px solid ${COLORS.borderDark}`,
+                      borderBottomLeftRadius: message.role === 'user' ? 8 : 2,
+                      borderBottomRightRadius: message.role === 'user' ? 2 : 8,
+                    }}
+                  >
+                    <p style={{
+                      fontSize: '0.875rem',
+                      lineHeight: 1.6,
+                      margin: 0,
+                    }}>{message.content}</p>
+                    {message.sources && message.sources.length > 0 && (
+                      <div style={{
+                        marginTop: '0.75rem',
+                        paddingTop: '0.75rem',
+                        borderTop: `1px solid ${message.role === 'user' ? 'rgba(255, 255, 255, 0.2)' : `${COLORS.borderDark}`}`,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.25rem',
+                      }}>
+                        <p style={{
+                          fontSize: '0.75rem',
+                          opacity: 0.7,
+                          margin: 0,
+                        }}>Sources:</p>
+                        {message.sources.map((source, i) => (
+                          <a
+                            key={i}
+                            href={source}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              fontSize: '0.75rem',
+                              opacity: 0.8,
+                              color: 'inherit',
+                              textDecoration: 'none',
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                            onMouseLeave={(e) => e.currentTarget.style.opacity = '0.8'}
+                          >
+                            📚 {source}
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                    <p style={{
+                      fontSize: '0.75rem',
+                      opacity: 0.5,
+                      margin: '0.5rem 0 0 0',
+                    }}>
+                      {message.timestamp.toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                  </div>
+
+                  {message.role === 'user' && (
+                    <div style={{
+                      flexShrink: 0,
+                      width: '2rem',
+                      height: '2rem',
+                      borderRadius: '50%',
+                      backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '1.125rem',
+                      border: `1px solid rgba(79, 70, 229, 0.2)`,
+                    }}>
+                      👤
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {sending && (
+                <div style={{
                   display: 'flex',
                   gap: '1rem',
-                  justifyContent: message.role === 'user' ? 'flex-end' : 'flex-start',
-                  animation: 'fadeUp 0.3s ease-out',
-                }}
-              >
-                {message.role === 'assistant' && (
+                }}>
                   <div style={{
                     flexShrink: 0,
                     width: '2rem',
                     height: '2rem',
                     borderRadius: '50%',
-                    backgroundColor: 'rgba(108, 99, 255, 0.2)',
+                    backgroundColor: 'rgba(79, 70, 229, 0.1)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontSize: '1.125rem',
+                    border: `1px solid rgba(79, 70, 229, 0.2)`,
                   }}>
                     🤖
                   </div>
-                )}
-
-                <div
-                  style={{
-                    maxWidth: '32rem',
-                    padding: '0.75rem 1rem',
+                  <div style={{
+                    backgroundColor: COLORS.bgCard,
+                    border: `1px solid ${COLORS.borderDark}`,
                     borderRadius: 8,
-                    backgroundColor: message.role === 'user' ? COLORS.primary : COLORS.bgCard,
-                    color: message.role === 'user' ? 'white' : COLORS.textPrimary,
-                    border: message.role === 'user' ? 'none' : `1px solid ${COLORS.borderDark}`,
-                    borderBottomLeftRadius: message.role === 'user' ? 8 : 2,
-                    borderBottomRightRadius: message.role === 'user' ? 2 : 8,
-                  }}
-                >
+                    borderBottomLeftRadius: 2,
+                    padding: '0.75rem 1rem',
+                    display: 'flex',
+                    gap: '0.5rem',
+                  }}>
+                    <div style={{
+                      width: '0.5rem',
+                      height: '0.5rem',
+                      borderRadius: '50%',
+                      backgroundColor: COLORS.textMuted,
+                      animation: 'bounce 1.4s infinite',
+                    }} />
+                    <div style={{
+                      width: '0.5rem',
+                      height: '0.5rem',
+                      borderRadius: '50%',
+                      backgroundColor: COLORS.textMuted,
+                      animation: 'bounce 1.4s infinite 0.2s',
+                    }} />
+                    <div style={{
+                      width: '0.5rem',
+                      height: '0.5rem',
+                      borderRadius: '50%',
+                      backgroundColor: COLORS.textMuted,
+                      animation: 'bounce 1.4s infinite 0.4s',
+                    }} />
+                  </div>
+                </div>
+              )}
+
+              {error && (
+                <div style={{
+                  padding: '1rem',
+                  backgroundColor: 'rgba(239, 68, 68, 0.05)',
+                  border: `1px solid rgba(239, 68, 68, 0.2)`,
+                  borderRadius: 8,
+                }}>
                   <p style={{
                     fontSize: '0.875rem',
-                    lineHeight: 1.6,
+                    color: COLORS.error,
                     margin: 0,
-                  }}>{message.content}</p>
-                  {message.sources && message.sources.length > 0 && (
-                    <div style={{
-                      marginTop: '0.75rem',
-                      paddingTop: '0.75rem',
-                      borderTop: `1px solid ${message.role === 'user' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(148, 163, 184, 0.2)'}`,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.25rem',
-                    }}>
-                      <p style={{
-                        fontSize: '0.75rem',
-                        opacity: 0.7,
-                        margin: 0,
-                      }}>Sources:</p>
-                      {message.sources.map((source, i) => (
-                        <a
-                          key={i}
-                          href={source}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            fontSize: '0.75rem',
-                            opacity: 0.8,
-                            color: 'inherit',
-                            textDecoration: 'none',
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-                          onMouseLeave={(e) => e.currentTarget.style.opacity = '0.8'}
-                        >
-                          📚 {source}
-                        </a>
-                      ))}
-                    </div>
-                  )}
-                  <p style={{
-                    fontSize: '0.75rem',
-                    opacity: 0.5,
-                    marginTop: '0.5rem',
-                    margin: '0.5rem 0 0 0',
-                  }}>
-                    {message.timestamp.toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </p>
+                  }}>⚠️ {error}</p>
                 </div>
+              )}
 
-                {message.role === 'user' && (
-                  <div style={{
-                    flexShrink: 0,
-                    width: '2rem',
-                    height: '2rem',
-                    borderRadius: '50%',
-                    backgroundColor: 'rgba(108, 99, 255, 0.2)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '1.125rem',
-                  }}>
-                    👤
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {sending && (
-              <div style={{
-                display: 'flex',
-                gap: '1rem',
-              }}>
-                <div style={{
-                  flexShrink: 0,
-                  width: '2rem',
-                  height: '2rem',
-                  borderRadius: '50%',
-                  backgroundColor: 'rgba(108, 99, 255, 0.2)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '1.125rem',
-                }}>
-                  🤖
-                </div>
-                <div style={{
-                  backgroundColor: COLORS.bgCard,
-                  border: `1px solid ${COLORS.borderDark}`,
-                  borderRadius: 8,
-                  borderBottomLeftRadius: 2,
-                  padding: '0.75rem 1rem',
-                  display: 'flex',
-                  gap: '0.5rem',
-                }}>
-                  <div style={{
-                    width: '0.5rem',
-                    height: '0.5rem',
-                    borderRadius: '50%',
-                    backgroundColor: COLORS.textMuted,
-                    animation: 'bounce 1.4s infinite',
-                  }} />
-                  <div style={{
-                    width: '0.5rem',
-                    height: '0.5rem',
-                    borderRadius: '50%',
-                    backgroundColor: COLORS.textMuted,
-                    animation: 'bounce 1.4s infinite 0.2s',
-                  }} />
-                  <div style={{
-                    width: '0.5rem',
-                    height: '0.5rem',
-                    borderRadius: '50%',
-                    backgroundColor: COLORS.textMuted,
-                    animation: 'bounce 1.4s infinite 0.4s',
-                  }} />
-                </div>
-              </div>
-            )}
-
-            {error && (
-              <div style={{
-                padding: '1rem',
-                backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                border: `1px solid rgba(239, 68, 68, 0.2)`,
-                borderRadius: 8,
-              }}>
-                <p style={{
-                  fontSize: '0.875rem',
-                  color: COLORS.error,
-                  margin: 0,
-                }}>⚠️ {error}</p>
-              </div>
-            )}
-
-            <div ref={messagesEndRef} />
+              <div ref={messagesEndRef} />
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Input footer */}
-      <div style={{
-        backgroundColor: 'rgba(30, 41, 59, 0.5)',
-        backdropFilter: 'blur(12px)',
-        borderTop: `1px solid ${COLORS.borderDark}`,
-      }}>
+        {/* Input footer */}
         <div style={{
-          maxWidth: '1280px',
-          margin: '0 auto',
-          padding: '1rem 2rem',
+          backgroundColor: COLORS.bgCard,
+          borderTop: `1px solid ${COLORS.borderDark}`,
         }}>
-          <form onSubmit={handleSendMessage} style={{
-            maxWidth: '48rem',
-            margin: '0 auto',
-          }}>
-            <div style={{
-              display: 'flex',
-              gap: '0.75rem',
-            }}>
-              <input
-                type="text"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                placeholder="Ask your mentor anything..."
-                disabled={sending}
-                style={{
-                  flex: 1,
-                  padding: '0.75rem 1rem',
-                  border: `1.5px solid ${COLORS.borderDark}`,
-                  borderRadius: 10,
-                  backgroundColor: 'rgba(30, 41, 59, 0.5)',
-                  color: COLORS.textPrimary,
-                  fontSize: '0.875rem',
-                  fontFamily: 'inherit',
-                  transition: 'all 0.2s',
-                  opacity: sending ? 0.6 : 1,
-                  cursor: sending ? 'not-allowed' : 'text',
-                }}
-                onFocus={(e) => !sending && (e.currentTarget.style.borderColor = COLORS.primary)}
-                onBlur={(e) => e.currentTarget.style.borderColor = COLORS.borderDark}
-              />
-              <button
-                type="submit"
-                disabled={sending || !inputValue.trim()}
-                style={{
-                  padding: '0.75rem 1.5rem',
-                  background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryHover})`,
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: 10,
-                  fontWeight: 600,
-                  cursor: sending || !inputValue.trim() ? 'not-allowed' : 'pointer',
-                  opacity: sending || !inputValue.trim() ? 0.5 : 1,
-                  transition: 'all 0.2s',
-                  boxShadow: `0 4px 15px rgba(108, 99, 255, 0.3)`,
-                }}
-                onMouseEnter={(e) => !sending && !inputValue.trim() && (e.currentTarget.style.opacity = '0.9')}
-                onMouseLeave={(e) => !sending && !inputValue.trim() && (e.currentTarget.style.opacity = '1')}
-              >
-                {sending ? '...' : '→'}
-              </button>
-            </div>
-          </form>
-
-          {/* Footer info */}
           <div style={{
-            maxWidth: '48rem',
-            margin: '0.75rem auto 0 auto',
+            maxWidth: '1280px',
+            margin: '0 auto',
+            padding: '1rem 2rem',
           }}>
-            <p style={{
-              fontSize: '0.75rem',
-              color: COLORS.textMuted,
-              textAlign: 'center',
-              margin: 0,
+            <form onSubmit={handleSendMessage} style={{
+              maxWidth: '48rem',
+              margin: '0 auto',
             }}>
-              💡 Tip: Ask follow-up questions if you don't understand something. I'll break it down further.
-            </p>
+              <div style={{
+                display: 'flex',
+                gap: '0.75rem',
+              }}>
+                <input
+                  type="text"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  placeholder="Ask your mentor anything..."
+                  disabled={sending}
+                  style={{
+                    flex: 1,
+                    padding: '0.75rem 1rem',
+                    border: `1.5px solid ${COLORS.borderDark}`,
+                    borderRadius: 10,
+                    backgroundColor: '#F9FAFB',
+                    color: COLORS.textPrimary,
+                    fontSize: '0.875rem',
+                    fontFamily: 'inherit',
+                    transition: 'all 0.2s',
+                    opacity: sending ? 0.6 : 1,
+                    cursor: sending ? 'not-allowed' : 'text',
+                  }}
+                  onFocus={(e) => !sending && (e.currentTarget.style.borderColor = COLORS.primary)}
+                  onBlur={(e) => e.currentTarget.style.borderColor = COLORS.borderDark}
+                />
+                <button
+                  type="submit"
+                  disabled={sending || !inputValue.trim()}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryHover})`,
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: 10,
+                    fontWeight: 600,
+                    cursor: sending || !inputValue.trim() ? 'not-allowed' : 'pointer',
+                    opacity: sending || !inputValue.trim() ? 0.5 : 1,
+                    transition: 'all 0.2s',
+                    boxShadow: `0 4px 15px rgba(79, 70, 229, 0.2)`,
+                  }}
+                  onMouseEnter={(e) => !sending && inputValue.trim() && (e.currentTarget.style.opacity = '0.9')}
+                  onMouseLeave={(e) => !sending && inputValue.trim() && (e.currentTarget.style.opacity = '1')}
+                >
+                  {sending ? '...' : '→'}
+                </button>
+              </div>
+            </form>
+
+            {/* Footer info */}
+            <div style={{
+              maxWidth: '48rem',
+              margin: '0.75rem auto 0 auto',
+            }}>
+              <p style={{
+                fontSize: '0.75rem',
+                color: COLORS.textMuted,
+                textAlign: 'center',
+                margin: 0,
+              }}>
+                💡 Tip: Ask follow-up questions if you don't understand something. I'll break it down further.
+              </p>
+            </div>
           </div>
         </div>
       </div>
