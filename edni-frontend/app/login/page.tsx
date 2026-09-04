@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
 
 type AuthMode = "login" | "forgot";
@@ -12,27 +13,6 @@ function Orb({ style }: { style: React.CSSProperties }) {
       position: "absolute", borderRadius: "50%",
       filter: "blur(60px)", pointerEvents: "none", ...style,
     }} />
-  );
-}
-
-function SocialBtn({ icon, label, onClick }: { icon: string; label: string; onClick: () => void }) {
-  const [hov, setHov] = useState(false);
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-      style={{
-        flex: 1, padding: "10px 16px",
-        border: `1.5px solid ${hov ? "#6C63FF" : "#E5E7EB"}`,
-        borderRadius: 10, background: hov ? "#EEF2FF" : "white",
-        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-        cursor: "pointer", transition: "all 0.2s",
-      }}
-    >
-      <span style={{ fontSize: 18 }}>{icon}</span>
-      <span style={{ fontSize: 13, fontWeight: 600, color: hov ? "#4F46E5" : "#374151" }}>{label}</span>
-    </button>
   );
 }
 
@@ -80,7 +60,7 @@ function Input({
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, loginAsGuest } = useAuth();
+  const { login } = useAuth();
   const [mode, setMode] = useState<AuthMode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -129,7 +109,7 @@ export default function LoginPage() {
         degree: data.user?.degree ?? "Computer Science",
         yearOfStudy: data.user?.year_of_study ?? "Year 1",
         gpa: data.user?.gpa ?? 3.8,
-        semester: data.user?.semester ?? "Fall Semester",
+        semester: data.user?.semester ?? "Semester",
       };
 
       // 1. Auth context update
@@ -143,12 +123,6 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleGuestLogin = () => {
-    localStorage.setItem("edni_access", "demo_guest_token_123");
-    loginAsGuest();
-    router.push("/dashboard"); // Added guest redirect
   };
 
   const handleForgot = async () => {
@@ -188,16 +162,9 @@ export default function LoginPage() {
       }}>
         <div
           onClick={() => router.push("/")}
-          style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 40, cursor: "pointer" }}
+          style={{ display: "flex", justifyContent: "center", marginBottom: 0, cursor: "pointer" }}
         >
-          <div style={{
-            width: 36, height: 36, borderRadius: 10,
-            background: "linear-gradient(135deg,#6C63FF,#4F46E5)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 16, color: "white", fontWeight: 800,
-            boxShadow: "0 4px 14px rgba(108,99,255,0.35)",
-          }}>E</div>
-          <span style={{ fontSize: 20, fontWeight: 800, color: "#4F46E5", letterSpacing: "-0.4px" }}>Edni AI</span>
+          <Image src="/icon.png" alt="Edni AI Logo" width={180} height={20} priority style={{ height: "auto", objectFit: "contain" }} />
         </div>
 
         {mode === "forgot" ? (
@@ -240,8 +207,8 @@ export default function LoginPage() {
               </div>
             ) : (
               <>
-                <Input label="Email Address" type="email" placeholder="you@university.edu"
-                  value={email} onChange={setEmail} icon="✉️" />
+                <Input label="Email Address" type="email" placeholder="you@university.com"
+                  value={email} onChange={setEmail} />
                 {error && (
                   <div style={{ padding: "10px 14px", borderRadius: 9, background: "#FEF2F2", border: "1px solid #FECACA", marginTop: 12 }}>
                     <span style={{ fontSize: 12.5, color: "#EF4444" }}>⚠ {error}</span>
@@ -277,17 +244,6 @@ export default function LoginPage() {
               </p>
             </div>
 
-            <div style={{ display: "flex", gap: 10, marginBottom: 22 }}>
-              <SocialBtn icon="🔵" label="Google" onClick={handleGuestLogin} />
-              <SocialBtn icon="⚫" label="GitHub" onClick={handleGuestLogin} />
-            </div>
-
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 22 }}>
-              <div style={{ flex: 1, height: 1, background: "#E5E7EB" }} />
-              <span style={{ fontSize: 12, color: "#9CA3AF", fontWeight: 500 }}>or continue with email</span>
-              <div style={{ flex: 1, height: 1, background: "#E5E7EB" }} />
-            </div>
-
             {error && (
               <div style={{
                 padding: "10px 14px", borderRadius: 9, marginBottom: 16,
@@ -302,15 +258,13 @@ export default function LoginPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <Input
                 label="Email Address" type="email"
-                placeholder="you@university.edu"
+                placeholder="you@university.com"
                 value={email} onChange={(v) => { setEmail(v); setError(""); }}
-                icon="✉️"
               />
               <Input
                 label="Password" type={showPass ? "text" : "password"}
                 placeholder="••••••••"
                 value={password} onChange={(v) => { setPassword(v); setError(""); }}
-                icon="🔒"
                 right={
                   <button
                     onClick={() => setShowPass((v) => !v)}
@@ -356,23 +310,8 @@ export default function LoginPage() {
                 : "Sign In →"}
             </button>
 
-            <button
-              onClick={handleGuestLogin}
-              style={{
-                width: "100%", marginTop: 10, padding: "12px",
-                border: "1.5px solid #E5E7EB", borderRadius: 10,
-                background: "transparent", color: "#6B7280",
-                fontSize: 13.5, fontWeight: 600, cursor: "pointer",
-                transition: "all 0.2s",
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#6C63FF"; e.currentTarget.style.color = "#4F46E5"; e.currentTarget.style.background = "#EEF2FF"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.color = "#6B7280"; e.currentTarget.style.background = "transparent"; }}
-            >
-              👀 Continue as Guest (Demo)
-            </button>
-
             <p style={{ textAlign: "center", fontSize: 11.5, color: "#9CA3AF", marginTop: 20, lineHeight: 1.6 }}>
-              By signing in you agree to our{" "}
+              Agree to our{" "}
               <a href="#" style={{ color: "#4F46E5", textDecoration: "none" }}>Terms of Service</a>
               {" "}and{" "}
               <a href="#" style={{ color: "#4F46E5", textDecoration: "none" }}>Privacy Policy</a>.
