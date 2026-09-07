@@ -380,40 +380,47 @@ async def _run_background_pipeline(
                             task_data.get("hours", 1)
                         )
 
+                        BLOOM_LABELS = {
+                            1: "Remember",
+                            2: "Understand",
+                            3: "Apply",
+                            4: "Analyze",
+                            5: "Evaluate",
+                            6: "Create",
+                        }
+
+                        bloom_value = task_data.get("bloom_level", 3)
+
+                        try:
+                            bloom_number = int(bloom_value)
+                        except (TypeError, ValueError):
+                            bloom_number = 3
+
+                        bloom_label = BLOOM_LABELS.get(
+                            bloom_number,
+                            "Apply",
+                        )
+
                         task = Task(
                             user_id=student_id,
-
                             course=task_data.get(
                                 "learning_area",
-                                task_data.get(
-                                    "concept",
-                                    "Study"
-                                ),
+                                task_data.get("concept", "Study"),
                             ),
-
                             title=task_data.get(
                                 "activity",
-                                "Study task"
+                                "Study task",
                             ),
+                            duration=int(duration_hours * 60),
 
-                            duration=int(
-                                duration_hours * 60
-                            ),
+                            # Database String field
+                            bloom=bloom_label,
 
-                            bloom=task_data.get(
-                                "bloom_level",
-                                "Apply"
-                            ),
+                            # Database Integer field
+                            bloom_level=bloom_number,
 
-                            bloom_level=3,
-
-                            concept=task_data.get(
-                                "concept"
-                            ),
-
-                            learning_area=task_data.get(
-                                "learning_area"
-                            ),
+                            concept=task_data.get("concept"),
+                            learning_area=task_data.get("learning_area"),
 
                             column=(
                                 "UPCOMING"
