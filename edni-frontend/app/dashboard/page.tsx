@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import { AreaChart, Area, BarChart, Bar, LineChart, Line, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import axios from 'axios';
 import TopBar from '@/components/TopBar';
 import Sidebar from '@/components/Sidebar';
@@ -34,49 +34,35 @@ interface Task {
   status: string;
 }
 
-interface Notification {
-  id: string;
-  icon: string;
-  title: string;
-  desc: string;
-  time: string;
-}
-
-// 5 Learning Areas - Your Actual Areas
 const LEARNING_AREAS = [
   {
     id: 'data-structures-algorithms',
     label: 'Data Structures and Algorithms',
     icon: '📊',
-    description: 'Arrays, linked lists, sorting, searching, complexity analysis',
-    color: '#4F46E5',
+    color: '#6366F1',
   },
   {
     id: 'software-quality-assurance',
     label: 'Software Quality Assurance',
     icon: '✅',
-    description: 'Testing, debugging, QA processes, quality metrics',
     color: '#10B981',
   },
   {
     id: 'software-engineering',
     label: 'Software Engineering',
     icon: '🏗️',
-    description: 'Design patterns, architecture, development methodologies',
     color: '#F59E0B',
   },
   {
     id: 'database-systems',
     label: 'Database Systems',
     icon: '🗄️',
-    description: 'SQL, database design, normalization, queries',
     color: '#8B5CF6',
   },
   {
     id: 'programming-languages',
     label: 'Programming Languages',
     icon: '💻',
-    description: 'Syntax, semantics, paradigms, language features',
     color: '#EC4899',
   },
 ];
@@ -89,113 +75,81 @@ interface LearningAreaModalProps {
 function LearningAreaSelector({ isOpen, onSelect }: LearningAreaModalProps) {
   if (!isOpen) return null;
 
-  const styles = {
-    overlay: {
-      position: 'fixed' as const,
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000,
-    },
-    modal: {
-      backgroundColor: '#ffffff',
-      borderRadius: '12px',
-      padding: '32px',
-      maxWidth: '600px',
-      width: '90%',
-      maxHeight: '80vh',
-      overflowY: 'auto' as const,
-      boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
-    },
-    header: {
-      marginBottom: '24px',
-      textAlign: 'center' as const,
-    },
-    title: {
-      fontSize: '1.875rem',
-      fontWeight: 'bold',
-      color: '#111827',
-      marginBottom: '8px',
-      marginTop: 0,
-    },
-    subtitle: {
-      color: '#6B7280',
-      marginBottom: 0,
-      marginTop: 0,
-    },
-    grid: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-      gap: '16px',
-    },
-    card: (color: string) => ({
-      padding: '20px',
-      borderRadius: '12px',
-      border: `2px solid ${color}`,
-      backgroundColor: `${color}15`,
-      cursor: 'pointer',
-      transition: 'all 0.2s',
-      ':hover': {
-        transform: 'translateY(-4px)',
-        boxShadow: `0 10px 20px ${color}30`,
-      },
-    }),
-    icon: {
-      fontSize: '2.5rem',
-      marginBottom: '12px',
-      marginTop: 0,
-    },
-    cardTitle: {
-      fontWeight: '600',
-      color: '#111827',
-      marginBottom: '8px',
-      marginTop: 0,
-    },
-    cardDesc: {
-      fontSize: '0.875rem',
-      color: '#6B7280',
-      marginBottom: 0,
-      marginTop: 0,
-    },
-  };
-
   return (
-    <div style={styles.overlay}>
-      <div style={styles.modal}>
-        <div style={styles.header}>
-          <p style={styles.title}>📚 Choose Your Learning Area</p>
-          <p style={styles.subtitle}>
-            Select an area to focus your personalized study plan on
-          </p>
-        </div>
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.3)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+      }}
+    >
+      <div
+        style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '16px',
+          padding: '40px',
+          maxWidth: '700px',
+          width: '90%',
+          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.12)',
+        }}
+      >
+        <h2 style={{ fontSize: '28px', fontWeight: '600', marginBottom: '12px', marginTop: 0, color: '#1F2937' }}>
+          Select Learning Area
+        </h2>
+        <p style={{ color: '#6B7280', marginBottom: '32px', marginTop: 0, fontSize: '15px' }}>
+          Choose an area to focus your personalized study plan
+        </p>
 
-        <div style={styles.grid}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+            gap: '16px',
+          }}
+        >
           {LEARNING_AREAS.map((area) => (
-            <div
+            <button
               key={area.id}
-              style={styles.card(area.color)}
               onClick={() => onSelect(area.id)}
+              style={{
+                padding: '20px 16px',
+                borderRadius: '12px',
+                border: `2px solid ${area.color}`,
+                backgroundColor: `${area.color}08`,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                textAlign: 'center',
+              }}
               onMouseEnter={(e) => {
-                (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-4px)';
+                const target = e.currentTarget as HTMLButtonElement;
+                target.style.backgroundColor = `${area.color}15`;
+                target.style.transform = 'translateY(-2px)';
+                target.style.boxShadow = `0 8px 20px ${area.color}20`;
               }}
               onMouseLeave={(e) => {
-                (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
+                const target = e.currentTarget as HTMLButtonElement;
+                target.style.backgroundColor = `${area.color}08`;
+                target.style.transform = 'translateY(0)';
+                target.style.boxShadow = 'none';
               }}
             >
-              <div style={styles.icon}>{area.icon}</div>
-              <p style={styles.cardTitle}>{area.label}</p>
-              <p style={styles.cardDesc}>{area.description}</p>
-            </div>
+              <div style={{ fontSize: '32px', marginBottom: '8px' }}>{area.icon}</div>
+              <p style={{ fontWeight: '500', color: area.color, margin: 0, fontSize: '14px' }}>
+                {area.label.split(' ').slice(0, 2).join(' ')}
+              </p>
+            </button>
           ))}
         </div>
 
-        <p style={{ fontSize: '0.875rem', color: '#9CA3AF', textAlign: 'center', marginTop: '24px' }}>
-          💡 Tip: You can change this later or take diagnostic without selecting an area
+        <p style={{ fontSize: '13px', color: '#9CA3AF', textAlign: 'center', marginTop: '28px', marginBottom: 0 }}>
+          💡 You can change this later anytime
         </p>
       </div>
     </div>
@@ -215,7 +169,6 @@ export default function DashboardPage() {
 
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [backgroundStatus, setBackgroundStatus] = useState<'waiting' | 'complete'>('waiting');
 
   useEffect(() => {
@@ -234,10 +187,9 @@ export default function DashboardPage() {
 
         const headers = { Authorization: `Bearer ${token}` };
 
-        const [dashboardRes, tasksRes, notifRes] = await Promise.allSettled([
+        const [dashboardRes, tasksRes] = await Promise.allSettled([
           axios.get(`${API_URL}/analytics`, { headers }),
           axios.get(`${API_URL}/tasks/?column=TODAY`, { headers }),
-          axios.get(`${API_URL}/notifications`, { headers }),
         ]);
 
         if (dashboardRes.status === 'fulfilled') {
@@ -273,10 +225,6 @@ export default function DashboardPage() {
           setTasks(taskData.today || taskData.tasks || []);
         }
 
-        if (notifRes.status === 'fulfilled') {
-          setNotifications(notifRes.value.data || []);
-        }
-
         setError('');
       } catch (err: any) {
         setError('Failed to load dashboard data');
@@ -306,8 +254,6 @@ export default function DashboardPage() {
     setSelectedArea(areaId);
     localStorage.setItem('selected_learning_area', areaId);
     setShowAreaSelector(false);
-
-    // Navigate to diagnostic with selected area
     router.push(`/diagnostic?area=${areaId}`);
   };
 
@@ -320,11 +266,10 @@ export default function DashboardPage() {
       <div
         style={{
           minHeight: '100vh',
-          backgroundColor: '#f9fafb',
+          backgroundColor: '#FAFBFC',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: '#374151',
         }}
       >
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
@@ -332,13 +277,13 @@ export default function DashboardPage() {
             style={{
               width: '40px',
               height: '40px',
-              border: '4px solid rgba(0,0,0,0.1)',
-              borderTopColor: '#4F46E5',
+              border: '3px solid #E5E7EB',
+              borderTopColor: '#6366F1',
               borderRadius: '50%',
               animation: 'spin 1s linear infinite',
             }}
           ></div>
-          <p style={{ color: '#6B7280' }}>Loading your dashboard...</p>
+          <p style={{ color: '#6B7280', fontSize: '15px' }}>Loading your dashboard...</p>
         </div>
       </div>
     );
@@ -369,263 +314,324 @@ export default function DashboardPage() {
   }));
 
   const masteryColor =
-    dashboard.overall_mastery >= 70 ? '#10b981' : dashboard.overall_mastery >= 50 ? '#f59e0b' : '#ef4444';
-
-  const getDifficultyBadgeStyle = (difficulty: string) => {
-    const baseStyle = { fontSize: '0.75rem', padding: '4px 8px', borderRadius: '4px', whiteSpace: 'nowrap' as const };
-    switch (difficulty?.toLowerCase()) {
-      case 'hard':
-        return { ...baseStyle, backgroundColor: 'rgba(239, 68, 68, 0.2)', color: '#ef4444' };
-      case 'medium':
-        return { ...baseStyle, backgroundColor: 'rgba(245, 158, 11, 0.2)', color: '#f59e0b' };
-      default:
-        return { ...baseStyle, backgroundColor: 'rgba(16, 185, 129, 0.2)', color: '#10b981' };
-    }
-  };
-
-  const cardStyle = {
-    backgroundColor: '#ffffff',
-    borderRadius: '12px',
-    padding: '24px',
-    border: '1px solid #E5E7EB',
-    color: '#374151',
-  };
+    dashboard.overall_mastery >= 70 ? '#10B981' : dashboard.overall_mastery >= 50 ? '#F59E0B' : '#EF4444';
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb', fontFamily: 'sans-serif' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#FAFBFC', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
       <Sidebar />
       <TopBar />
 
       <div style={{ marginLeft: '240px', paddingTop: '64px' }}>
-        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '32px 24px' }}>
-          {/* Welcome Section */}
-          <div style={{ marginBottom: '32px' }}>
-            <h2 style={{ fontSize: '1.875rem', fontWeight: 'bold', marginBottom: '8px', marginTop: 0, color: '#111827' }}>
-              Welcome back! 👋
-            </h2>
-            <p style={{ color: '#6B7280', margin: 0 }}>Here's your academic progress at a glance.</p>
-          </div>
-
-          {/* Background Status Banner */}
-          {backgroundStatus === 'waiting' && (
-            <div
+        <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '40px 32px' }}>
+          {/* Header */}
+          <div style={{ marginBottom: '40px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+            <div>
+              <h1 style={{ fontSize: '32px', fontWeight: '700', marginBottom: '8px', marginTop: 0, color: '#111827' }}>
+                Learning Dashboard
+              </h1>
+              <p style={{ color: '#6B7280', margin: 0, fontSize: '15px' }}>
+                Track your progress and identify learning opportunities
+              </p>
+            </div>
+            <button
+              onClick={handleTakeDiagnostic}
               style={{
-                marginBottom: '24px',
-                padding: '16px',
-                backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                border: '1px solid #6366f1',
+                padding: '10px 20px',
+                backgroundColor: '#6366F1',
+                color: '#ffffff',
+                border: 'none',
                 borderRadius: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                fontSize: '14px',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#4F46E5';
+                (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 12px rgba(99, 102, 241, 0.3)';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#6366F1';
+                (e.currentTarget as HTMLButtonElement).style.boxShadow = 'none';
               }}
             >
-              <div style={{ fontSize: '1.25rem', animation: 'spin 2s linear infinite' }}>⏳</div>
-              <div>
-                <p style={{ margin: 0, fontWeight: '600', color: '#4F46E5' }}>Study Plan Generating</p>
-                <p style={{ margin: '4px 0 0 0', fontSize: '0.875rem', color: '#6B7280' }}>
-                  Your personalized study plan is being prepared in the background.
-                </p>
-              </div>
-            </div>
-          )}
+              New Assessment
+            </button>
+          </div>
 
+          {/* Status Banner */}
           {backgroundStatus === 'complete' && (
             <div
               style={{
-                marginBottom: '24px',
-                padding: '16px',
-                backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                border: '1px solid #10b981',
-                borderRadius: '8px',
+                marginBottom: '32px',
+                padding: '16px 20px',
+                backgroundColor: '#ECFDF5',
+                border: '1px solid #D1FAE5',
+                borderRadius: '10px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px',
               }}
             >
-              <div style={{ fontSize: '1.25rem' }}>✅</div>
+              <span style={{ fontSize: '20px' }}>✓</span>
               <div>
-                <p style={{ margin: 0, fontWeight: '600', color: '#10b981' }}>Study Plan Ready!</p>
-                <p style={{ margin: '4px 0 0 0', fontSize: '0.875rem', color: '#6B7280' }}>
-                  Your 16-week personalized study plan is now available.{' '}
+                <p style={{ margin: 0, fontWeight: '600', color: '#047857', fontSize: '14px' }}>Study Plan Ready</p>
+                <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#6B7280' }}>
+                  Your 16-week personalized plan is available.{' '}
                   <button
                     onClick={() => router.push('/study-planner')}
                     style={{
                       background: 'none',
                       border: 'none',
-                      color: '#10b981',
+                      color: '#047857',
                       fontWeight: '600',
                       cursor: 'pointer',
-                      textDecoration: 'underline',
                       padding: 0,
+                      fontSize: '13px',
                     }}
                   >
-                    View it now →
+                    View now →
                   </button>
                 </p>
               </div>
             </div>
           )}
 
-          {/* Stat Cards Grid */}
+          {/* KPI Cards */}
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-              gap: '24px',
-              marginBottom: '32px',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: '20px',
+              marginBottom: '40px',
             }}
           >
-            <div style={cardStyle}>
+            {/* Overall Mastery */}
+            <div
+              style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '12px',
+                padding: '24px',
+                border: '1px solid #E5E7EB',
+                transition: 'all 0.3s ease',
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.08)';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLDivElement).style.boxShadow = 'none';
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <div>
-                  <p style={{ color: '#6B7280', fontSize: '0.875rem', marginBottom: '8px', margin: 0 }}>Overall Mastery</p>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '4px' }}>
-                    <span style={{ fontSize: '2.25rem', fontWeight: 'bold', color: masteryColor }}>
-                      {dashboard.overall_mastery.toFixed(1)}%
+                  <p style={{ color: '#6B7280', fontSize: '13px', margin: 0, marginBottom: '8px' }}>Overall Mastery</p>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                    <span style={{ fontSize: '28px', fontWeight: '700', color: masteryColor }}>
+                      {dashboard.overall_mastery.toFixed(0)}%
                     </span>
-                    <span style={{ fontSize: '0.875rem', color: '#10b981' }}>Cycle {dashboard.feedback_cycle || 0}</span>
+                    <span style={{ fontSize: '12px', color: '#6B7280' }}>Cycle {dashboard.feedback_cycle || 0}</span>
                   </div>
                 </div>
-                <div style={{ fontSize: '1.875rem' }}>🎯</div>
+                <div style={{ fontSize: '28px' }}>🎯</div>
               </div>
-              <div style={{ width: '100%', backgroundColor: '#F3F4F6', borderRadius: '9999px', height: '8px', overflow: 'hidden' }}>
+              <div style={{ width: '100%', backgroundColor: '#F3F4F6', borderRadius: '8px', height: '6px', overflow: 'hidden' }}>
                 <div
                   style={{
-                    height: '8px',
-                    borderRadius: '9999px',
-                    transition: 'all 0.5s',
-                    width: `${dashboard.overall_mastery}%`,
+                    height: '100%',
                     backgroundColor: masteryColor,
+                    transition: 'width 0.5s ease',
+                    width: `${dashboard.overall_mastery}%`,
                   }}
                 ></div>
               </div>
             </div>
 
-            <div style={cardStyle}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
+            {/* Study Time */}
+            <div
+              style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '12px',
+                padding: '24px',
+                border: '1px solid #E5E7EB',
+                transition: 'all 0.3s ease',
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.08)';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLDivElement).style.boxShadow = 'none';
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                 <div>
-                  <p style={{ color: '#6B7280', fontSize: '0.875rem', marginBottom: '8px', margin: 0 }}>Study Time</p>
-                  <p style={{ fontSize: '2.25rem', fontWeight: 'bold', margin: 0, color: '#111827' }}>
+                  <p style={{ color: '#6B7280', fontSize: '13px', margin: 0, marginBottom: '8px' }}>Study Time</p>
+                  <p style={{ fontSize: '28px', fontWeight: '700', margin: 0, color: '#111827' }}>
                     {(dashboard.total_study_time ?? 0).toFixed(1)}h
                   </p>
-                  <p style={{ fontSize: '0.875rem', color: '#6B7280', marginTop: '4px', marginBottom: 0 }}>This week</p>
+                  <p style={{ fontSize: '12px', color: '#10B981', marginTop: '8px', marginBottom: 0 }}>This week</p>
                 </div>
-                <div style={{ fontSize: '1.875rem' }}>⏱️</div>
+                <div style={{ fontSize: '28px' }}>⏱️</div>
               </div>
-              <div style={{ fontSize: '0.75rem', color: '#10b981' }}>+3.5h from last week</div>
             </div>
 
-            <div style={cardStyle}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
+            {/* Tasks Progress */}
+            <div
+              style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '12px',
+                padding: '24px',
+                border: '1px solid #E5E7EB',
+                transition: 'all 0.3s ease',
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.08)';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLDivElement).style.boxShadow = 'none';
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                 <div>
-                  <p style={{ color: '#6B7280', fontSize: '0.875rem', marginBottom: '8px', margin: 0 }}>Tasks Today</p>
-                  <p style={{ fontSize: '2.25rem', fontWeight: 'bold', margin: 0, color: '#111827' }}>
+                  <p style={{ color: '#6B7280', fontSize: '13px', margin: 0, marginBottom: '8px' }}>Tasks Completed</p>
+                  <p style={{ fontSize: '28px', fontWeight: '700', margin: 0, color: '#111827' }}>
                     {dashboard.tasks_completed}/{dashboard.tasks_today}
                   </p>
-                  <p style={{ fontSize: '0.875rem', color: '#6B7280', marginTop: '4px', marginBottom: 0 }}>Completed</p>
+                  <p style={{ fontSize: '12px', color: '#6B7280', marginTop: '8px', marginBottom: 0 }}>Today</p>
                 </div>
-                <div style={{ fontSize: '1.875rem' }}>✅</div>
+                <div style={{ fontSize: '28px' }}>✓</div>
               </div>
-              <div style={{ fontSize: '0.75rem', color: '#f59e0b' }}>Keep it up!</div>
             </div>
 
-            <div style={cardStyle}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
+            {/* Knowledge Gaps */}
+            <div
+              style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '12px',
+                padding: '24px',
+                border: '1px solid #E5E7EB',
+                transition: 'all 0.3s ease',
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.08)';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLDivElement).style.boxShadow = 'none';
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                 <div>
-                  <p style={{ color: '#6B7280', fontSize: '0.875rem', marginBottom: '8px', margin: 0 }}>Knowledge Gaps</p>
-                  <p style={{ fontSize: '2.25rem', fontWeight: 'bold', color: '#ef4444', margin: 0 }}>
+                  <p style={{ color: '#6B7280', fontSize: '13px', margin: 0, marginBottom: '8px' }}>Knowledge Gaps</p>
+                  <p style={{ fontSize: '28px', fontWeight: '700', color: '#EF4444', margin: 0 }}>
                     {dashboard.critical_gaps?.length ?? 0}
                   </p>
-                  <p style={{ fontSize: '0.875rem', color: '#6B7280', marginTop: '4px', marginBottom: 0 }}>Needs review</p>
+                  <p style={{ fontSize: '12px', color: '#6B7280', marginTop: '8px', marginBottom: 0 }}>Areas to review</p>
                 </div>
-                <div style={{ fontSize: '1.875rem' }}>🔍</div>
+                <div style={{ fontSize: '28px' }}>!</div>
               </div>
-              <button
-                onClick={handleTakeDiagnostic}
-                style={{
-                  fontSize: '0.875rem',
-                  color: '#4F46E5',
-                  background: 'none',
-                  border: 'none',
-                  padding: 0,
-                  cursor: 'pointer',
-                  marginTop: '8px',
-                  textDecoration: 'underline',
-                }}
-              >
-                Take new assessment →
-              </button>
             </div>
           </div>
 
-          {/* Charts Section */}
+          {/* Charts Grid */}
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))',
               gap: '24px',
-              marginBottom: '32px',
+              marginBottom: '40px',
             }}
           >
-            <div style={cardStyle}>
-              <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '24px', marginTop: 0, color: '#111827' }}>
-                Bloom's Taxonomy Levels
+            {/* Bloom's Taxonomy */}
+            <div
+              style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '12px',
+                padding: '24px',
+                border: '1px solid #E5E7EB',
+              }}
+            >
+              <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '24px', marginTop: 0, color: '#111827' }}>
+                Learning Levels
               </h3>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={bloomData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
                   <XAxis dataKey="name" stroke="#6B7280" style={{ fontSize: '12px' }} />
                   <YAxis stroke="#6B7280" style={{ fontSize: '12px' }} />
                   <Tooltip
-                    contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #E5E7EB', borderRadius: '8px' }}
-                    labelStyle={{ color: '#374151' }}
+                    contentStyle={{
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #E5E7EB',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                    }}
+                    labelStyle={{ color: '#374151', fontSize: '12px' }}
                   />
-                  <Bar dataKey="value" fill="#4F46E5" radius={[8, 8, 0, 0]} />
+                  <Bar dataKey="value" fill="#6366F1" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
 
-            <div style={cardStyle}>
-              <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '24px', marginTop: 0, color: '#111827' }}>
-                Concept Mastery Progress
+            {/* Concept Progress */}
+            <div
+              style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '12px',
+                padding: '24px',
+                border: '1px solid #E5E7EB',
+              }}
+            >
+              <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '24px', marginTop: 0, color: '#111827' }}>
+                Concept Mastery
               </h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={conceptData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={conceptData} layout="vertical" margin={{ left: 120 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={true} />
                   <XAxis type="number" stroke="#6B7280" style={{ fontSize: '12px' }} />
-                  <YAxis dataKey="name" type="category" stroke="#6B7280" style={{ fontSize: '11px' }} width={100} />
+                  <YAxis dataKey="name" type="category" stroke="#6B7280" style={{ fontSize: '12px' }} />
                   <Tooltip
-                    contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #E5E7EB', borderRadius: '8px' }}
-                    labelStyle={{ color: '#374151' }}
+                    contentStyle={{
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #E5E7EB',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                    }}
+                    labelStyle={{ color: '#374151', fontSize: '12px' }}
                   />
-                  <Bar dataKey="progress" fill="#7c3aed" radius={[0, 8, 8, 0]} />
+                  <Bar dataKey="progress" fill="#8B5CF6" radius={[0, 6, 6, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
 
-          {/* Tasks and Gaps */}
+          {/* Tasks & Gaps Section */}
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))',
               gap: '24px',
+              marginBottom: '40px',
             }}
           >
-            <div style={cardStyle}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-                <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', margin: 0, color: '#111827' }}>Today's Tasks</h3>
+            {/* Today's Tasks */}
+            <div
+              style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '12px',
+                padding: '24px',
+                border: '1px solid #E5E7EB',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: '600', margin: 0, color: '#111827' }}>Today's Tasks</h3>
                 <button
                   onClick={() => router.push('/study-planner')}
                   style={{
-                    fontSize: '0.875rem',
-                    color: '#4F46E5',
+                    fontSize: '13px',
+                    color: '#6366F1',
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
                     padding: 0,
-                    textDecoration: 'underline',
                   }}
                 >
                   View all →
@@ -633,72 +639,104 @@ export default function DashboardPage() {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {tasks.length > 0 ? (
-                  tasks.slice(0, 5).map((task, idx) => (
-                    <div
-                      key={task.id || idx}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        gap: '12px',
-                        padding: '12px',
-                        backgroundColor: '#F9FAFB',
-                        borderRadius: '8px',
-                        border: '1px solid #E5E7EB',
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        style={{ marginTop: '4px', accentColor: '#4F46E5' }}
-                        defaultChecked={task.status === 'completed'}
-                      />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p
+                  tasks.slice(0, 4).map((task, idx) => {
+                    const diffColor =
+                      task.difficulty?.toLowerCase() === 'hard'
+                        ? '#EF4444'
+                        : task.difficulty?.toLowerCase() === 'medium'
+                          ? '#F59E0B'
+                          : '#10B981';
+                    return (
+                      <div
+                        key={task.id || idx}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '12px 14px',
+                          backgroundColor: '#F9FAFB',
+                          borderRadius: '10px',
+                          border: '1px solid #E5E7EB',
+                          transition: 'all 0.2s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          (e.currentTarget as HTMLDivElement).style.backgroundColor = '#F3F4F6';
+                          (e.currentTarget as HTMLDivElement).style.borderColor = '#D1D5DB';
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.currentTarget as HTMLDivElement).style.backgroundColor = '#F9FAFB';
+                          (e.currentTarget as HTMLDivElement).style.borderColor = '#E5E7EB';
+                        }}
+                      >
+                        <input
+                          type="checkbox"
                           style={{
+                            accentColor: '#6366F1',
+                            cursor: 'pointer',
+                            width: '18px',
+                            height: '18px',
+                          }}
+                          defaultChecked={task.status === 'completed'}
+                        />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p
+                            style={{
+                              fontWeight: '500',
+                              color: '#374151',
+                              margin: 0,
+                              fontSize: '14px',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {task.title}
+                          </p>
+                        </div>
+                        <span
+                          style={{
+                            fontSize: '11px',
+                            padding: '4px 8px',
+                            borderRadius: '6px',
+                            backgroundColor: `${diffColor}15`,
+                            color: diffColor,
                             fontWeight: '500',
-                            color: '#374151',
-                            margin: 0,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
                           }}
                         >
-                          {task.title}
-                        </p>
-                        <p
-                          style={{
-                            fontSize: '0.875rem',
-                            color: '#6B7280',
-                            margin: 0,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {task.description}
-                        </p>
+                          {task.difficulty}
+                        </span>
                       </div>
-                      <span style={getDifficultyBadgeStyle(task.difficulty)}>{task.difficulty}</span>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
-                  <p style={{ color: '#6B7280', textAlign: 'center', padding: '20px 0' }}>No tasks today</p>
+                  <p style={{ color: '#9CA3AF', textAlign: 'center', padding: '24px 0', margin: 0, fontSize: '14px' }}>
+                    No tasks today
+                  </p>
                 )}
               </div>
             </div>
 
-            <div style={cardStyle}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-                <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', margin: 0, color: '#111827' }}>Critical Knowledge Gaps</h3>
+            {/* Critical Gaps */}
+            <div
+              style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '12px',
+                padding: '24px',
+                border: '1px solid #E5E7EB',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: '600', margin: 0, color: '#111827' }}>Knowledge Gaps</h3>
                 <button
                   onClick={() => router.push('/learning-resources')}
                   style={{
-                    fontSize: '0.875rem',
-                    color: '#4F46E5',
+                    fontSize: '13px',
+                    color: '#6366F1',
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
                     padding: 0,
-                    textDecoration: 'underline',
                   }}
                 >
                   View resources →
@@ -706,135 +744,59 @@ export default function DashboardPage() {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {(dashboard.critical_gaps || []).length > 0 ? (
-                  (dashboard.critical_gaps || []).map((gap, idx) => (
+                  (dashboard.critical_gaps || []).slice(0, 4).map((gap, idx) => (
                     <div
                       key={idx}
                       style={{
-                        padding: '12px',
+                        padding: '12px 14px',
                         backgroundColor: '#FEF2F2',
-                        border: '1px solid rgba(239, 68, 68, 0.2)',
-                        borderRadius: '8px',
+                        border: '1px solid #FEE2E2',
+                        borderRadius: '10px',
                         cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        (e.currentTarget as HTMLDivElement).style.backgroundColor = '#FDE8E8';
+                        (e.currentTarget as HTMLDivElement).style.borderColor = '#FCA5A5';
+                      }}
+                      onMouseLeave={(e) => {
+                        (e.currentTarget as HTMLDivElement).style.backgroundColor = '#FEF2F2';
+                        (e.currentTarget as HTMLDivElement).style.borderColor = '#FEE2E2';
                       }}
                     >
-                      <p style={{ fontWeight: '500', color: '#374151', margin: 0 }}>{gap}</p>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px' }}>
-                        <span style={{ fontSize: '0.75rem', color: '#6B7280' }}>Priority: High</span>
-                        <span
-                          style={{
-                            fontSize: '0.75rem',
-                            padding: '2px 8px',
-                            borderRadius: '4px',
-                            backgroundColor: 'rgba(239, 68, 68, 0.2)',
-                            color: '#EF4444',
-                          }}
-                        >
-                          Needs Review
-                        </span>
-                      </div>
+                      <p style={{ fontWeight: '500', color: '#DC2626', margin: 0, fontSize: '14px' }}>{gap}</p>
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          color: '#DC2626',
+                          marginTop: '6px',
+                          display: 'inline-block',
+                          opacity: 0.7,
+                        }}
+                      >
+                        Priority: High
+                      </span>
                     </div>
                   ))
                 ) : (
-                  <p style={{ color: '#6B7280', textAlign: 'center', padding: '20px 0' }}>No critical gaps identified</p>
+                  <p style={{ color: '#9CA3AF', textAlign: 'center', padding: '24px 0', margin: 0, fontSize: '14px' }}>
+                    No critical gaps identified
+                  </p>
                 )}
               </div>
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div
-            style={{
-              marginTop: '32px',
-              padding: '24px',
-              background: 'linear-gradient(135deg, #4F46E5 0%, #10b981 100%)',
-              borderRadius: '12px',
-            }}
-          >
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '16px', color: '#ffffff', marginTop: 0 }}>
-              Ready to improve?
-            </h3>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                gap: '16px',
-              }}
-            >
-              <button
-                onClick={handleTakeDiagnostic}
-                style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                  color: '#ffffff',
-                  fontWeight: '600',
-                  padding: '10px 16px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  cursor: 'pointer',
-                  textAlign: 'center',
-                  transition: 'all 0.2s',
-                }}
-                onMouseEnter={(e) => {
-                  (e.target as HTMLButtonElement).style.backgroundColor = 'rgba(255, 255, 255, 0.25)';
-                }}
-                onMouseLeave={(e) => {
-                  (e.target as HTMLButtonElement).style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
-                }}
-              >
-                📊 Take Assessment
-              </button>
-              <button
-                onClick={() => router.push('/study-planner')}
-                style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                  color: '#ffffff',
-                  fontWeight: '600',
-                  padding: '10px 16px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  cursor: 'pointer',
-                  textAlign: 'center',
-                  transition: 'all 0.2s',
-                }}
-                onMouseEnter={(e) => {
-                  (e.target as HTMLButtonElement).style.backgroundColor = 'rgba(255, 255, 255, 0.25)';
-                }}
-                onMouseLeave={(e) => {
-                  (e.target as HTMLButtonElement).style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
-                }}
-              >
-                📅 View Study Plan
-              </button>
-              <button
-                onClick={() => router.push('/mentor')}
-                style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                  color: '#ffffff',
-                  fontWeight: '600',
-                  padding: '10px 16px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  cursor: 'pointer',
-                  textAlign: 'center',
-                  transition: 'all 0.2s',
-                }}
-                onMouseEnter={(e) => {
-                  (e.target as HTMLButtonElement).style.backgroundColor = 'rgba(255, 255, 255, 0.25)';
-                }}
-                onMouseLeave={(e) => {
-                  (e.target as HTMLButtonElement).style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
-                }}
-              >
-                🤖 Chat with Mentor
-              </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Learning Area Selector Modal */}
       <LearningAreaSelector isOpen={showAreaSelector} onSelect={handleSelectArea} />
 
-      <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }
