@@ -8,6 +8,8 @@ from sqlalchemy import (
     String, Integer, Float, Boolean, DateTime,
     ForeignKey, Text, JSON, Enum as SAEnum,
 )
+from sqlalchemy import Column, Integer
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 import enum
 
@@ -158,7 +160,17 @@ class StudyPlanModel(Base):
     is_active:    Mapped[bool]     = mapped_column(Boolean, default=True)
     created_at:   Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at:   Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+current_week = Column(
+        Integer,
+        nullable=False,
+        default=1
+    )
 
+    completed_weeks = Column(
+        JSONB,
+        nullable=False,
+        default=list
+    )
     user: Mapped["User"] = relationship(back_populates="study_plans")
 
 
