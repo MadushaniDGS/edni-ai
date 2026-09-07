@@ -1,9 +1,11 @@
 import json
+import asyncio
+
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional, List, Dict, Any
+
 from loguru import logger
-import asyncio
 
 from langchain_groq import ChatGroq
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -44,14 +46,14 @@ class StudyPlan:
 
 class PlannerAgent:
     """
-    Personalized 16-week study-plan generator.
+    Adaptive weekly study-plan generator.
 
-    Uses:
-    - Knowledge profile
-    - Bloom's Taxonomy
-    - Critical knowledge gaps
-    - Learning-area mastery
-    - LLM self-critique/refinement
+    Instead of generating an entire 16-week plan at once,
+    this agent generates ONE week based on the student's
+    current knowledge profile.
+
+    Future weeks can be generated after the student completes
+    the current week and the EvaluatorAgent updates progress.
     """
 
     def __init__(
@@ -65,6 +67,7 @@ class PlannerAgent:
         # ----------------------------------------------------
         # API KEY
         # ----------------------------------------------------
+
         api_key = groq_api_key or settings.GROQ_API_KEY
 
         if not api_key:
@@ -76,6 +79,7 @@ class PlannerAgent:
         # ----------------------------------------------------
         # MODEL
         # ----------------------------------------------------
+
         model_name = model_name or settings.GROQ_MODEL
 
         if not model_name:
@@ -84,11 +88,12 @@ class PlannerAgent:
         # ----------------------------------------------------
         # LLM
         # ----------------------------------------------------
+
         self.llm = ChatGroq(
             api_key=api_key,
             model_name=model_name,
             temperature=temperature,
-            max_tokens=8192,
+            max_tokens=4096,
         )
 
         self.model_name = model_name
@@ -103,69 +108,90 @@ class PlannerAgent:
 
     async def run(self, state: AgentState) -> AgentState:
 
+        if not state.knowledge_profile:
+            logger.error(
+                "[PlannerAgent] No knowledge profile provided"
+            )
+            return state
+
+        profile = state.knowledge_profile
+
         logger.info(
-            f"[PlannerAgent] Starting for "
-            f"student={state.student_id} "
-            f"| mastery={state.knowledge_profile.overall_mastery:.1f}%"
+            f"[PlannerAgent] Starting weekly planning for "
+            f"student={state.student_id} | "
+            f"mastery={profile.overall_mastery:.1f}%"
         )
 
         try:
 
-            profile = state.knowledge_profile
+            # ------------------------------------------------
+            # DETERMINE WEEK NUMBER
+            # ------------------------------------------------
 
-            if not profile:
-                logger.error(
-                    "[PlannerAgent] No knowledge profile provided"
-                )
-                return state
+            week_number = self._get_next_week_number(state)
+
+            logger.info(
+                f"[PlannerAgent] Generating Week {week_number} only..."
+            )
 
             # ------------------------------------------------
-            # INITIAL PLAN
+            # GENERATE ONE WEEK
+            # ------------------------------------------------
+
+            weekly_plan = await self._generate_week(
+                profile=profile,
+                week_number=week_number,
+                state=state,
+            )
+
+            # ------------------------------------------------
+            # SMALL WEEKLY CRITIQUE
             # ------------------------------------------------
 
             logger.info(
-                "[PlannerAgent] Generating initial 16-week plan..."
+                f"[PlannerAgent] Running Week {week_number} critique..."
             )
 
-            initial_plan = await self._generate_initial_plan(
-                profile
+            critique = await self._critique_week(
+                weekly_plan,
+                profile,
             )
 
             # ------------------------------------------------
-            # REFLEXION
+            # STORE CRITIQUE
             # ------------------------------------------------
 
-            logger.info(
-                "[PlannerAgent] Running self-critique loop..."
+            weekly_plan["critique"] = critique.get(
+                "summary",
+                ""
             )
 
-            refined_plan = await self._reflexion_loop(
-                initial_plan,
-                profile
-            )
+            weekly_plan["critique_history"] = [
+                critique.get("summary", "")
+            ]
 
             # ------------------------------------------------
             # BUILD STUDY PLAN
             # ------------------------------------------------
 
             study_plan = self._build_study_plan(
-                refined_plan,
-                state.student_id
+                weekly_plan,
+                state.student_id,
+                week_number,
             )
 
             state.study_plan = study_plan
 
-            state.plan_critique = refined_plan.get(
-                "critique",
+            state.plan_critique = critique.get(
+                "summary",
                 ""
             )
 
             logger.success(
-                f"[PlannerAgent] Complete | "
-                f"weeks={len(study_plan.weeks)} | "
+                f"[PlannerAgent] Weekly plan complete | "
+                f"week={week_number} | "
                 f"hours={study_plan.total_hours} | "
-                f"critique_iterations="
-                f"{len(refined_plan.get('critique_history', []))}"
+                f"tasks={sum(len(w.tasks) for w in study_plan.weeks)}"
             )
 
             return state
@@ -183,61 +209,99 @@ class PlannerAgent:
             return state
 
     # ========================================================
-    # GENERATE INITIAL PLAN
+    # GET NEXT WEEK NUMBER
     # ========================================================
 
-    async def _generate_initial_plan(
+    def _get_next_week_number(
         self,
-        profile
+        state: AgentState,
+    ) -> int:
+
+        """
+        Determine which week should be generated.
+
+        For the initial diagnostic this returns Week 1.
+
+        Later, when previous weeks are persisted in the state,
+        this can return the next required week.
+        """
+
+        # If the state already has a study plan, continue from it.
+        if state.study_plan:
+
+            existing_weeks = getattr(
+                state.study_plan,
+                "weeks",
+                []
+            )
+
+            if existing_weeks:
+
+                numbers = [
+                    getattr(
+                        week,
+                        "week_number",
+                        0
+                    )
+                    for week in existing_weeks
+                ]
+
+                valid_numbers = [
+                    n for n in numbers
+                    if isinstance(n, int) and n > 0
+                ]
+
+                if valid_numbers:
+                    return min(
+                        max(valid_numbers) + 1,
+                        16
+                    )
+
+        # Initial diagnostic
+        return 1
+
+    # ========================================================
+    # GENERATE ONE WEEK
+    # ========================================================
+
+    async def _generate_week(
+        self,
+        profile,
+        week_number: int,
+        state: AgentState,
     ) -> Dict[str, Any]:
 
-        context = self._build_profile_context(profile)
+        context = self._build_profile_context(
+            profile
+        )
 
         # ----------------------------------------------------
         # SYSTEM PROMPT
         # ----------------------------------------------------
 
         system_prompt = """
-You are an expert educational planner.
+You are an expert adaptive educational planner.
 
-Your task is to create a personalized 16-week academic
-study plan using the student's diagnostic knowledge profile.
+Your task is to create ONLY ONE personalized study week
+for a Software Engineering student.
 
-The plan MUST:
+The plan must be based on the student's current diagnostic
+knowledge profile.
 
-1. Address the student's critical knowledge gaps.
-2. Prioritize weak concepts before advanced concepts.
-3. Progress logically through Bloom's Taxonomy.
-4. Begin with foundational knowledge.
-5. Gradually move toward Apply, Analyze, Evaluate and Create.
-6. Respect prerequisites between concepts.
-7. Allocate realistic study hours.
-8. Never exceed 20 hours per week.
-9. Include concrete learning activities.
-10. Include milestones for every week.
-11. Cover all major weak learning areas.
-12. Create exactly 16 weeks.
+PRIORITY RULES:
 
-For every week provide:
+1. Address the student's weakest and most critical gaps first.
+2. Prioritize foundational concepts before advanced concepts.
+3. Respect prerequisites.
+4. Use Bloom's Taxonomy appropriately.
+5. Start at the student's current cognitive level.
+6. Do not overload the student.
+7. Maximum weekly workload is 20 hours.
+8. Include concrete and actionable activities.
+9. Every task must contain all required metadata.
+10. Focus on quality rather than covering too many concepts.
 
-- week_number
-- theme
-- concepts
-- bloom_focus
-- hours
-- tasks
-- priority
-- milestone
-
-Every task MUST contain:
-
-- activity
-- concept
-- learning_area
-- bloom_level
-- hours
-
-Bloom levels:
+BLOOM LEVELS:
 
 1 = Remember
 2 = Understand
@@ -246,19 +310,22 @@ Bloom levels:
 5 = Evaluate
 6 = Create
 
-IMPORTANT OUTPUT RULE:
+IMPORTANT:
 
-Return ONLY a valid JSON object.
+Generate EXACTLY ONE WEEK.
 
-Do NOT return Markdown.
+Do NOT generate Week 2.
+Do NOT generate Week 3.
+Do NOT generate a semester plan.
+Do NOT generate 16 weeks.
 
-Do NOT use ```json.
+Return ONLY valid JSON.
 
-Do NOT add explanations.
-
-Do NOT add text before the JSON.
-
-Do NOT add text after the JSON.
+No Markdown.
+No ```json.
+No explanations.
+No text before the JSON.
+No text after the JSON.
 """
 
         # ----------------------------------------------------
@@ -266,340 +333,207 @@ Do NOT add text after the JSON.
         # ----------------------------------------------------
 
         user_prompt = f"""
-Create a personalized 16-week study plan for this student.
+Create Week {week_number} of this student's adaptive
+study plan.
 
 STUDENT KNOWLEDGE PROFILE
 =========================
 
 {context}
 
-The plan must contain exactly 16 weeks.
+WEEK TO GENERATE:
+Week {week_number}
 
-Return this JSON structure:
+Create ONLY this week.
+
+The week should focus primarily on the student's most
+important current knowledge gaps.
+
+Return exactly this JSON structure:
 
 {{
-  "weeks": [
-    {{
-      "week_number": 1,
-      "theme": "Foundation of the weakest concepts",
-      "concepts": [
-        "Concept 1",
-        "Concept 2"
-      ],
-      "bloom_focus": [
-        "Remember",
-        "Understand"
-      ],
-      "hours": 15,
-      "tasks": [
+    "weeks": [
         {{
-          "activity": "Study the fundamental concepts",
-          "concept": "Concept 1",
-          "learning_area": "Learning Area",
-          "bloom_level": 1,
-          "hours": 2
-        }},
-        {{
-          "activity": "Complete practice exercises",
-          "concept": "Concept 1",
-          "learning_area": "Learning Area",
-          "bloom_level": 2,
-          "hours": 3
+            "week_number": {week_number},
+            "theme": "Main focus of this week",
+            "concepts": [
+                "Weak Concept 1",
+                "Weak Concept 2"
+            ],
+            "bloom_focus": [
+                "Remember",
+                "Understand",
+                "Apply"
+            ],
+            "hours": 12,
+            "tasks": [
+                {{
+                    "activity": "Study the fundamental concept",
+                    "concept": "Weak Concept 1",
+                    "learning_area": "Learning Area",
+                    "bloom_level": 1,
+                    "hours": 2
+                }},
+                {{
+                    "activity": "Complete practice exercises",
+                    "concept": "Weak Concept 1",
+                    "learning_area": "Learning Area",
+                    "bloom_level": 2,
+                    "hours": 2
+                }}
+            ],
+            "priority": "HIGH",
+            "milestone": "Student can explain and apply the target concept"
         }}
-      ],
-      "priority": "HIGH",
-      "milestone": "Understand the fundamental concepts"
-    }}
-  ],
-  "total_hours": 240
+    ],
+    "total_hours": 12
 }}
 
-IMPORTANT:
+REQUIREMENTS:
 
-- weeks MUST contain exactly 16 items.
-- Every week must contain at least one task.
-- Every task must have all required fields.
-- Total weekly hours should be realistic.
+- weeks must contain exactly ONE item.
+- That item must be Week {week_number}.
 - Maximum weekly hours = 20.
-- Critical gaps must be addressed.
+- At least one task is required.
+- Every task must contain:
+  activity
+  concept
+  learning_area
+  bloom_level
+  hours
+- Tasks must directly address the student's knowledge gaps.
+- Do not invent unrelated subjects.
+- Keep the workload realistic.
 """
 
-        try:
-
-            messages = [
-                SystemMessage(
-                    content=system_prompt
-                ),
-                HumanMessage(
-                    content=user_prompt
-                ),
-            ]
-
-            logger.info(
-                "[PlannerAgent] Sending request to Groq..."
-            )
-
-            # ------------------------------------------------
-            # LLM CALL
-            # ------------------------------------------------
-
-            response = await asyncio.to_thread(
-                self.llm.invoke,
-                messages
-            )
-
-            # ------------------------------------------------
-            # DEBUG RESPONSE
-            # ------------------------------------------------
-
-            logger.info(
-                "[PlannerAgent] LLM response received"
-            )
-
-            logger.info(
-                f"[PlannerAgent] Response type: "
-                f"{type(response).__name__}"
-            )
-
-            logger.info(
-                f"[PlannerAgent] Content type: "
-                f"{type(response.content).__name__}"
-            )
-
-            logger.info(
-                f"[PlannerAgent] Response metadata: "
-                f"{getattr(response, 'response_metadata', {})}"
-            )
-
-            # ------------------------------------------------
-            # EXTRACT CONTENT
-            # ------------------------------------------------
-
-            content = response.content
-
-            if isinstance(content, str):
-
-                response_text = content.strip()
-
-            elif isinstance(content, list):
-
-                parts = []
-
-                for block in content:
-
-                    if isinstance(block, dict):
-
-                        text = block.get("text")
-
-                        if text:
-                            parts.append(str(text))
-
-                    elif hasattr(block, "text"):
-
-                        text = getattr(
-                            block,
-                            "text",
-                            None
-                        )
-
-                        if text:
-                            parts.append(str(text))
-
-                    else:
-
-                        parts.append(
-                            str(block)
-                        )
-
-                response_text = "".join(parts).strip()
-
-            else:
-
-                response_text = str(content).strip()
-
-            # ------------------------------------------------
-            # RESPONSE LENGTH
-            # ------------------------------------------------
-
-            logger.info(
-                f"[PlannerAgent] Response length: "
-                f"{len(response_text)} characters"
-            )
-
-            # ------------------------------------------------
-            # EMPTY RESPONSE
-            # ------------------------------------------------
-
-            if not response_text:
-
-                logger.error(
-                    "[PlannerAgent] Groq returned "
-                    "an EMPTY response."
-                )
-
-                logger.error(
-                    f"[PlannerAgent] Full response object: "
-                    f"{response}"
-                )
-
-                raise ValueError(
-                    "Groq returned an empty response. "
-                    "The model may have stopped before "
-                    "generating content."
-                )
-
-            # ------------------------------------------------
-            # SHOW FIRST PART FOR DEBUGGING
-            # ------------------------------------------------
-
-            logger.info(
-                "[PlannerAgent] Response preview:\n"
-                + response_text[:3000]
-            )
-
-            # ------------------------------------------------
-            # PARSE JSON
-            # ------------------------------------------------
-
-            plan = self._parse_plan_json(
-                response_text
-            )
-
-            # ------------------------------------------------
-            # VALIDATE
-            # ------------------------------------------------
-
-            if not isinstance(plan, dict):
-
-                raise ValueError(
-                    "Planner returned invalid JSON object."
-                )
-
-            weeks = plan.get("weeks")
-
-            if not weeks:
-
-                raise ValueError(
-                    "LLM returned JSON but "
-                    "no study plan weeks were found."
-                )
-
-            if not isinstance(weeks, list):
-
-                raise ValueError(
-                    "'weeks' must be a list."
-                )
-
-            logger.info(
-                f"[PlannerAgent] Generated initial plan "
-                f"with {len(weeks)} weeks"
-            )
-
-            return plan
-
-        except Exception as e:
-
-            logger.error(
-                f"[PlannerAgent] Failed to generate plan: {e}"
-            )
-
-            raise
-
-    # ========================================================
-    # REFLEXION LOOP
-    # ========================================================
-
-    async def _reflexion_loop(
-        self,
-        plan: Dict[str, Any],
-        profile
-    ) -> Dict[str, Any]:
-
-        critique_history = []
-
-        current_plan = plan
-
         # ----------------------------------------------------
-        # TWO ITERATIONS
+        # LLM CALL
         # ----------------------------------------------------
 
-        for iteration in range(2):
+        messages = [
+            SystemMessage(
+                content=system_prompt
+            ),
+            HumanMessage(
+                content=user_prompt
+            ),
+        ]
 
-            logger.info(
-                f"[PlannerAgent] "
-                f"Critique iteration {iteration + 1}/2"
-            )
-
-            critique = await self._critique_plan(
-                current_plan,
-                profile
-            )
-
-            critique_history.append(
-                critique.get("summary", "")
-            )
-
-            # ------------------------------------------------
-            # CHECK IMPROVEMENT
-            # ------------------------------------------------
-
-            needs_improvement = critique.get(
-                "needs_improvement",
-                False
-            )
-
-            if not needs_improvement:
-
-                logger.info(
-                    "[PlannerAgent] "
-                    "Plan passed self-critique."
-                )
-
-                break
-
-            # ------------------------------------------------
-            # REFINE
-            # ------------------------------------------------
-
-            logger.info(
-                "[PlannerAgent] Refining study plan..."
-            )
-
-            current_plan = await self._refine_plan(
-                current_plan,
-                critique,
-                profile
-            )
-
-        # ----------------------------------------------------
-        # FINAL CRITIQUE
-        # ----------------------------------------------------
-
-        final_critique = await self._generate_final_critique(
-            current_plan,
-            profile
+        logger.info(
+            f"[PlannerAgent] Sending Week {week_number} "
+            f"request to Groq..."
         )
 
-        current_plan["critique"] = final_critique
-
-        current_plan["critique_history"] = (
-            critique_history
+        response = await asyncio.to_thread(
+            self.llm.invoke,
+            messages
         )
 
-        return current_plan
+        logger.info(
+            "[PlannerAgent] LLM response received"
+        )
 
-    # ========================================================
-    # CRITIQUE PLAN
-    # ========================================================
+        # ----------------------------------------------------
+        # EXTRACT RESPONSE
+        # ----------------------------------------------------
 
-    async def _critique_plan(
-        self,
-        plan: Dict[str, Any],
-        profile
-    ) -> Dict[str, Any]:
+        response_text = self._extract_response_text(
+            response
+        )
 
-        plan_json = json.dumps(
+        logger.info(
+            f"[PlannerAgent] Weekly response length: "
+            f"{len(response_text)} characters"
+        )
+
+        if not response_text:
+
+            raise ValueError(
+                "Groq returned an empty response."
+            )
+
+        # ----------------------------------------------------
+        # PARSE JSON
+        # ----------------------------------------------------
+
+        plan = self._parse_plan_json(
+            response_text
+        )
+
+        # ----------------------------------------------------
+        # VALIDATE
+        # ----------------------------------------------------
+
+        self._validate_weekly_plan(
             plan,
+            expected_week=week_number
+        )
+
+        logger.success(
+            f"[PlannerAgent] Generated Week "
+            f"{week_number} successfully"
+        )
+
+        return plan
+
+    # ========================================================
+    # CRITIQUE ONE WEEK
+    # ========================================================
+
+    async def _critique_week(
+        self,
+        plan: Dict[str, Any],
+        profile,
+    ) -> Dict[str, Any]:
+
+        weeks = plan.get(
+            "weeks",
+            []
+        )
+
+        if not weeks:
+            return {
+                "strengths": [],
+                "weaknesses": [],
+                "needs_improvement": False,
+                "suggestions": [],
+                "summary": "",
+            }
+
+        week = weeks[0]
+
+        # ----------------------------------------------------
+        # IMPORTANT:
+        # Only send the compact week information.
+        # Do not send huge task/context payloads.
+        # ----------------------------------------------------
+
+        compact_week = {
+            "week_number": week.get(
+                "week_number"
+            ),
+            "theme": week.get(
+                "theme"
+            ),
+            "concepts": week.get(
+                "concepts"
+            ),
+            "bloom_focus": week.get(
+                "bloom_focus"
+            ),
+            "hours": week.get(
+                "hours"
+            ),
+            "priority": week.get(
+                "priority"
+            ),
+            "milestone": week.get(
+                "milestone"
+            ),
+        }
+
+        week_json = json.dumps(
+            compact_week,
             indent=2
         )
 
@@ -610,31 +544,28 @@ IMPORTANT:
         system_prompt = """
 You are an expert educational plan evaluator.
 
-Evaluate the provided 16-week study plan.
+Evaluate ONE weekly study plan.
 
 Check:
 
-1. Critical knowledge gaps are addressed.
-2. Weak learning areas receive sufficient attention.
-3. Bloom progression is logical.
-4. Prerequisites are respected.
-5. Weekly workload is realistic.
-6. No week exceeds 20 hours.
-7. Tasks are concrete and actionable.
-8. Every task contains required metadata.
-9. The plan progresses from foundation to advanced skills.
-10. The plan contains exactly 16 weeks.
+1. Does it address critical knowledge gaps?
+2. Are weak concepts prioritized?
+3. Is Bloom progression appropriate?
+4. Is the workload realistic?
+5. Is the weekly workload <= 20 hours?
+6. Is the milestone measurable?
+7. Are the concepts relevant?
 
 Return ONLY valid JSON.
 
 Required format:
 
 {
-  "strengths": [],
-  "weaknesses": [],
-  "needs_improvement": true,
-  "suggestions": [],
-  "summary": "..."
+    "strengths": [],
+    "weaknesses": [],
+    "needs_improvement": false,
+    "suggestions": [],
+    "summary": "..."
 }
 """
 
@@ -643,11 +574,11 @@ STUDENT PROFILE:
 
 {profile_context}
 
-CURRENT STUDY PLAN:
+WEEKLY PLAN:
 
-{plan_json}
+{week_json}
 
-Evaluate this plan.
+Evaluate this week.
 """
 
         try:
@@ -670,17 +601,12 @@ Evaluate this plan.
 
             if not response_text:
 
-                logger.warning(
-                    "[PlannerAgent] "
-                    "Critique returned empty response."
-                )
-
                 return {
                     "strengths": [],
                     "weaknesses": [],
                     "needs_improvement": False,
                     "suggestions": [],
-                    "summary": ""
+                    "summary": "",
                 }
 
             result = self._parse_json_response(
@@ -691,202 +617,19 @@ Evaluate this plan.
 
         except Exception as e:
 
-            logger.error(
-                f"[PlannerAgent] Critique failed: {e}"
+            logger.warning(
+                f"[PlannerAgent] Week critique failed: {e}"
             )
+
+            # Critique failure should NOT break planning.
 
             return {
                 "strengths": [],
                 "weaknesses": [],
                 "needs_improvement": False,
                 "suggestions": [],
-                "summary": ""
+                "summary": "",
             }
-
-    # ========================================================
-    # REFINE PLAN
-    # ========================================================
-
-    async def _refine_plan(
-        self,
-        plan: Dict[str, Any],
-        critique: Dict[str, Any],
-        profile
-    ) -> Dict[str, Any]:
-
-        plan_json = json.dumps(
-            plan,
-            indent=2
-        )
-
-        critique_json = json.dumps(
-            critique,
-            indent=2
-        )
-
-        profile_context = self._build_profile_context(
-            profile
-        )
-
-        system_prompt = """
-You are an expert educational planner.
-
-Improve the existing study plan based on the critique.
-
-Rules:
-
-- Keep exactly 16 weeks.
-- Keep all required fields.
-- Address all critical knowledge gaps.
-- Preserve useful parts of the original plan.
-- Improve weak areas identified by the critique.
-- Maintain logical Bloom progression.
-- Respect prerequisites.
-- Maximum 20 hours per week.
-- Keep tasks concrete and actionable.
-
-Return ONLY valid JSON.
-
-Do not use Markdown.
-Do not include explanations.
-"""
-
-        user_prompt = f"""
-STUDENT PROFILE:
-
-{profile_context}
-
-CURRENT PLAN:
-
-{plan_json}
-
-CRITIQUE:
-
-{critique_json}
-
-Return the improved 16-week plan.
-"""
-
-        response = await asyncio.to_thread(
-            self.llm.invoke,
-            [
-                SystemMessage(
-                    content=system_prompt
-                ),
-                HumanMessage(
-                    content=user_prompt
-                ),
-            ]
-        )
-
-        response_text = self._extract_response_text(
-            response
-        )
-
-        if not response_text:
-
-            logger.warning(
-                "[PlannerAgent] "
-                "Refinement returned empty response. "
-                "Keeping previous plan."
-            )
-
-            return plan
-
-        try:
-
-            refined = self._parse_plan_json(
-                response_text
-            )
-
-            if not refined.get("weeks"):
-
-                logger.warning(
-                    "[PlannerAgent] "
-                    "Refined plan has no weeks. "
-                    "Keeping previous plan."
-                )
-
-                return plan
-
-            return refined
-
-        except Exception as e:
-
-            logger.warning(
-                f"[PlannerAgent] "
-                f"Failed to parse refined plan: {e}"
-            )
-
-            return plan
-
-    # ========================================================
-    # FINAL CRITIQUE
-    # ========================================================
-
-    async def _generate_final_critique(
-        self,
-        plan: Dict[str, Any],
-        profile
-    ) -> str:
-
-        plan_json = json.dumps(
-            plan,
-            indent=2
-        )
-
-        prompt = f"""
-Provide a concise final critique of this personalized
-16-week study plan.
-
-Mention:
-
-- major strengths
-- how critical gaps are addressed
-- Bloom progression
-- workload realism
-- expected learning outcome
-
-STUDENT PROFILE:
-
-{self._build_profile_context(profile)}
-
-STUDY PLAN:
-
-{plan_json}
-
-Return a concise paragraph.
-"""
-
-        try:
-
-            response = await asyncio.to_thread(
-                self.llm.invoke,
-                [
-                    SystemMessage(
-                        content=(
-                            "You are an expert "
-                            "educational evaluator."
-                        )
-                    ),
-                    HumanMessage(
-                        content=prompt
-                    ),
-                ]
-            )
-
-            return self._extract_response_text(
-                response
-            )
-
-        except Exception as e:
-
-            logger.warning(
-                f"[PlannerAgent] "
-                f"Final critique failed: {e}"
-            )
-
-            return ""
 
     # ========================================================
     # BUILD PROFILE CONTEXT
@@ -894,12 +637,8 @@ Return a concise paragraph.
 
     def _build_profile_context(
         self,
-        profile
+        profile,
     ) -> str:
-
-        # ----------------------------------------------------
-        # SAFE CRITICAL GAPS
-        # ----------------------------------------------------
 
         critical_gaps = (
             profile.critical_gaps
@@ -907,29 +646,17 @@ Return a concise paragraph.
             else []
         )
 
-        # ----------------------------------------------------
-        # SAFE BLOOM SUMMARY
-        # ----------------------------------------------------
-
         bloom_summary = (
             profile.bloom_summary
             if profile.bloom_summary
             else {}
         )
 
-        # ----------------------------------------------------
-        # SAFE LEARNING AREAS
-        # ----------------------------------------------------
-
         learning_area_summary = (
             profile.learning_area_summary
             if profile.learning_area_summary
             else {}
         )
-
-        # ----------------------------------------------------
-        # ACCURACY
-        # ----------------------------------------------------
 
         if profile.total_questions:
 
@@ -944,10 +671,10 @@ Return a concise paragraph.
             accuracy = 0.0
 
         return f"""
-Mastery Level:
+Overall Mastery:
 {profile.overall_mastery:.1f}%
 
-Theta (Ability):
+Theta:
 {profile.overall_theta:.2f}
 
 Critical Knowledge Gaps:
@@ -970,16 +697,175 @@ Accuracy:
 """
 
     # ========================================================
+    # VALIDATE WEEKLY PLAN
+    # ========================================================
+
+    def _validate_weekly_plan(
+        self,
+        plan: Dict[str, Any],
+        expected_week: int,
+    ) -> None:
+
+        if not isinstance(
+            plan,
+            dict
+        ):
+            raise ValueError(
+                "Planner returned invalid JSON object."
+            )
+
+        weeks = plan.get(
+            "weeks"
+        )
+
+        if not isinstance(
+            weeks,
+            list
+        ):
+            raise ValueError(
+                "'weeks' must be a list."
+            )
+
+        if len(weeks) != 1:
+
+            raise ValueError(
+                f"Planner must return exactly ONE week, "
+                f"but returned {len(weeks)}."
+            )
+
+        week = weeks[0]
+
+        if not isinstance(
+            week,
+            dict
+        ):
+            raise ValueError(
+                "Week must be a JSON object."
+            )
+
+        actual_week = week.get(
+            "week_number"
+        )
+
+        try:
+            actual_week = int(
+                actual_week
+            )
+        except (
+            TypeError,
+            ValueError
+        ):
+            actual_week = expected_week
+
+        if actual_week != expected_week:
+
+            raise ValueError(
+                f"Expected Week {expected_week}, "
+                f"but planner returned Week {actual_week}."
+            )
+
+        # ----------------------------------------------------
+        # HOURS
+        # ----------------------------------------------------
+
+        try:
+
+            hours = float(
+                week.get(
+                    "hours",
+                    0
+                )
+            )
+
+        except (
+            TypeError,
+            ValueError
+        ):
+
+            hours = 0
+
+        if hours <= 0:
+
+            raise ValueError(
+                "Weekly plan must contain positive hours."
+            )
+
+        if hours > 20:
+
+            raise ValueError(
+                f"Weekly plan exceeds 20 hours: {hours}"
+            )
+
+        # ----------------------------------------------------
+        # TASKS
+        # ----------------------------------------------------
+
+        tasks = week.get(
+            "tasks",
+            []
+        )
+
+        if not isinstance(
+            tasks,
+            list
+        ):
+
+            raise ValueError(
+                "Week tasks must be a list."
+            )
+
+        if not tasks:
+
+            raise ValueError(
+                "Weekly plan must contain at least one task."
+            )
+
+        # ----------------------------------------------------
+        # REQUIRED TASK FIELDS
+        # ----------------------------------------------------
+
+        required_fields = [
+            "activity",
+            "concept",
+            "learning_area",
+            "bloom_level",
+            "hours",
+        ]
+
+        for index, task in enumerate(tasks):
+
+            if not isinstance(
+                task,
+                dict
+            ):
+
+                raise ValueError(
+                    f"Task {index + 1} is not an object."
+                )
+
+            missing = [
+                field
+                for field in required_fields
+                if field not in task
+            ]
+
+            if missing:
+
+                raise ValueError(
+                    f"Task {index + 1} missing fields: "
+                    f"{missing}"
+                )
+
+    # ========================================================
     # EXTRACT RESPONSE TEXT
     # ========================================================
 
     def _extract_response_text(
         self,
-        response
+        response,
     ) -> str:
 
         if response is None:
-
             return ""
 
         content = getattr(
@@ -992,7 +878,10 @@ Accuracy:
         # STRING
         # ----------------------------------------------------
 
-        if isinstance(content, str):
+        if isinstance(
+            content,
+            str
+        ):
 
             return content.strip()
 
@@ -1000,29 +889,42 @@ Accuracy:
         # LIST
         # ----------------------------------------------------
 
-        if isinstance(content, list):
+        if isinstance(
+            content,
+            list
+        ):
 
             parts = []
 
             for block in content:
 
-                if isinstance(block, str):
+                if isinstance(
+                    block,
+                    str
+                ):
 
-                    parts.append(block)
+                    parts.append(
+                        block
+                    )
 
-                elif isinstance(block, dict):
+                elif isinstance(
+                    block,
+                    dict
+                ):
 
                     text = block.get(
                         "text"
                     )
 
                     if text:
-
                         parts.append(
                             str(text)
                         )
 
-                elif hasattr(block, "text"):
+                elif hasattr(
+                    block,
+                    "text"
+                ):
 
                     text = getattr(
                         block,
@@ -1031,7 +933,6 @@ Accuracy:
                     )
 
                     if text:
-
                         parts.append(
                             str(text)
                         )
@@ -1042,7 +943,9 @@ Accuracy:
         # OTHER
         # ----------------------------------------------------
 
-        return str(content).strip()
+        return str(
+            content
+        ).strip()
 
     # ========================================================
     # PARSE PLAN JSON
@@ -1050,7 +953,7 @@ Accuracy:
 
     def _parse_plan_json(
         self,
-        response_text: str
+        response_text: str,
     ) -> Dict[str, Any]:
 
         if not response_text:
@@ -1062,14 +965,19 @@ Accuracy:
         text = response_text.strip()
 
         # ----------------------------------------------------
-        # 1. DIRECT JSON
+        # DIRECT JSON
         # ----------------------------------------------------
 
         try:
 
-            result = json.loads(text)
+            result = json.loads(
+                text
+            )
 
-            if isinstance(result, dict):
+            if isinstance(
+                result,
+                dict
+            ):
 
                 return result
 
@@ -1077,7 +985,7 @@ Accuracy:
             pass
 
         # ----------------------------------------------------
-        # 2. ```json ... ```
+        # MARKDOWN JSON
         # ----------------------------------------------------
 
         lower_text = text.lower()
@@ -1088,8 +996,9 @@ Accuracy:
                 "```json"
             )
 
-            start = start_marker + len(
-                "```json"
+            start = (
+                start_marker
+                + len("```json")
             )
 
             end = text.find(
@@ -1119,17 +1028,19 @@ Accuracy:
                 except json.JSONDecodeError as e:
 
                     logger.warning(
-                        "[PlannerAgent] "
+                        f"[PlannerAgent] "
                         f"Markdown JSON parse failed: {e}"
                     )
 
         # ----------------------------------------------------
-        # 3. GENERIC CODE BLOCK
+        # GENERIC CODE BLOCK
         # ----------------------------------------------------
 
         if "```" in text:
 
-            first = text.find("```")
+            first = text.find(
+                "```"
+            )
 
             start = text.find(
                 "\n",
@@ -1168,12 +1079,16 @@ Accuracy:
                         pass
 
         # ----------------------------------------------------
-        # 4. EXTRACT FIRST { ... }
+        # EXTRACT FIRST JSON OBJECT
         # ----------------------------------------------------
 
-        start = text.find("{")
+        start = text.find(
+            "{"
+        )
 
-        end = text.rfind("}")
+        end = text.rfind(
+            "}"
+        )
 
         if start != -1 and end > start:
 
@@ -1197,23 +1112,12 @@ Accuracy:
             except json.JSONDecodeError as e:
 
                 logger.error(
-                    "[PlannerAgent] "
-                    f"Extracted JSON is invalid: {e}"
+                    f"[PlannerAgent] "
+                    f"Extracted JSON invalid: {e}"
                 )
-
-                logger.error(
-                    "[PlannerAgent] "
-                    f"Response was:\n"
-                    f"{text[:5000]}"
-                )
-
-        # ----------------------------------------------------
-        # FAILURE
-        # ----------------------------------------------------
 
         logger.error(
-            "[PlannerAgent] "
-            "Failed to parse plan JSON."
+            "[PlannerAgent] Failed to parse plan JSON."
         )
 
         logger.error(
@@ -1231,11 +1135,10 @@ Accuracy:
 
     def _parse_json_response(
         self,
-        response_text: str
+        response_text: str,
     ) -> Dict[str, Any]:
 
         if not response_text:
-
             return {}
 
         text = response_text.strip()
@@ -1246,7 +1149,9 @@ Accuracy:
 
         try:
 
-            result = json.loads(text)
+            result = json.loads(
+                text
+            )
 
             if isinstance(
                 result,
@@ -1270,8 +1175,9 @@ Accuracy:
                 "```json"
             )
 
-            start = start_marker + len(
-                "```json"
+            start = (
+                start_marker
+                + len("```json")
             )
 
             end = text.find(
@@ -1307,7 +1213,9 @@ Accuracy:
 
         if "```" in text:
 
-            first = text.find("```")
+            first = text.find(
+                "```"
+            )
 
             start = text.find(
                 "\n",
@@ -1349,9 +1257,13 @@ Accuracy:
         # EXTRACT JSON OBJECT
         # ----------------------------------------------------
 
-        start = text.find("{")
+        start = text.find(
+            "{"
+        )
 
-        end = text.rfind("}")
+        end = text.rfind(
+            "}"
+        )
 
         if start != -1 and end > start:
 
@@ -1384,13 +1296,14 @@ Accuracy:
     def _build_study_plan(
         self,
         plan_data: Dict[str, Any],
-        student_id: str
+        student_id: str,
+        week_number: int,
     ) -> StudyPlan:
 
         weeks = []
 
         # ----------------------------------------------------
-        # READ WEEKS
+        # READ ONLY THE GENERATED WEEK
         # ----------------------------------------------------
 
         for week_data in plan_data.get(
@@ -1402,7 +1315,6 @@ Accuracy:
                 week_data,
                 dict
             ):
-
                 continue
 
             # ------------------------------------------------
@@ -1458,10 +1370,11 @@ Accuracy:
             # ------------------------------------------------
 
             week = WeekPlan(
+
                 week_number=int(
                     week_data.get(
                         "week_number",
-                        len(weeks) + 1
+                        week_number
                     )
                 ),
 
@@ -1503,10 +1416,12 @@ Accuracy:
                         "milestone",
                         ""
                     )
-                )
+                ),
             )
 
-            weeks.append(week)
+            weeks.append(
+                week
+            )
 
         # ----------------------------------------------------
         # TOTAL HOURS
@@ -1537,20 +1452,26 @@ Accuracy:
         # ----------------------------------------------------
 
         return StudyPlan(
+
             plan_id=plan_id,
+
             student_id=student_id,
+
             weeks=weeks,
+
             total_hours=float(
                 total_hours
             ),
+
             version=int(
                 plan_data.get(
                     "version",
                     1
                 )
             ),
+
             critique_history=plan_data.get(
                 "critique_history",
                 []
-            )
+            ),
         )
