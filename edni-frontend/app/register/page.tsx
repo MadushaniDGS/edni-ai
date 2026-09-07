@@ -673,25 +673,15 @@ export default function RegisterPage() {
           {/* Logo */}
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 28 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div
+              <img
+                src="icon.png"
+                alt="Logo"
                 style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 7,
-                  background: "linear-gradient(135deg,#6C63FF,#4F46E5)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 13,
-                  color: "white",
-                  fontWeight: 800,
+                  width: "50px",
+                  height: "50px",
+                  objectFit: "cover", // Fits image cleanly inside the 28x28 box
                 }}
-              >
-                E
-              </div>
-              <span style={{ fontSize: 16, fontWeight: 800, color: "#4F46E5", letterSpacing: "-0.3px" }}>
-                Edni AI
-              </span>
+              />
             </div>
           </div>
 
