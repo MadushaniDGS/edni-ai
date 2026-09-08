@@ -1,33 +1,31 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import axios from 'axios';
-import TopBar from '@/components/TopBar';
-import Sidebar from '@/components/Sidebar';
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import axios from "axios";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1';
+import TopBar from "@/components/TopBar";
+import Sidebar from "@/components/Sidebar";
+
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
 const COLORS = {
   primary: "#4F46E5",
   primaryHover: "#4338CA",
-  secondary: "#A855F7",
-  accent: "#EC4899",
-  bgDark: "#f9fafb",
-  bgCard: "#ffffff",
-  bgLight: "#F9FAFB",
-  textPrimary: "#111827",
-  textSecondary: "#6B7280",
-  textMuted: "#9CA3AF",
-  borderDark: "#E5E7EB",
-  success: "#10B981",
-  warning: "#F59E0B",
+  bg: "#F8FAFC",
+  card: "#FFFFFF",
+  text: "#111827",
+  secondary: "#64748B",
+  muted: "#94A3B8",
+  border: "#E2E8F0",
+  userBubble: "#4F46E5",
+  assistantBubble: "#FFFFFF",
   error: "#EF4444",
-  info: "#3B82F6",
 };
 
 interface Message {
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
   timestamp: Date;
   sources?: string[];
@@ -43,62 +41,68 @@ interface MentorContext {
 export default function MentorPage() {
   const router = useRouter();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
+  const [inputValue, setInputValue] = useState("");
+
+  const [context, setContext] = useState<MentorContext | null>(null);
 
   const [messages, setMessages] = useState<Message[]>([
     {
-      role: 'assistant',
-      content: 'Hello! I\'m your AI Mentor, powered by advanced language models. I\'m here to help you understand complex concepts through Socratic questioning. What topic would you like to explore today?',
+      role: "assistant",
+      content:
+        "Hi! I'm your AI Mentor 👋\n\nI'm here to help you understand concepts, solve problems, and improve your learning. Ask me anything and I'll guide you step by step.",
       timestamp: new Date(),
     },
   ]);
 
-  const [inputValue, setInputValue] = useState('');
-  const [context, setContext] = useState<MentorContext | null>(null);
-
-  // Scroll to bottom when new messages arrive
+  /* --------------------------------
+     Scroll to latest message
+  -------------------------------- */
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    messagesEndRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "end",
+    });
+  }, [messages, sending]);
 
-  // Fetch student context on mount
+  /* --------------------------------
+     Fetch student context
+  -------------------------------- */
   useEffect(() => {
     const fetchContext = async () => {
       try {
-        const token = localStorage.getItem('edni_access');
+        const token =
+          localStorage.getItem("edni_access") ||
+          sessionStorage.getItem("edni_access");
+
         if (!token) {
-          router.push('/login');
+          router.push("/login");
           return;
         }
 
-        const res = await axios.get(`${API_URL}/analytics`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const headers = {
+          Authorization: `Bearer ${token}`,
+        };
 
-        const userData = await axios.get(`${API_URL}/user/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const [analyticsRes, userRes] = await Promise.all([
+          axios.get(`${API_URL}/analytics`, { headers }),
+          axios.get(`${API_URL}/user/auth/me`, { headers }),
+        ]);
 
         setContext({
-          student_name: userData.data.first_name || 'Student',
-          overall_mastery: res.data.overall_mastery,
-          critical_gaps: res.data.critical_gaps,
-          current_concept: res.data.current_concept,
+          student_name: userRes.data.name,
+          overall_mastery: analyticsRes.data.overall_mastery ?? 0,
+          critical_gaps: analyticsRes.data.critical_gaps ?? [],
+          current_concept: analyticsRes.data.current_concept,
         });
-
-        setLoading(false);
       } catch (err) {
-        console.error('Failed to fetch context:', err);
-        // Use mock data for demo
-        setContext({
-          student_name: 'Student',
-          overall_mastery: 72,
-          critical_gaps: ['System Design', 'Database Design'],
-          current_concept: 'Algorithms',
-        });
+        console.error("Failed to fetch mentor context:", err);
+        setError("Unable to load your learning context.");
+      } finally {
         setLoading(false);
       }
     };
@@ -106,100 +110,163 @@ export default function MentorPage() {
     fetchContext();
   }, [router]);
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
+  /* --------------------------------
+     Send message
+  -------------------------------- */
+  const handleSendMessage = async (e?: React.FormEvent) => {
+    e?.preventDefault();
 
-    if (!inputValue.trim() || sending) return;
+    const messageText = inputValue.trim();
 
-    // Add user message to chat
+    if (!messageText || sending) return;
+
     const userMessage: Message = {
-      role: 'user',
-      content: inputValue,
+      role: "user",
+      content: messageText,
       timestamp: new Date(),
     };
 
     setMessages((prev) => [...prev, userMessage]);
-    setInputValue('');
+    setInputValue("");
     setSending(true);
+    setError("");
 
     try {
-      const token = localStorage.getItem('edni_access');
+      const token =
+        localStorage.getItem("edni_access") ||
+        sessionStorage.getItem("edni_access");
 
-      const res = await axios.post(
+      if (!token) {
+        router.push("/login");
+        return;
+      }
+
+      const response = await axios.post(
         `${API_URL}/mentor/chat`,
         {
-          message: inputValue,
+          message: messageText,
+
           history: messages.map((m) => ({
             role: m.role,
             content: m.content,
           })),
-          context: context ? {
-            student_name: context.student_name,
-            overall_mastery: context.overall_mastery,
-            critical_gaps: context.critical_gaps,
-          } : undefined,
+
+          context: context
+            ? {
+              student_name: context.student_name,
+              overall_mastery: context.overall_mastery,
+              critical_gaps: context.critical_gaps,
+              current_concept: context.current_concept,
+              overall_mastery_percentage: context.overall_mastery,
+            }
+            : undefined,
         },
-        { headers: { Authorization: `Bearer ${token}` } }
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
 
       const assistantMessage: Message = {
-        role: 'assistant',
-        content: res.data.response || res.data.message,
+        role: "assistant",
+        content:
+          response.data.response ||
+          response.data.message ||
+          "I couldn't generate a response.",
         timestamp: new Date(),
-        sources: res.data.sources,
+        sources: response.data.sources || [],
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
-      setError('');
     } catch (err) {
-      console.error('Failed to get mentor response:', err);
-      setError('Failed to get response from mentor');
+      console.error("Mentor API error:", err);
 
-      // Fallback response for demo
-      const fallbackMessage: Message = {
-        role: 'assistant',
-        content: "That's an interesting question! Let me ask you this to help you think through it: Can you break down the problem into smaller components? What's the core concept you're trying to understand?",
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, fallbackMessage]);
+      setError("The mentor could not respond. Please try again.");
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content:
+            "I'm having trouble connecting right now. Please try sending your question again.",
+          timestamp: new Date(),
+        },
+      ]);
     } finally {
       setSending(false);
+
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
     }
   };
 
+  /* --------------------------------
+     Suggested questions
+  -------------------------------- */
   const suggestedQuestions = [
-    'How do hash tables work internally?',
-    'What\'s the difference between DFS and BFS?',
-    'Can you explain recursion step by step?',
-    'How do I optimize this algorithm?',
-    'What\'s the time complexity of this solution?',
+    {
+      icon: "🧠",
+      text: "Explain a difficult concept to me",
+    },
+    {
+      icon: "💻",
+      text: "How do hash tables work internally?",
+    },
+    {
+      icon: "🔍",
+      text: "What's the difference between DFS and BFS?",
+    },
+    {
+      icon: "📚",
+      text: "Help me understand recursion step by step",
+    },
   ];
 
+  const selectQuestion = (question: string) => {
+    setInputValue(question);
+    inputRef.current?.focus();
+  };
+
+  /* --------------------------------
+     Loading
+  -------------------------------- */
   if (loading) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        backgroundColor: COLORS.bgDark,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}>
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '1rem',
-        }}>
-          <div style={{
-            width: 40,
-            height: 40,
-            border: `3px solid ${COLORS.borderDark}`,
-            borderTop: `3px solid ${COLORS.primary}`,
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-          }} />
-          <p style={{ color: COLORS.textMuted }}>Loading your mentor...</p>
+      <div
+        style={{
+          minHeight: "100vh",
+          backgroundColor: COLORS.bg,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <div style={{ textAlign: "center" }}>
+          <div
+            style={{
+              width: 42,
+              height: 42,
+              border: `3px solid ${COLORS.border}`,
+              borderTop: `3px solid ${COLORS.primary}`,
+              borderRadius: "50%",
+              animation: "spin 1s linear infinite",
+              margin: "0 auto 16px",
+            }}
+          />
+
+          <p
+            style={{
+              color: COLORS.secondary,
+              fontSize: 14,
+              margin: 0,
+            }}
+          >
+            Preparing your AI Mentor...
+          </p>
         </div>
+
         <style>{`
           @keyframes spin {
             from { transform: rotate(0deg); }
@@ -211,485 +278,646 @@ export default function MentorPage() {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      backgroundColor: COLORS.bgDark,
-      display: 'flex',
-      flexDirection: 'column',
-    }}>
-      {/* Fixed Sidebar */}
+    <div
+      style={{
+        minHeight: "100vh",
+        backgroundColor: COLORS.bg,
+      }}
+    >
+      {/* SIDEBAR */}
       <Sidebar />
 
-      {/* Top Bar */}
-      <TopBar title="AI Mentor" />
-
-      {/* Main Content - Offset by sidebar width (240px) */}
-      <div style={{ marginLeft: '240px', paddingTop: '64px', display: 'flex', flexDirection: 'column', flex: 1 }}>
-        {/* Header */}
-        <div style={{
-          backgroundColor: COLORS.bgCard,
-          borderBottom: `1px solid ${COLORS.borderDark}`,
-          position: 'sticky',
-          top: '64px',
-          zIndex: 30,
-        }}>
-          <div style={{
-            maxWidth: '1280px',
-            margin: '0 auto',
-            padding: '1rem 2rem',
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}>
-              <div>
-                <h1 style={{
-                  fontSize: '1.5rem',
-                  fontWeight: 700,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  margin: 0,
-                  color: COLORS.textPrimary,
-                }}>
-                  🤖 AI Mentor
-                </h1>
-                <p style={{
-                  fontSize: '0.875rem',
-                  color: COLORS.textMuted,
-                  margin: '0.25rem 0 0 0',
-                }}>
-                  {context?.student_name}, your personalized learning companion
-                </p>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <p style={{
-                  fontSize: '0.875rem',
-                  color: COLORS.textMuted,
-                  margin: 0,
-                }}>Current Mastery</p>
-                <p style={{
-                  fontSize: '1.5rem',
-                  fontWeight: 700,
-                  color: COLORS.primary,
-                  margin: '0.25rem 0 0 0',
-                }}>
-                  {context?.overall_mastery}%
-                </p>
-              </div>
-            </div>
-          </div>
+      {/* MAIN AREA */}
+      <div
+        style={{
+          marginLeft: "240px",
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        {/* TOP BAR */}
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: "240px",
+            right: 0,
+            height: "64px",
+            zIndex: 100,
+          }}
+        >
+          <TopBar title="AI Mentor" />
         </div>
 
-        {/* Chat container */}
-        <div style={{
-          flex: 1,
-          overflowY: 'auto',
-        }}>
-          <div style={{
-            maxWidth: '1280px',
-            margin: '0 auto',
-            padding: '1.5rem 2rem',
-            width: '100%',
-          }}>
-            <div style={{
-              maxWidth: '48rem',
-              margin: '0 auto',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1rem',
-            }}>
-              {messages.length === 1 && (
-                <div style={{
-                  textAlign: 'center',
-                  paddingTop: '3rem',
-                  paddingBottom: '3rem',
-                }}>
-                  <p style={{ fontSize: '2.25rem', marginBottom: '1rem' }}>🎓</p>
-                  <h2 style={{
-                    fontSize: '1.5rem',
-                    fontWeight: 700,
-                    marginBottom: '0.5rem',
-                    color: COLORS.textPrimary,
-                    margin: '0 0 0.5rem 0',
-                  }}>Welcome to Your AI Mentor</h2>
-                  <p style={{
-                    color: COLORS.textMuted,
-                    marginBottom: '2rem',
-                    margin: '0 0 2rem 0',
-                  }}>
-                    Ask questions about any concept. I'll guide you using Socratic questions
-                    to deepen your understanding.
+        {/* CHAT PAGE */}
+        <div
+          style={{
+            paddingTop: "64px",
+            minHeight: "100vh",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          {/* CHAT HEADER */}
+          <div
+            style={{
+              backgroundColor: COLORS.card,
+              borderBottom: `1px solid ${COLORS.border}`,
+              padding: "18px 32px",
+            }}
+          >
+            <div
+              style={{
+                maxWidth: "1100px",
+                margin: "0 auto",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                }}
+              >
+                <div
+                  style={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: 12,
+                    background:
+                      "linear-gradient(135deg, #4F46E5, #7C3AED)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 22,
+                  }}
+                >
+                  🤖
+                </div>
+
+                <div>
+                  <h1
+                    style={{
+                      margin: 0,
+                      fontSize: 18,
+                      fontWeight: 700,
+                      color: COLORS.text,
+                    }}
+                  >
+                    AI Mentor
+                  </h1>
+
+                  <p
+                    style={{
+                      margin: "3px 0 0",
+                      fontSize: 12,
+                      color: COLORS.secondary,
+                    }}
+                  >
+                    Your personalized learning companion
                   </p>
+                </div>
+              </div>
 
-                  {/* Critical gaps reminder */}
-                  {context?.critical_gaps && context.critical_gaps.length > 0 && (
-                    <div style={{
-                      backgroundColor: 'rgba(239, 68, 68, 0.05)',
-                      border: `1px solid rgba(239, 68, 68, 0.2)`,
-                      borderRadius: 8,
-                      padding: '1rem',
-                      marginBottom: '2rem',
-                      textAlign: 'left',
-                    }}>
-                      <p style={{
-                        fontWeight: 600,
-                        marginBottom: '0.5rem',
-                        color: COLORS.error,
-                        margin: '0 0 0.5rem 0',
-                      }}>📌 Your Priority Areas</p>
-                      <p style={{
-                        fontSize: '0.875rem',
-                        color: COLORS.textMuted,
-                        marginBottom: '0.75rem',
-                        margin: '0 0 0.75rem 0',
-                      }}>
-                        Based on your diagnostic, focus on:
-                      </p>
-                      <div style={{
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        gap: '0.5rem',
-                      }}>
-                        {context.critical_gaps.map((gap, idx) => (
-                          <button
-                            key={idx}
-                            onClick={() => setInputValue(`Can you help me understand ${gap}?`)}
-                            style={{
-                              fontSize: '0.875rem',
-                              padding: '0.5rem 0.75rem',
-                              backgroundColor: '#F9FAFB',
-                              color: COLORS.textPrimary,
-                              border: `1px solid ${COLORS.borderDark}`,
-                              borderRadius: 6,
-                              cursor: 'pointer',
-                              transition: 'all 0.2s',
-                              textAlign: 'left',
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = '#F3F4F6';
-                              e.currentTarget.style.borderColor = COLORS.primary;
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = '#F9FAFB';
-                              e.currentTarget.style.borderColor = COLORS.borderDark;
-                            }}
-                          >
-                            {gap} →
-                          </button>
-                        ))}
-                      </div>
+              {/* MASTERy */}
+              {context && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "8px 14px",
+                    backgroundColor: "#F8FAFC",
+                    border: `1px solid ${COLORS.border}`,
+                    borderRadius: 10,
+                  }}
+                >
+                  <div>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: COLORS.muted,
+                      }}
+                    >
+                      Overall Mastery
                     </div>
-                  )}
 
-                  {/* Suggested questions */}
-                  <div style={{ textAlign: 'left' }}>
-                    <p style={{
-                      fontSize: '0.875rem',
-                      fontWeight: 600,
-                      marginBottom: '0.75rem',
-                      color: COLORS.textMuted,
-                      margin: '0 0 0.75rem 0',
-                    }}>Or try one of these:</p>
-                    <div style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.5rem',
-                    }}>
-                      {suggestedQuestions.map((q, idx) => (
+                    <div
+                      style={{
+                        fontSize: 16,
+                        fontWeight: 700,
+                        color: COLORS.primary,
+                      }}
+                    >
+                      {Number(context.overall_mastery).toFixed(1)}%
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* CHAT BODY */}
+          <div
+            style={{
+              flex: 1,
+              overflowY: "auto",
+              padding: "28px 20px 150px",
+            }}
+          >
+            <div
+              style={{
+                width: "100%",
+                maxWidth: "850px",
+                margin: "0 auto",
+              }}
+            >
+              {/* WELCOME SECTION */}
+              {messages.length === 1 && (
+                <div
+                  style={{
+                    textAlign: "center",
+                    marginBottom: 30,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 64,
+                      height: 64,
+                      margin: "0 auto 18px",
+                      borderRadius: "50%",
+                      background:
+                        "linear-gradient(135deg, #EEF2FF, #F5F3FF)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 30,
+                    }}
+                  >
+                    🎓
+                  </div>
+
+                  <h2
+                    style={{
+                      margin: "0 0 8px",
+                      fontSize: 24,
+                      fontWeight: 700,
+                      color: COLORS.text,
+                    }}
+                  >
+                    Hi {context?.student_name || "there"}!
+                  </h2>
+
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 14,
+                      color: COLORS.secondary,
+                    }}
+                  >
+                    What would you like to learn today?
+                  </p>
+                </div>
+              )}
+
+              {/* PRIORITY AREAS */}
+              {messages.length === 1 &&
+                context?.critical_gaps &&
+                context.critical_gaps.length > 0 && (
+                  <div
+                    style={{
+                      backgroundColor: "#FFF7ED",
+                      border: "1px solid #FED7AA",
+                      borderRadius: 14,
+                      padding: 16,
+                      marginBottom: 24,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        marginBottom: 10,
+                      }}
+                    >
+                      <span>🎯</span>
+
+                      <span
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 700,
+                          color: "#9A3412",
+                        }}
+                      >
+                        Your priority learning areas
+                      </span>
+                    </div>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: 8,
+                      }}
+                    >
+                      {context.critical_gaps.slice(0, 5).map((gap, index) => (
                         <button
-                          key={idx}
-                          onClick={() => setInputValue(q)}
+                          key={index}
+                          type="button"
+                          onClick={() =>
+                            selectQuestion(
+                              `Can you help me understand ${gap}?`
+                            )
+                          }
                           style={{
-                            width: '100%',
-                            textAlign: 'left',
-                            padding: '0.75rem',
-                            backgroundColor: '#F9FAFB',
-                            color: COLORS.textPrimary,
-                            border: `1px solid ${COLORS.borderDark}`,
+                            border: "1px solid #FED7AA",
+                            backgroundColor: "#FFFFFF",
+                            color: "#7C2D12",
+                            padding: "7px 11px",
                             borderRadius: 8,
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#F3F4F6';
-                            e.currentTarget.style.borderColor = COLORS.primary;
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = '#F9FAFB';
-                            e.currentTarget.style.borderColor = COLORS.borderDark;
+                            fontSize: 12,
+                            cursor: "pointer",
                           }}
                         >
-                          <p style={{
-                            fontSize: '0.875rem',
-                            color: COLORS.textPrimary,
-                            margin: 0,
-                          }}>{q}</p>
+                          {gap}
                         </button>
                       ))}
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {messages.map((message, idx) => (
+              {/* SUGGESTIONS */}
+              {messages.length === 1 && (
                 <div
-                  key={idx}
                   style={{
-                    display: 'flex',
-                    gap: '1rem',
-                    justifyContent: message.role === 'user' ? 'flex-end' : 'flex-start',
-                    animation: 'fadeUp 0.3s ease-out',
+                    display: "grid",
+                    gridTemplateColumns:
+                      "repeat(auto-fit, minmax(200px, 1fr))",
+                    gap: 10,
+                    marginBottom: 30,
                   }}
                 >
-                  {message.role === 'assistant' && (
-                    <div style={{
-                      flexShrink: 0,
-                      width: '2rem',
-                      height: '2rem',
-                      borderRadius: '50%',
-                      backgroundColor: 'rgba(79, 70, 229, 0.1)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '1.125rem',
-                      border: `1px solid rgba(79, 70, 229, 0.2)`,
-                    }}>
-                      🤖
-                    </div>
-                  )}
+                  {suggestedQuestions.map((item, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => selectQuestion(item.text)}
+                      style={{
+                        backgroundColor: COLORS.card,
+                        border: `1px solid ${COLORS.border}`,
+                        borderRadius: 12,
+                        padding: 14,
+                        textAlign: "left",
+                        cursor: "pointer",
+                        transition: "all 0.2s",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = COLORS.primary;
+                        e.currentTarget.style.transform =
+                          "translateY(-2px)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = COLORS.border;
+                        e.currentTarget.style.transform = "translateY(0)";
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 18,
+                          marginBottom: 8,
+                        }}
+                      >
+                        {item.icon}
+                      </div>
 
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: COLORS.text,
+                          fontWeight: 500,
+                          lineHeight: 1.5,
+                        }}
+                      >
+                        {item.text}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* MESSAGES */}
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 22,
+                }}
+              >
+                {messages.map((message, index) => {
+                  const isUser = message.role === "user";
+
+                  return (
+                    <div
+                      key={index}
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 10,
+                        justifyContent: isUser
+                          ? "flex-end"
+                          : "flex-start",
+                        animation: "fadeUp 0.25s ease-out",
+                      }}
+                    >
+                      {!isUser && (
+                        <div
+                          style={{
+                            width: 32,
+                            height: 32,
+                            minWidth: 32,
+                            borderRadius: "50%",
+                            background:
+                              "linear-gradient(135deg, #EEF2FF, #F5F3FF)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: 16,
+                          }}
+                        >
+                          🤖
+                        </div>
+                      )}
+
+                      <div
+                        style={{
+                          maxWidth: "72%",
+                          padding: "12px 16px",
+                          borderRadius: 16,
+                          backgroundColor: isUser
+                            ? COLORS.userBubble
+                            : COLORS.assistantBubble,
+                          color: isUser ? "#FFFFFF" : COLORS.text,
+                          border: isUser
+                            ? "none"
+                            : `1px solid ${COLORS.border}`,
+                          borderBottomRightRadius: isUser ? 4 : 16,
+                          borderBottomLeftRadius: isUser ? 16 : 4,
+                          boxShadow: isUser
+                            ? "0 3px 10px rgba(79,70,229,0.15)"
+                            : "0 2px 8px rgba(15,23,42,0.03)",
+                        }}
+                      >
+                        <div
+                          style={{
+                            whiteSpace: "pre-wrap",
+                            fontSize: 14,
+                            lineHeight: 1.7,
+                          }}
+                        >
+                          {message.content}
+                        </div>
+
+                        {/* SOURCES */}
+                        {message.sources &&
+                          message.sources.length > 0 && (
+                            <div
+                              style={{
+                                marginTop: 12,
+                                paddingTop: 10,
+                                borderTop: isUser
+                                  ? "1px solid rgba(255,255,255,0.2)"
+                                  : `1px solid ${COLORS.border}`,
+                              }}
+                            >
+                              <div
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  marginBottom: 6,
+                                  opacity: 0.7,
+                                }}
+                              >
+                                📚 Sources
+                              </div>
+
+                              {message.sources.map((source, i) => (
+                                <a
+                                  key={i}
+                                  href={source}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{
+                                    display: "block",
+                                    fontSize: 11,
+                                    color: isUser
+                                      ? "#FFFFFF"
+                                      : COLORS.primary,
+                                    marginBottom: 4,
+                                    textDecoration: "none",
+                                  }}
+                                >
+                                  {source}
+                                </a>
+                              ))}
+                            </div>
+                          )}
+
+                        <div
+                          style={{
+                            marginTop: 6,
+                            fontSize: 10,
+                            opacity: 0.55,
+                            textAlign: isUser ? "right" : "left",
+                          }}
+                        >
+                          {message.timestamp.toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </div>
+                      </div>
+
+                      {isUser && (
+                        <div
+                          style={{
+                            width: 32,
+                            height: 32,
+                            minWidth: 32,
+                            borderRadius: "50%",
+                            backgroundColor: "#E0E7FF",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: 15,
+                          }}
+                        >
+                          👤
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {/* TYPING INDICATOR */}
+                {sending && (
                   <div
                     style={{
-                      maxWidth: '32rem',
-                      padding: '0.75rem 1rem',
-                      borderRadius: 8,
-                      backgroundColor: message.role === 'user' ? COLORS.primary : COLORS.bgCard,
-                      color: message.role === 'user' ? 'white' : COLORS.textPrimary,
-                      border: message.role === 'user' ? 'none' : `1px solid ${COLORS.borderDark}`,
-                      borderBottomLeftRadius: message.role === 'user' ? 8 : 2,
-                      borderBottomRightRadius: message.role === 'user' ? 2 : 8,
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 10,
                     }}
                   >
-                    <p style={{
-                      fontSize: '0.875rem',
-                      lineHeight: 1.6,
-                      margin: 0,
-                    }}>{message.content}</p>
-                    {message.sources && message.sources.length > 0 && (
-                      <div style={{
-                        marginTop: '0.75rem',
-                        paddingTop: '0.75rem',
-                        borderTop: `1px solid ${message.role === 'user' ? 'rgba(255, 255, 255, 0.2)' : `${COLORS.borderDark}`}`,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '0.25rem',
-                      }}>
-                        <p style={{
-                          fontSize: '0.75rem',
-                          opacity: 0.7,
-                          margin: 0,
-                        }}>Sources:</p>
-                        {message.sources.map((source, i) => (
-                          <a
-                            key={i}
-                            href={source}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                              fontSize: '0.75rem',
-                              opacity: 0.8,
-                              color: 'inherit',
-                              textDecoration: 'none',
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-                            onMouseLeave={(e) => e.currentTarget.style.opacity = '0.8'}
-                          >
-                            📚 {source}
-                          </a>
-                        ))}
-                      </div>
-                    )}
-                    <p style={{
-                      fontSize: '0.75rem',
-                      opacity: 0.5,
-                      margin: '0.5rem 0 0 0',
-                    }}>
-                      {message.timestamp.toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </p>
-                  </div>
-
-                  {message.role === 'user' && (
-                    <div style={{
-                      flexShrink: 0,
-                      width: '2rem',
-                      height: '2rem',
-                      borderRadius: '50%',
-                      backgroundColor: 'rgba(79, 70, 229, 0.1)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '1.125rem',
-                      border: `1px solid rgba(79, 70, 229, 0.2)`,
-                    }}>
-                      👤
+                    <div
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: "50%",
+                        backgroundColor: "#EEF2FF",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      🤖
                     </div>
-                  )}
-                </div>
-              ))}
 
-              {sending && (
-                <div style={{
-                  display: 'flex',
-                  gap: '1rem',
-                }}>
-                  <div style={{
-                    flexShrink: 0,
-                    width: '2rem',
-                    height: '2rem',
-                    borderRadius: '50%',
-                    backgroundColor: 'rgba(79, 70, 229, 0.1)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '1.125rem',
-                    border: `1px solid rgba(79, 70, 229, 0.2)`,
-                  }}>
-                    🤖
+                    <div
+                      style={{
+                        backgroundColor: COLORS.card,
+                        border: `1px solid ${COLORS.border}`,
+                        borderRadius: 16,
+                        borderBottomLeftRadius: 4,
+                        padding: "14px 18px",
+                        display: "flex",
+                        gap: 5,
+                      }}
+                    >
+                      <span className="dot" />
+                      <span className="dot" />
+                      <span className="dot" />
+                    </div>
                   </div>
-                  <div style={{
-                    backgroundColor: COLORS.bgCard,
-                    border: `1px solid ${COLORS.borderDark}`,
-                    borderRadius: 8,
-                    borderBottomLeftRadius: 2,
-                    padding: '0.75rem 1rem',
-                    display: 'flex',
-                    gap: '0.5rem',
-                  }}>
-                    <div style={{
-                      width: '0.5rem',
-                      height: '0.5rem',
-                      borderRadius: '50%',
-                      backgroundColor: COLORS.textMuted,
-                      animation: 'bounce 1.4s infinite',
-                    }} />
-                    <div style={{
-                      width: '0.5rem',
-                      height: '0.5rem',
-                      borderRadius: '50%',
-                      backgroundColor: COLORS.textMuted,
-                      animation: 'bounce 1.4s infinite 0.2s',
-                    }} />
-                    <div style={{
-                      width: '0.5rem',
-                      height: '0.5rem',
-                      borderRadius: '50%',
-                      backgroundColor: COLORS.textMuted,
-                      animation: 'bounce 1.4s infinite 0.4s',
-                    }} />
+                )}
+
+                {error && (
+                  <div
+                    style={{
+                      padding: 12,
+                      borderRadius: 10,
+                      backgroundColor: "#FEF2F2",
+                      border: "1px solid #FECACA",
+                      color: COLORS.error,
+                      fontSize: 12,
+                    }}
+                  >
+                    ⚠️ {error}
                   </div>
-                </div>
-              )}
+                )}
 
-              {error && (
-                <div style={{
-                  padding: '1rem',
-                  backgroundColor: 'rgba(239, 68, 68, 0.05)',
-                  border: `1px solid rgba(239, 68, 68, 0.2)`,
-                  borderRadius: 8,
-                }}>
-                  <p style={{
-                    fontSize: '0.875rem',
-                    color: COLORS.error,
-                    margin: 0,
-                  }}>⚠️ {error}</p>
-                </div>
-              )}
-
-              <div ref={messagesEndRef} />
+                <div ref={messagesEndRef} />
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Input footer */}
-        <div style={{
-          backgroundColor: COLORS.bgCard,
-          borderTop: `1px solid ${COLORS.borderDark}`,
-        }}>
-          <div style={{
-            maxWidth: '1280px',
-            margin: '0 auto',
-            padding: '1rem 2rem',
-          }}>
-            <form onSubmit={handleSendMessage} style={{
-              maxWidth: '48rem',
-              margin: '0 auto',
-            }}>
-              <div style={{
-                display: 'flex',
-                gap: '0.75rem',
-              }}>
+          {/* INPUT AREA */}
+          <div
+            style={{
+              position: "fixed",
+              bottom: 0,
+              left: "240px",
+              right: 0,
+              background:
+                "linear-gradient(to top, #F8FAFC 75%, rgba(248,250,252,0))",
+              padding: "30px 20px 20px",
+              zIndex: 50,
+            }}
+          >
+            <div
+              style={{
+                maxWidth: "850px",
+                margin: "0 auto",
+              }}
+            >
+              <form
+                onSubmit={handleSendMessage}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  backgroundColor: COLORS.card,
+                  border: `1px solid ${COLORS.border}`,
+                  borderRadius: 16,
+                  padding: "7px 7px 7px 16px",
+                  boxShadow: "0 5px 25px rgba(15,23,42,0.08)",
+                }}
+              >
                 <input
+                  ref={inputRef}
                   type="text"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                  placeholder="Ask your mentor anything..."
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                  placeholder="Ask your AI Mentor anything..."
                   disabled={sending}
                   style={{
                     flex: 1,
-                    padding: '0.75rem 1rem',
-                    border: `1.5px solid ${COLORS.borderDark}`,
-                    borderRadius: 10,
-                    backgroundColor: '#F9FAFB',
-                    color: COLORS.textPrimary,
-                    fontSize: '0.875rem',
-                    fontFamily: 'inherit',
-                    transition: 'all 0.2s',
-                    opacity: sending ? 0.6 : 1,
-                    cursor: sending ? 'not-allowed' : 'text',
+                    border: "none",
+                    outline: "none",
+                    backgroundColor: "transparent",
+                    color: COLORS.text,
+                    fontSize: 14,
+                    padding: "10px 0",
+                    minWidth: 0,
                   }}
-                  onFocus={(e) => !sending && (e.currentTarget.style.borderColor = COLORS.primary)}
-                  onBlur={(e) => e.currentTarget.style.borderColor = COLORS.borderDark}
                 />
+
                 <button
                   type="submit"
                   disabled={sending || !inputValue.trim()}
                   style={{
-                    padding: '0.75rem 1.5rem',
-                    background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryHover})`,
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: 10,
-                    fontWeight: 600,
-                    cursor: sending || !inputValue.trim() ? 'not-allowed' : 'pointer',
-                    opacity: sending || !inputValue.trim() ? 0.5 : 1,
-                    transition: 'all 0.2s',
-                    boxShadow: `0 4px 15px rgba(79, 70, 229, 0.2)`,
+                    width: 42,
+                    height: 42,
+                    border: "none",
+                    borderRadius: 12,
+                    background:
+                      sending || !inputValue.trim()
+                        ? "#CBD5E1"
+                        : "linear-gradient(135deg, #4F46E5, #7C3AED)",
+                    color: "#FFFFFF",
+                    fontSize: 20,
+                    cursor:
+                      sending || !inputValue.trim()
+                        ? "not-allowed"
+                        : "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
                   }}
-                  onMouseEnter={(e) => !sending && inputValue.trim() && (e.currentTarget.style.opacity = '0.9')}
-                  onMouseLeave={(e) => !sending && inputValue.trim() && (e.currentTarget.style.opacity = '1')}
                 >
-                  {sending ? '...' : '→'}
+                  {sending ? "..." : "↑"}
                 </button>
-              </div>
-            </form>
+              </form>
 
-            {/* Footer info */}
-            <div style={{
-              maxWidth: '48rem',
-              margin: '0.75rem auto 0 auto',
-            }}>
-              <p style={{
-                fontSize: '0.75rem',
-                color: COLORS.textMuted,
-                textAlign: 'center',
-                margin: 0,
-              }}>
-                💡 Tip: Ask follow-up questions if you don't understand something. I'll break it down further.
+              <p
+                style={{
+                  textAlign: "center",
+                  fontSize: 10,
+                  color: COLORS.muted,
+                  margin: "8px 0 0",
+                }}
+              >
+                AI Mentor uses your learning profile to personalize guidance.
               </p>
             </div>
           </div>
@@ -698,12 +926,48 @@ export default function MentorPage() {
 
       <style>{`
         @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(12px); }
-          to { opacity: 1; transform: translateY(0); }
+          from {
+            opacity: 0;
+            transform: translateY(8px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
+
+        .dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: #94A3B8;
+          animation: bounce 1.4s infinite;
+        }
+
+        .dot:nth-child(2) {
+          animation-delay: 0.2s;
+        }
+
+        .dot:nth-child(3) {
+          animation-delay: 0.4s;
+        }
+
         @keyframes bounce {
-          0%, 80%, 100% { opacity: 0.5; transform: translateY(0); }
-          40% { opacity: 1; transform: translateY(-8px); }
+          0%, 80%, 100% {
+            opacity: 0.4;
+            transform: translateY(0);
+          }
+
+          40% {
+            opacity: 1;
+            transform: translateY(-5px);
+          }
+        }
+
+        @media (max-width: 768px) {
+          .mentor-main {
+            margin-left: 0 !important;
+          }
         }
       `}</style>
     </div>

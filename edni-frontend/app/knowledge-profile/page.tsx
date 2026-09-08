@@ -3,12 +3,16 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-import Sidebar from "@/components/Sidebar";
+
 import TopBar from "@/components/TopBar";
+import Sidebar from "@/components/Sidebar";
 
 const API_URL =
-    process.env.NEXT_PUBLIC_API_URL ??
-    "http://localhost:8000/api/v1";
+    process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+
+// ============================================================
+// TYPES
+// ============================================================
 
 type BloomResult = {
     bloom_label?: string;
@@ -30,37 +34,78 @@ type ConceptProfile = {
     bloom_results?: Record<string, BloomResult>;
 };
 
+type CriticalGap =
+    | string
+    | {
+        concept?: string;
+        mastery?: number;
+        severity?: string;
+        area?: string;
+    };
+
 type KnowledgeProfile = {
     id: string;
     student_id: string;
     diagnostic_id: string;
     feedback_cycle: number;
-
     overall_theta: number;
     overall_mastery: number;
-
     bloom_summary: Record<string, any>;
     learning_area_summary: Record<string, number>;
-
-    critical_gaps: string[];
-
+    critical_gaps: CriticalGap[];
     concept_profiles: ConceptProfile[];
-
     total_questions: number;
     correct_answers: number;
     diagnostic_time_sec: number;
-
     created_at?: string;
 };
 
+// ============================================================
+// BLOOM LEVELS
+// ============================================================
+
 const BLOOM_LEVELS = [
-    { id: "1", label: "Remember" },
-    { id: "2", label: "Understand" },
-    { id: "3", label: "Apply" },
-    { id: "4", label: "Analyze" },
-    { id: "5", label: "Evaluate" },
-    { id: "6", label: "Create" },
+    {
+        id: "1",
+        label: "Remember",
+        description: "Recall facts and basic concepts",
+        icon: "🧠",
+    },
+    {
+        id: "2",
+        label: "Understand",
+        description: "Explain ideas and concepts",
+        icon: "💡",
+    },
+    {
+        id: "3",
+        label: "Apply",
+        description: "Use information in new situations",
+        icon: "⚙️",
+    },
+    {
+        id: "4",
+        label: "Analyze",
+        description: "Break information into parts",
+        icon: "🔍",
+    },
+    {
+        id: "5",
+        label: "Evaluate",
+        description: "Justify decisions and solutions",
+        icon: "⚖️",
+    },
+    {
+        id: "6",
+        label: "Create",
+        description: "Produce new ideas or solutions",
+        icon: "🚀",
+    },
 ];
+
+// ============================================================
+// HELPERS
+// ============================================================
 
 function getMasteryColor(value: number) {
     if (value >= 80) return "#16a34a";
@@ -70,130 +115,215 @@ function getMasteryColor(value: number) {
 }
 
 function getSeverityColor(severity?: string) {
-    if (!severity) return "#64748b";
+    switch (severity?.toLowerCase()) {
+        case "critical":
+            return "#dc2626";
 
-    const value = severity.toLowerCase();
+        case "high":
+            return "#ea580c";
 
-    if (value.includes("critical")) return "#dc2626";
-    if (value.includes("high")) return "#ea580c";
-    if (value.includes("medium")) return "#ca8a04";
-    if (value.includes("low")) return "#16a34a";
+        case "medium":
+            return "#ca8a04";
 
-    return "#64748b";
+        case "low":
+            return "#16a34a";
+
+        default:
+            return "#64748b";
+    }
 }
 
-function formatTime(seconds?: number) {
-    if (!seconds) return "0 sec";
+function getMasteryLabel(value: number) {
+    if (value >= 80) return "Excellent";
+    if (value >= 60) return "Good";
+    if (value >= 40) return "Developing";
+    return "Needs Attention";
+}
+
+function formatTime(seconds: number) {
+    if (!seconds || seconds <= 0) return "0 sec";
 
     const minutes = Math.floor(seconds / 60);
-    const remaining = Math.round(seconds % 60);
+    const remainingSeconds = Math.round(seconds % 60);
 
     if (minutes === 0) {
-        return `${remaining} sec`;
+        return `${remainingSeconds} sec`;
     }
 
-    return `${minutes}m ${remaining}s`;
+    return `${minutes}m ${remainingSeconds}s`;
 }
+
+function getBloomMastery(
+    summary: Record<string, any> | undefined,
+    id: string,
+    label: string
+): number {
+    if (!summary) return 0;
+
+    const possibleKeys = [
+        id,
+        `level_${id}`,
+        `bloom_${id}`,
+        label,
+        label.toLowerCase(),
+        `level${id}`,
+    ];
+
+    for (const key of possibleKeys) {
+        const value = summary[key];
+
+        if (typeof value === "number") {
+            return value;
+        }
+
+        if (value && typeof value === "object") {
+            if (typeof value.mastery === "number") {
+                return value.mastery;
+            }
+
+            if (typeof value.overall_mastery === "number") {
+                return value.overall_mastery;
+            }
+
+            if (typeof value.value === "number") {
+                return value.value;
+            }
+        }
+    }
+
+    return 0;
+}
+
+// ============================================================
+// PAGE
+// ============================================================
 
 export default function KnowledgeProfilePage() {
     const router = useRouter();
 
-    const [profile, setProfile] =
-        useState<KnowledgeProfile | null>(null);
-
+    const [profile, setProfile] = useState<KnowledgeProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
+    // ========================================================
+    // FETCH PROFILE
+    // ========================================================
+
     useEffect(() => {
-        fetchProfile();
-    }, []);
+        const fetchProfile = async () => {
+            try {
+                setLoading(true);
+                setError("");
 
-    const fetchProfile = async () => {
-        try {
-            setLoading(true);
-            setError("");
+                const token = localStorage.getItem("edni_access");
 
-            const token = localStorage.getItem("edni_access");
-
-            if (!token) {
-                router.push("/login");
-                return;
-            }
-
-            const response = await axios.get(
-                `${API_URL}/knowledge-profile`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
+                if (!token) {
+                    router.push("/login");
+                    return;
                 }
-            );
 
-            setProfile(response.data);
-        } catch (err: any) {
-            console.error(
-                "Knowledge profile error:",
-                err
-            );
-
-            if (err.response?.status === 401) {
-                localStorage.removeItem("edni_access");
-                router.push("/login");
-                return;
-            }
-
-            if (err.response?.status === 404) {
-                setError(
-                    "No knowledge profile found. Please complete the diagnostic assessment first."
+                const response = await axios.get(
+                    `${API_URL}/knowledge-profile`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                        },
+                    }
                 );
-            } else {
-                setError(
-                    err.response?.data?.detail ||
-                    "Failed to load knowledge profile."
-                );
+
+                setProfile(response.data);
+            } catch (err: any) {
+                console.error("Knowledge profile error:", err);
+
+                if (err?.response?.status === 401) {
+                    localStorage.removeItem("edni_access");
+                    router.push("/login");
+                    return;
+                }
+
+                if (err?.response?.status === 404) {
+                    setError(
+                        "No knowledge profile found. Please complete the diagnostic assessment first."
+                    );
+                } else {
+                    setError(
+                        "Unable to load your knowledge profile. Please try again."
+                    );
+                }
+            } finally {
+                setLoading(false);
             }
-        } finally {
-            setLoading(false);
-        }
-    };
+        };
+
+        fetchProfile();
+    }, [router]);
+
+    // ========================================================
+    // LOADING
+    // ========================================================
 
     if (loading) {
         return (
-            <div style={styles.pageWrapper}>
+            <div style={styles.page}>
                 <Sidebar />
-                <TopBar />
-                <div style={styles.mainContent}>
-                    <div style={styles.loading}>
-                        <div style={styles.spinner} />
-                        <p>Loading your knowledge profile...</p>
+                <div style={styles.main}>
+                    <TopBar />
+
+                    <div style={styles.loadingContainer}>
+                        <div style={styles.spinner}></div>
+
+                        <h2 style={styles.loadingTitle}>
+                            Loading Knowledge Profile
+                        </h2>
+
+                        <p style={styles.loadingText}>
+                            Analyzing your learning profile...
+                        </p>
                     </div>
                 </div>
+
+                <style jsx>{`
+                    @keyframes spin {
+                        to {
+                            transform: rotate(360deg);
+                        }
+                    }
+
+                    .spinner {
+                        animation: spin 0.8s linear infinite;
+                    }
+                `}</style>
             </div>
         );
     }
 
-    if (error) {
-        return (
-            <div style={styles.pageWrapper}>
-                <Sidebar />
-                <TopBar />
-                <div style={styles.mainContent}>
-                    <div style={styles.emptyCard}>
-                        <div style={styles.emptyIcon}>📊</div>
+    // ========================================================
+    // ERROR
+    // ========================================================
 
-                        <h2 style={styles.emptyTitle}>
-                            Knowledge Profile
+    if (error || !profile) {
+        return (
+            <div style={styles.page}>
+                <Sidebar />
+
+                <div style={styles.main}>
+                    <TopBar />
+
+                    <div style={styles.errorContainer}>
+                        <div style={styles.errorIcon}>!</div>
+
+                        <h2 style={styles.errorTitle}>
+                            Knowledge Profile Unavailable
                         </h2>
 
-                        <p style={styles.emptyText}>
-                            {error}
+                        <p style={styles.errorText}>
+                            {error ||
+                                "No knowledge profile is available yet."}
                         </p>
 
                         <button
+                            onClick={() => router.push("/diagnostic")}
                             style={styles.primaryButton}
-                            onClick={() =>
-                                router.push("/diagnostic")
-                            }
                         >
                             Take Diagnostic Assessment
                         </button>
@@ -203,962 +333,1654 @@ export default function KnowledgeProfilePage() {
         );
     }
 
-    if (!profile) {
-        return null;
-    }
+    // ========================================================
+    // CALCULATIONS
+    // ========================================================
+
+    const overallMastery = Number(profile.overall_mastery || 0);
+    const overallTheta = Number(profile.overall_theta || 0);
 
     const accuracy =
         profile.total_questions > 0
-            ? (profile.correct_answers /
-                profile.total_questions) *
-            100
+            ? (profile.correct_answers / profile.total_questions) * 100
             : 0;
 
+    const learningAreas = Object.entries(
+        profile.learning_area_summary || {}
+    );
+
+    // IMPORTANT:
+    // No useMemo here. This avoids the useMemo error.
+    const bloomData = BLOOM_LEVELS.map((level) => ({
+        ...level,
+        mastery: getBloomMastery(
+            profile.bloom_summary,
+            level.id,
+            level.label
+        ),
+    }));
+
+    // Normalize critical gaps so objects are never rendered directly.
+    const normalizedGaps = (profile.critical_gaps || []).map((gap) => {
+        if (typeof gap === "string") {
+            return {
+                concept: gap,
+                mastery: undefined,
+                severity: undefined,
+                area: undefined,
+            };
+        }
+
+        return {
+            concept: gap?.concept || "Knowledge Gap",
+            mastery:
+                typeof gap?.mastery === "number"
+                    ? gap.mastery
+                    : undefined,
+            severity: gap?.severity,
+            area: gap?.area,
+        };
+    });
+
+    // ========================================================
+    // RENDER
+    // ========================================================
+
     return (
-        <div style={styles.pageWrapper}>
+        <div style={styles.page}>
             <Sidebar />
-            <TopBar />
 
-            <div style={styles.mainContent}>
-                <div style={styles.container}>
+            <div style={styles.main}>
+                <TopBar />
 
-                    {/* HEADER */}
+                <div style={styles.content}>
+                    {/* ==================================================
+                        HEADER
+                    ================================================== */}
+
                     <div style={styles.header}>
                         <div>
-                            <h1 style={styles.title}>
+                            <div style={styles.eyebrow}>
+                                PERSONALIZED LEARNING PROFILE
+                            </div>
+
+                            <h1 style={styles.pageTitle}>
                                 Knowledge Profile
                             </h1>
 
                             <p style={styles.subtitle}>
-                                Your diagnostic-based learning profile
-                                across Bloom's Taxonomy.
+                                Understand your current knowledge,
+                                strengths, and areas that need improvement.
                             </p>
                         </div>
 
-                        <div style={styles.cycleBadge}>
-                            Diagnostic Cycle {profile.feedback_cycle}
+                        <div style={styles.cycleCard}>
+                            <div style={styles.cycleLabel}>
+                                DIAGNOSTIC CYCLE
+                            </div>
+
+                            <div style={styles.cycleNumber}>
+                                #{profile.feedback_cycle || 1}
+                            </div>
+
+                            <div style={styles.cycleStatus}>
+                                Latest assessment
+                            </div>
                         </div>
                     </div>
 
-                    {/* OVERVIEW CARDS */}
-                    <div style={styles.statsGrid}>
+                    {/* ==================================================
+                        HERO
+                    ================================================== */}
 
-                        <StatCard
-                            label="Overall Mastery"
-                            value={`${Number(
-                                profile.overall_mastery || 0
-                            ).toFixed(1)}%`}
-                            icon="🎯"
-                            description="Overall knowledge mastery"
-                        />
-
-                        <StatCard
-                            label="IRT Ability"
-                            value={Number(
-                                profile.overall_theta || 0
-                            ).toFixed(2)}
-                            icon="📈"
-                            description="Estimated ability (θ)"
-                        />
-
-                        <StatCard
-                            label="Accuracy"
-                            value={`${accuracy.toFixed(1)}%`}
-                            icon="✓"
-                            description={`${profile.correct_answers} / ${profile.total_questions} correct`}
-                        />
-
-                        <StatCard
-                            label="Diagnostic Time"
-                            value={formatTime(
-                                profile.diagnostic_time_sec
-                            )}
-                            icon="⏱"
-                            description="Assessment completion time"
-                        />
-
-                    </div>
-
-                    {/* OVERALL MASTERY */}
-                    <section style={styles.section}>
-                        <div style={styles.sectionHeader}>
-                            <div>
-                                <h2 style={styles.sectionTitle}>
-                                    Overall Mastery
-                                </h2>
-
-                                <p style={styles.sectionDescription}>
-                                    Your overall estimated mastery from
-                                    the diagnostic assessment.
-                                </p>
+                    <section style={styles.hero}>
+                        <div style={styles.heroLeft}>
+                            <div style={styles.heroEyebrow}>
+                                OVERALL MASTERY
                             </div>
 
-                            <strong
-                                style={{
-                                    ...styles.largeScore,
-                                    color: getMasteryColor(
-                                        Number(
-                                            profile.overall_mastery || 0
-                                        )
-                                    ),
-                                }}
-                            >
-                                {Number(
-                                    profile.overall_mastery || 0
-                                ).toFixed(1)}
-                                %
-                            </strong>
-                        </div>
-
-                        <div style={styles.progressTrack}>
-                            <div
-                                style={{
-                                    ...styles.progressFill,
-                                    width: `${Math.min(
-                                        100,
-                                        Math.max(
-                                            0,
-                                            Number(
-                                                profile.overall_mastery || 0
-                                            )
-                                        )
-                                    )}%`,
-                                    background:
-                                        getMasteryColor(
-                                            Number(
-                                                profile.overall_mastery || 0
-                                            )
-                                        ),
-                                }}
-                            />
-                        </div>
-                    </section>
-
-                    {/* BLOOM SUMMARY */}
-                    <section style={styles.section}>
-                        <div style={styles.sectionHeader}>
-                            <div>
-                                <h2 style={styles.sectionTitle}>
-                                    Bloom's Taxonomy
-                                </h2>
-
-                                <p style={styles.sectionDescription}>
-                                    Performance across the six cognitive
-                                    levels.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div style={styles.bloomGrid}>
-                            {BLOOM_LEVELS.map((level) => {
-                                const data =
-                                    profile.bloom_summary[
-                                    level.id
-                                    ] ??
-                                    profile.bloom_summary[
-                                    level.label
-                                    ];
-
-                                const mastery =
-                                    typeof data === "number"
-                                        ? data
-                                        : Number(
-                                            data?.mastery ??
-                                            data?.overall_mastery ??
-                                            0
-                                        );
-
-                                return (
-                                    <div
-                                        key={level.id}
-                                        style={styles.bloomCard}
-                                    >
-                                        <div style={styles.bloomNumber}>
-                                            {level.id}
-                                        </div>
-
-                                        <div style={styles.bloomContent}>
-                                            <div style={styles.bloomTitle}>
-                                                {level.label}
-                                            </div>
-
-                                            <div
-                                                style={{
-                                                    ...styles.bloomScore,
-                                                    color:
-                                                        getMasteryColor(
-                                                            mastery
-                                                        ),
-                                                }}
-                                            >
-                                                {mastery.toFixed(1)}%
-                                            </div>
-
-                                            <div
-                                                style={styles.smallTrack}
-                                            >
-                                                <div
-                                                    style={{
-                                                        ...styles.smallFill,
-                                                        width: `${Math.min(
-                                                            100,
-                                                            Math.max(
-                                                                0,
-                                                                mastery
-                                                            )
-                                                        )}%`,
-                                                        background:
-                                                            getMasteryColor(
-                                                                mastery
-                                                            ),
-                                                    }}
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </section>
-
-                    {/* LEARNING AREAS */}
-                    <section style={styles.section}>
-                        <div style={styles.sectionHeader}>
-                            <div>
-                                <h2 style={styles.sectionTitle}>
-                                    Learning Area Performance
-                                </h2>
-
-                                <p style={styles.sectionDescription}>
-                                    Mastery by subject and learning area.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div style={styles.areaList}>
-                            {Object.entries(
-                                profile.learning_area_summary || {}
-                            ).map(([area, mastery]) => (
+                            <div style={styles.heroMasteryRow}>
                                 <div
-                                    key={area}
-                                    style={styles.areaRow}
+                                    style={{
+                                        ...styles.masteryCircle,
+                                        background: `conic-gradient(${getMasteryColor(
+                                            overallMastery
+                                        )} ${overallMastery * 3.6
+                                            }deg, #e2e8f0 ${overallMastery * 3.6
+                                            }deg)`,
+                                    }}
                                 >
-                                    <div style={styles.areaInfo}>
-                                        <span style={styles.areaName}>
-                                            {area}
-                                        </span>
-
-                                        <span
+                                    <div style={styles.masteryCircleInner}>
+                                        <strong
                                             style={{
-                                                color:
-                                                    getMasteryColor(
-                                                        Number(mastery)
-                                                    ),
-                                                fontWeight: 700,
+                                                ...styles.masteryNumber,
+                                                color: getMasteryColor(
+                                                    overallMastery
+                                                ),
                                             }}
                                         >
-                                            {Number(mastery).toFixed(1)}%
+                                            {overallMastery.toFixed(1)}%
+                                        </strong>
+
+                                        <span
+                                            style={styles.masteryCircleText}
+                                        >
+                                            mastery
                                         </span>
                                     </div>
+                                </div>
 
-                                    <div
-                                        style={styles.progressTrack}
-                                    >
+                                <div>
+                                    <h2 style={styles.heroTitle}>
+                                        {getMasteryLabel(overallMastery)}
+                                    </h2>
+
+                                    <p style={styles.heroDescription}>
+                                        Your overall performance across the
+                                        diagnostic assessment.
+                                    </p>
+
+                                    <div style={styles.heroProgress}>
                                         <div
                                             style={{
-                                                ...styles.progressFill,
+                                                ...styles.heroProgressFill,
                                                 width: `${Math.min(
-                                                    100,
                                                     Math.max(
-                                                        0,
-                                                        Number(mastery)
-                                                    )
+                                                        overallMastery,
+                                                        0
+                                                    ),
+                                                    100
                                                 )}%`,
                                                 background:
                                                     getMasteryColor(
-                                                        Number(mastery)
+                                                        overallMastery
                                                     ),
                                             }}
                                         />
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+
+                        <div style={styles.thetaCard}>
+                            <div style={styles.thetaIcon}>θ</div>
+
+                            <div>
+                                <div style={styles.thetaLabel}>
+                                    IRT ABILITY
+                                </div>
+
+                                <div style={styles.thetaValue}>
+                                    {overallTheta.toFixed(2)}
+                                </div>
+
+                                <div style={styles.thetaDescription}>
+                                    Estimated ability level
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* ==================================================
+                        STAT CARDS
+                    ================================================== */}
+
+                    <div style={styles.statsGrid}>
+                        <StatCard
+                            icon="✓"
+                            label="Accuracy"
+                            value={`${accuracy.toFixed(1)}%`}
+                            description={`${profile.correct_answers} correct answers`}
+                        />
+
+                        <StatCard
+                            icon="◉"
+                            label="Questions"
+                            value={String(profile.total_questions)}
+                            description="Questions assessed"
+                        />
+
+                        <StatCard
+                            icon="◷"
+                            label="Diagnostic Time"
+                            value={formatTime(
+                                profile.diagnostic_time_sec
+                            )}
+                            description="Assessment duration"
+                        />
+
+                        <StatCard
+                            icon="▦"
+                            label="Learning Areas"
+                            value={String(learningAreas.length)}
+                            description="Areas evaluated"
+                        />
+                    </div>
+
+                    {/* ==================================================
+                        BLOOM TAXONOMY
+                    ================================================== */}
+
+                    <SectionHeader
+                        eyebrow="COGNITIVE PERFORMANCE"
+                        title="Bloom's Taxonomy"
+                        description="Your mastery across different levels of thinking."
+                    />
+
+                    <div style={styles.bloomGrid}>
+                        {bloomData.map((level) => (
+                            <div
+                                key={level.id}
+                                style={styles.bloomCard}
+                            >
+                                <div style={styles.bloomTop}>
+                                    <div style={styles.bloomIcon}>
+                                        {level.icon}
+                                    </div>
+
+                                    <div style={styles.bloomNumber}>
+                                        {level.id}
+                                    </div>
+                                </div>
+
+                                <h3 style={styles.bloomTitle}>
+                                    {level.label}
+                                </h3>
+
+                                <p style={styles.bloomDescription}>
+                                    {level.description}
+                                </p>
+
+                                <div style={styles.bloomValue}>
+                                    {level.mastery.toFixed(0)}%
+                                </div>
+
+                                <div style={styles.progressTrack}>
+                                    <div
+                                        style={{
+                                            ...styles.progressFill,
+                                            width: `${Math.min(
+                                                Math.max(
+                                                    level.mastery,
+                                                    0
+                                                ),
+                                                100
+                                            )}%`,
+                                            background:
+                                                getMasteryColor(
+                                                    level.mastery
+                                                ),
+                                        }}
+                                    />
+                                </div>
+
+                                <div
+                                    style={{
+                                        ...styles.statusText,
+                                        color: getMasteryColor(
+                                            level.mastery
+                                        ),
+                                    }}
+                                >
+                                    {getMasteryLabel(level.mastery)}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* ==================================================
+                        LEARNING AREAS
+                    ================================================== */}
+
+                    <SectionHeader
+                        eyebrow="SUBJECT PERFORMANCE"
+                        title="Learning Area Performance"
+                        description="See how you performed across each learning area."
+                    />
+
+                    {learningAreas.length === 0 ? (
+                        <EmptyState text="No learning area data available." />
+                    ) : (
+                        <div style={styles.areaGrid}>
+                            {learningAreas.map(([area, mastery]) => {
+                                const numericMastery =
+                                    Number(mastery) || 0;
+
+                                return (
+                                    <div
+                                        key={area}
+                                        style={styles.areaCard}
+                                    >
+                                        <div
+                                            style={
+                                                styles.areaCardHeader
+                                            }
+                                        >
+                                            <div
+                                                style={
+                                                    styles.areaIcon
+                                                }
+                                            >
+                                                {area
+                                                    .charAt(0)
+                                                    .toUpperCase()}
+                                            </div>
+
+                                            <div
+                                                style={{
+                                                    flex: 1,
+                                                }}
+                                            >
+                                                <h3
+                                                    style={
+                                                        styles.areaTitle
+                                                    }
+                                                >
+                                                    {area}
+                                                </h3>
+
+                                                <span
+                                                    style={
+                                                        styles.areaStatus
+                                                    }
+                                                >
+                                                    {getMasteryLabel(
+                                                        numericMastery
+                                                    )}
+                                                </span>
+                                            </div>
+
+                                            <strong
+                                                style={{
+                                                    ...styles.areaValue,
+                                                    color: getMasteryColor(
+                                                        numericMastery
+                                                    ),
+                                                }}
+                                            >
+                                                {numericMastery.toFixed(
+                                                    1
+                                                )}
+                                                %
+                                            </strong>
+                                        </div>
+
+                                        <div
+                                            style={
+                                                styles.progressTrack
+                                            }
+                                        >
+                                            <div
+                                                style={{
+                                                    ...styles.progressFill,
+                                                    width: `${Math.min(
+                                                        Math.max(
+                                                            numericMastery,
+                                                            0
+                                                        ),
+                                                        100
+                                                    )}%`,
+                                                    background:
+                                                        getMasteryColor(
+                                                            numericMastery
+                                                        ),
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {/* ==================================================
+                        CRITICAL GAPS
+                    ================================================== */}
+
+                    <SectionHeader
+                        eyebrow="ATTENTION REQUIRED"
+                        title="Critical Knowledge Gaps"
+                        description="Concepts that may require additional study or remediation."
+                    />
+
+                    {normalizedGaps.length === 0 ? (
+                        <div style={styles.successCard}>
+                            <div style={styles.successIcon}>✓</div>
+
+                            <div>
+                                <h3 style={styles.successTitle}>
+                                    No critical gaps detected
+                                </h3>
+
+                                <p style={styles.successText}>
+                                    Your current profile does not contain
+                                    any critical knowledge gaps.
+                                </p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div style={styles.gapList}>
+                            {normalizedGaps.map((gap, index) => (
+                                <div
+                                    key={`${gap.concept}-${index}`}
+                                    style={styles.gapCard}
+                                >
+                                    <div style={styles.gapIcon}>
+                                        !
+                                    </div>
+
+                                    <div
+                                        style={{
+                                            flex: 1,
+                                        }}
+                                    >
+                                        <div
+                                            style={
+                                                styles.gapHeader
+                                            }
+                                        >
+                                            <h3
+                                                style={
+                                                    styles.gapTitle
+                                                }
+                                            >
+                                                {gap.concept}
+                                            </h3>
+
+                                            {gap.severity && (
+                                                <span
+                                                    style={{
+                                                        ...styles.severityBadge,
+                                                        color: getSeverityColor(
+                                                            gap.severity
+                                                        ),
+                                                        background:
+                                                            `${getSeverityColor(
+                                                                gap.severity
+                                                            )}15`,
+                                                    }}
+                                                >
+                                                    {gap.severity}
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {gap.area && (
+                                            <p
+                                                style={
+                                                    styles.gapArea
+                                                }
+                                            >
+                                                {gap.area}
+                                            </p>
+                                        )}
+
+                                        {typeof gap.mastery ===
+                                            "number" && (
+                                                <div
+                                                    style={
+                                                        styles.gapMastery
+                                                    }
+                                                >
+                                                    <span>
+                                                        Mastery
+                                                    </span>
+
+                                                    <strong>
+                                                        {gap.mastery.toFixed(
+                                                            1
+                                                        )}
+                                                        %
+                                                    </strong>
+                                                </div>
+                                            )}
+                                    </div>
+                                </div>
                             ))}
                         </div>
-                    </section>
+                    )}
 
-                    {/* CRITICAL GAPS */}
-                    <section style={styles.section}>
-                        <div style={styles.sectionHeader}>
-                            <div>
-                                <h2 style={styles.sectionTitle}>
-                                    Critical Knowledge Gaps
-                                </h2>
+                    {/* ==================================================
+                        CONCEPT ANALYSIS
+                    ================================================== */}
 
-                                <p style={styles.sectionDescription}>
-                                    Areas that require the highest
-                                    remediation priority.
-                                </p>
-                            </div>
+                    <SectionHeader
+                        eyebrow="DETAILED ANALYSIS"
+                        title="Concept-Level Analysis"
+                        description="Explore your performance on individual concepts."
+                    />
 
-                            <span style={styles.gapCount}>
-                                {profile.critical_gaps.length} gaps
-                            </span>
-                        </div>
-
-                        {profile.critical_gaps.length === 0 ? (
-                            <div style={styles.successBox}>
-                                ✓ No critical knowledge gaps detected.
-                            </div>
-                        ) : (
-                            <div style={styles.gapList}>
-                                {profile.critical_gaps.map(
-                                    (gap, index) => (
-                                        <div
-                                            key={index}
-                                            style={styles.gapItem}
-                                        >
-                                            <span style={styles.gapIcon}>
-                                                !
-                                            </span>
-
-                                            <span>{gap}</span>
-                                        </div>
-                                    )
-                                )}
-                            </div>
-                        )}
-                    </section>
-
-                    {/* CONCEPT PROFILES */}
-                    <section style={styles.section}>
-                        <div style={styles.sectionHeader}>
-                            <div>
-                                <h2 style={styles.sectionTitle}>
-                                    Concept-Level Analysis
-                                </h2>
-
-                                <p style={styles.sectionDescription}>
-                                    Detailed mastery and Bloom-level
-                                    performance for each concept.
-                                </p>
-                            </div>
-                        </div>
-
+                    {profile.concept_profiles?.length === 0 ? (
+                        <EmptyState text="No concept-level data available." />
+                    ) : (
                         <div style={styles.conceptList}>
                             {profile.concept_profiles.map(
                                 (concept, index) => (
-                                    <ConceptCard
+                                    <details
                                         key={`${concept.concept}-${index}`}
-                                        concept={concept}
-                                    />
+                                        style={styles.conceptDetails}
+                                    >
+                                        <summary
+                                            style={
+                                                styles.conceptSummary
+                                            }
+                                        >
+                                            <div
+                                                style={
+                                                    styles.conceptMain
+                                                }
+                                            >
+                                                <div
+                                                    style={
+                                                        styles.conceptIndex
+                                                    }
+                                                >
+                                                    {String(
+                                                        index + 1
+                                                    ).padStart(
+                                                        2,
+                                                        "0"
+                                                    )}
+                                                </div>
+
+                                                <div>
+                                                    <h3
+                                                        style={
+                                                            styles.conceptTitle
+                                                        }
+                                                    >
+                                                        {
+                                                            concept.concept
+                                                        }
+                                                    </h3>
+
+                                                    <p
+                                                        style={
+                                                            styles.conceptArea
+                                                        }
+                                                    >
+                                                        {
+                                                            concept.learning_area
+                                                        }
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div
+                                                style={
+                                                    styles.conceptRight
+                                                }
+                                            >
+                                                <div
+                                                    style={{
+                                                        ...styles.conceptMastery,
+                                                        color: getMasteryColor(
+                                                            concept.overall_mastery
+                                                        ),
+                                                    }}
+                                                >
+                                                    {Number(
+                                                        concept.overall_mastery ||
+                                                        0
+                                                    ).toFixed(
+                                                        0
+                                                    )}
+                                                    %
+                                                </div>
+
+                                                <span
+                                                    style={{
+                                                        ...styles.severityBadge,
+                                                        color: getSeverityColor(
+                                                            concept.highest_gap_severity
+                                                        ),
+                                                        background:
+                                                            `${getSeverityColor(
+                                                                concept.highest_gap_severity
+                                                            )}15`,
+                                                    }}
+                                                >
+                                                    {concept.highest_gap_severity ||
+                                                        "Normal"}
+                                                </span>
+
+                                                <span
+                                                    style={
+                                                        styles.expandIcon
+                                                    }
+                                                >
+                                                    +
+                                                </span>
+                                            </div>
+                                        </summary>
+
+                                        <div
+                                            style={
+                                                styles.conceptDetailsContent
+                                            }
+                                        >
+                                            <div
+                                                style={
+                                                    styles.detailGrid
+                                                }
+                                            >
+                                                <DetailItem
+                                                    label="Overall Mastery"
+                                                    value={`${Number(
+                                                        concept.overall_mastery ||
+                                                        0
+                                                    ).toFixed(
+                                                        1
+                                                    )}%`}
+                                                />
+
+                                                <DetailItem
+                                                    label="Learning Area"
+                                                    value={
+                                                        concept.learning_area
+                                                    }
+                                                />
+
+                                                <DetailItem
+                                                    label="Highest Gap"
+                                                    value={
+                                                        concept.highest_gap_severity ||
+                                                        "None"
+                                                    }
+                                                />
+
+                                                <DetailItem
+                                                    label="Priority"
+                                                    value={
+                                                        concept.remediation_priority !==
+                                                            undefined
+                                                            ? String(
+                                                                concept.remediation_priority
+                                                            )
+                                                            : "—"
+                                                    }
+                                                />
+                                            </div>
+
+                                            {concept.prerequisite_gap && (
+                                                <div
+                                                    style={
+                                                        styles.prerequisite
+                                                    }
+                                                >
+                                                    <span>
+                                                        ⚠
+                                                    </span>
+
+                                                    <span>
+                                                        This concept
+                                                        has a
+                                                        prerequisite
+                                                        knowledge gap.
+                                                    </span>
+                                                </div>
+                                            )}
+
+                                            {concept.bloom_results &&
+                                                Object.keys(
+                                                    concept.bloom_results
+                                                ).length >
+                                                0 && (
+                                                    <div
+                                                        style={
+                                                            styles.bloomResults
+                                                        }
+                                                    >
+                                                        <h4
+                                                            style={
+                                                                styles.bloomResultsTitle
+                                                            }
+                                                        >
+                                                            Bloom
+                                                            Performance
+                                                        </h4>
+
+                                                        <div
+                                                            style={
+                                                                styles.bloomResultGrid
+                                                            }
+                                                        >
+                                                            {Object.entries(
+                                                                concept.bloom_results
+                                                            ).map(
+                                                                ([
+                                                                    key,
+                                                                    result,
+                                                                ]) => (
+                                                                    <div
+                                                                        key={
+                                                                            key
+                                                                        }
+                                                                        style={
+                                                                            styles.bloomResult
+                                                                        }
+                                                                    >
+                                                                        <div
+                                                                            style={
+                                                                                styles.bloomResultTop
+                                                                            }
+                                                                        >
+                                                                            <span>
+                                                                                {result.bloom_label ||
+                                                                                    `Level ${key}`}
+                                                                            </span>
+
+                                                                            <strong>
+                                                                                {Number(
+                                                                                    result.mastery ||
+                                                                                    0
+                                                                                ).toFixed(
+                                                                                    0
+                                                                                )}
+                                                                                %
+                                                                            </strong>
+                                                                        </div>
+
+                                                                        <div
+                                                                            style={
+                                                                                styles.progressTrack
+                                                                            }
+                                                                        >
+                                                                            <div
+                                                                                style={{
+                                                                                    ...styles.progressFill,
+                                                                                    width: `${Math.min(
+                                                                                        Math.max(
+                                                                                            Number(
+                                                                                                result.mastery ||
+                                                                                                0
+                                                                                            ),
+                                                                                            0
+                                                                                        ),
+                                                                                        100
+                                                                                    )}%`,
+                                                                                    background:
+                                                                                        getMasteryColor(
+                                                                                            Number(
+                                                                                                result.mastery ||
+                                                                                                0
+                                                                                            )
+                                                                                        ),
+                                                                                }}
+                                                                            />
+                                                                        </div>
+
+                                                                        <div
+                                                                            style={
+                                                                                styles.resultMeta
+                                                                            }
+                                                                        >
+                                                                            <span>
+                                                                                Questions:{" "}
+                                                                                {result.questions_seen ??
+                                                                                    0}
+                                                                            </span>
+
+                                                                            <span>
+                                                                                Correct:{" "}
+                                                                                {result.correct ??
+                                                                                    0}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                )
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                        </div>
+                                    </details>
                                 )
                             )}
                         </div>
-                    </section>
+                    )}
 
-                    {/* FOOTER INFO */}
-                    <div style={styles.footerInfo}>
-                        <span>
-                            Diagnostic ID: {profile.diagnostic_id}
-                        </span>
+                    {/* ==================================================
+                        FOOTER
+                    ================================================== */}
+
+                    <div style={styles.footer}>
+                        <div>
+                            <span style={styles.footerLabel}>
+                                Diagnostic ID
+                            </span>
+
+                            <span style={styles.footerValue}>
+                                {profile.diagnostic_id}
+                            </span>
+                        </div>
 
                         {profile.created_at && (
-                            <span>
-                                Completed:{" "}
-                                {new Date(
-                                    profile.created_at
-                                ).toLocaleString()}
-                            </span>
+                            <div>
+                                <span style={styles.footerLabel}>
+                                    Completed
+                                </span>
+
+                                <span style={styles.footerValue}>
+                                    {new Date(
+                                        profile.created_at
+                                    ).toLocaleDateString()}
+                                </span>
+                            </div>
                         )}
                     </div>
-
                 </div>
             </div>
 
-            <style>{`
+            <style jsx>{`
+                details > summary {
+                    list-style: none;
+                }
+
+                details > summary::-webkit-details-marker {
+                    display: none;
+                }
+
+                details[open] .expand-icon {
+                    transform: rotate(45deg);
+                }
+
+                .spinner {
+                    animation: spin 0.8s linear infinite;
+                }
+
                 @keyframes spin {
-                    0% { transform: rotate(0deg); }
-                    100% { transform: rotate(360deg); }
+                    to {
+                        transform: rotate(360deg);
+                    }
+                }
+
+                @media (max-width: 1200px) {
+                    .stats-grid {
+                        grid-template-columns: repeat(2, 1fr);
+                    }
+                }
+
+                @media (max-width: 900px) {
+                    .hero {
+                        grid-template-columns: 1fr;
+                    }
+
+                    .bloom-grid {
+                        grid-template-columns: repeat(2, 1fr);
+                    }
+
+                    .area-grid {
+                        grid-template-columns: 1fr;
+                    }
+                }
+
+                @media (max-width: 650px) {
+                    .stats-grid {
+                        grid-template-columns: 1fr;
+                    }
+
+                    .bloom-grid {
+                        grid-template-columns: 1fr;
+                    }
+
+                    .heroMasteryRow {
+                        flex-direction: column;
+                        align-items: flex-start;
+                    }
+
+                    .header {
+                        flex-direction: column;
+                    }
+
+                    .cycleCard {
+                        width: 100%;
+                    }
+
+                    .conceptSummary {
+                        flex-direction: column;
+                        align-items: flex-start;
+                        gap: 16px;
+                    }
+
+                    .conceptRight {
+                        width: 100%;
+                        justify-content: space-between;
+                    }
                 }
             `}</style>
         </div>
     );
 }
 
+// ============================================================
+// STAT CARD
+// ============================================================
+
 function StatCard({
+    icon,
     label,
     value,
-    icon,
     description,
 }: {
+    icon: string;
     label: string;
     value: string;
-    icon: string;
     description: string;
 }) {
     return (
         <div style={styles.statCard}>
-            <div style={styles.statTop}>
-                <div style={styles.statIcon}>
-                    {icon}
-                </div>
+            <div style={styles.statIcon}>{icon}</div>
 
-                <span style={styles.statLabel}>
-                    {label}
+            <div style={styles.statContent}>
+                <span style={styles.statLabel}>{label}</span>
+
+                <strong style={styles.statValue}>{value}</strong>
+
+                <span style={styles.statDescription}>
+                    {description}
                 </span>
-            </div>
-
-            <div style={styles.statValue}>
-                {value}
-            </div>
-
-            <div style={styles.statDescription}>
-                {description}
             </div>
         </div>
     );
 }
 
-function ConceptCard({
-    concept,
+// ============================================================
+// SECTION HEADER
+// ============================================================
+
+function SectionHeader({
+    eyebrow,
+    title,
+    description,
 }: {
-    concept: ConceptProfile;
+    eyebrow: string;
+    title: string;
+    description: string;
 }) {
     return (
-        <details style={styles.conceptCard}>
-            <summary style={styles.conceptSummary}>
-                <div style={styles.conceptMain}>
-                    <strong style={styles.conceptName}>
-                        {concept.concept}
-                    </strong>
+        <div style={styles.sectionHeader}>
+            <div style={styles.sectionEyebrow}>{eyebrow}</div>
 
-                    <span style={styles.conceptArea}>
-                        {concept.learning_area}
-                    </span>
-                </div>
+            <h2 style={styles.sectionTitle}>{title}</h2>
 
-                <div style={styles.conceptRight}>
-                    <strong
-                        style={{
-                            color: getMasteryColor(
-                                Number(
-                                    concept.overall_mastery || 0
-                                )
-                            ),
-                        }}
-                    >
-                        {Number(
-                            concept.overall_mastery || 0
-                        ).toFixed(1)}
-                        %
-                    </strong>
-
-                    {concept.highest_gap_severity && (
-                        <span
-                            style={{
-                                ...styles.severityBadge,
-                                color: getSeverityColor(
-                                    concept.highest_gap_severity
-                                ),
-                            }}
-                        >
-                            {concept.highest_gap_severity}
-                        </span>
-                    )}
-                </div>
-            </summary>
-
-            <div style={styles.conceptDetails}>
-
-                <div style={styles.detailGrid}>
-                    <div>
-                        <span style={styles.detailLabel}>
-                            Overall Mastery
-                        </span>
-
-                        <strong>
-                            {Number(
-                                concept.overall_mastery || 0
-                            ).toFixed(1)}
-                            %
-                        </strong>
-                    </div>
-
-                    <div>
-                        <span style={styles.detailLabel}>
-                            Gap Level
-                        </span>
-
-                        <strong>
-                            {concept.highest_gap_level ??
-                                "None"}
-                        </strong>
-                    </div>
-
-                    <div>
-                        <span style={styles.detailLabel}>
-                            Remediation Priority
-                        </span>
-
-                        <strong>
-                            {concept.remediation_priority ??
-                                "—"}
-                        </strong>
-                    </div>
-
-                    <div>
-                        <span style={styles.detailLabel}>
-                            Prerequisite Gap
-                        </span>
-
-                        <strong>
-                            {concept.prerequisite_gap
-                                ? "Yes"
-                                : "No"}
-                        </strong>
-                    </div>
-                </div>
-
-                <h4 style={styles.subHeading}>
-                    Bloom-Level Results
-                </h4>
-
-                <div style={styles.conceptBloomGrid}>
-                    {Object.entries(
-                        concept.bloom_results || {}
-                    ).map(([level, result]) => (
-                        <div
-                            key={level}
-                            style={styles.conceptBloom}
-                        >
-                            <div
-                                style={styles.conceptBloomHeader}
-                            >
-                                <span>
-                                    {result.bloom_label ||
-                                        `Level ${level}`}
-                                </span>
-
-                                <strong
-                                    style={{
-                                        color:
-                                            getMasteryColor(
-                                                Number(
-                                                    result.mastery || 0
-                                                )
-                                            ),
-                                    }}
-                                >
-                                    {Number(
-                                        result.mastery || 0
-                                    ).toFixed(1)}
-                                    %
-                                </strong>
-                            </div>
-
-                            <div
-                                style={styles.smallTrack}
-                            >
-                                <div
-                                    style={{
-                                        ...styles.smallFill,
-                                        width: `${Math.min(
-                                            100,
-                                            Math.max(
-                                                0,
-                                                Number(
-                                                    result.mastery || 0
-                                                )
-                                            )
-                                        )}%`,
-                                        background:
-                                            getMasteryColor(
-                                                Number(
-                                                    result.mastery || 0
-                                                )
-                                            ),
-                                    }}
-                                />
-                            </div>
-
-                            <div style={styles.resultMeta}>
-                                <span>
-                                    θ:{" "}
-                                    {Number(
-                                        result.theta || 0
-                                    ).toFixed(2)}
-                                </span>
-
-                                <span>
-                                    {result.correct ?? 0}/
-                                    {result.questions_seen ??
-                                        0}{" "}
-                                    correct
-                                </span>
-
-                                {result.gap_severity && (
-                                    <span
-                                        style={{
-                                            color:
-                                                getSeverityColor(
-                                                    result.gap_severity
-                                                ),
-                                        }}
-                                    >
-                                        {result.gap_severity}
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </details>
+            <p style={styles.sectionDescription}>
+                {description}
+            </p>
+        </div>
     );
 }
 
-const styles: Record<
-    string,
-    React.CSSProperties
-> = {
-    pageWrapper: {
+// ============================================================
+// DETAIL ITEM
+// ============================================================
+
+function DetailItem({
+    label,
+    value,
+}: {
+    label: string;
+    value: string;
+}) {
+    return (
+        <div style={styles.detailItem}>
+            <span style={styles.detailLabel}>{label}</span>
+
+            <strong style={styles.detailValue}>{value}</strong>
+        </div>
+    );
+}
+
+// ============================================================
+// EMPTY STATE
+// ============================================================
+
+function EmptyState({ text }: { text: string }) {
+    return (
+        <div style={styles.emptyState}>
+            <div style={styles.emptyIcon}>◌</div>
+
+            <p>{text}</p>
+        </div>
+    );
+}
+
+// ============================================================
+// STYLES
+// ============================================================
+
+const styles: Record<string, React.CSSProperties> = {
+    page: {
         minHeight: "100vh",
-        backgroundColor: "#FAFBFC",
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+        background:
+            "linear-gradient(135deg, #f8fafc 0%, #eef2ff 50%, #f8fafc 100%)",
+        color: "#0f172a",
     },
 
-    mainContent: {
+    main: {
         marginLeft: "240px",
-        paddingTop: "64px",
         minHeight: "100vh",
     },
 
-    container: {
-        maxWidth: "1250px",
+    content: {
+        maxWidth: "1500px",
         margin: "0 auto",
-        padding: "40px 32px",
+        padding: "38px 42px 60px",
     },
 
-    loading: {
-        minHeight: "70vh",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        color: "#64748b",
-    },
-
-    spinner: {
-        width: "40px",
-        height: "40px",
-        border: "3px solid #E5E7EB",
-        borderTopColor: "#6366F1",
-        borderRadius: "50%",
-        animation: "spin 1s linear infinite",
-    },
+    // ========================================================
+    // HEADER
+    // ========================================================
 
     header: {
         display: "flex",
+        alignItems: "flex-start",
         justifyContent: "space-between",
-        alignItems: "center",
-        gap: "20px",
-        marginBottom: "40px",
-    },
-
-    title: {
-        margin: 0,
-        fontSize: "32px",
-        fontWeight: 700,
-        color: "#111827",
-    },
-
-    subtitle: {
-        margin: "8px 0 0",
-        color: "#6B7280",
-        fontSize: "15px",
-    },
-
-    cycleBadge: {
-        background: "#F3F4F6",
-        color: "#6366F1",
-        padding: "10px 16px",
-        borderRadius: "8px",
-        fontSize: "13px",
-        fontWeight: 600,
-        whiteSpace: "nowrap",
-        border: "1px solid #E5E7EB",
-    },
-
-    statsGrid: {
-        display: "grid",
-        gridTemplateColumns:
-            "repeat(auto-fit, minmax(220px, 1fr))",
-        gap: "20px",
+        gap: "24px",
         marginBottom: "32px",
     },
 
-    statCard: {
-        background: "#ffffff",
-        border: "1px solid #E5E7EB",
-        borderRadius: "12px",
-        padding: "20px",
-        transition: "all 0.2s ease",
-        cursor: "pointer",
+    eyebrow: {
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "7px 12px",
+        borderRadius: "999px",
+        background: "#eef2ff",
+        color: "#4f46e5",
+        fontSize: "11px",
+        fontWeight: 800,
+        letterSpacing: "1.5px",
+        marginBottom: "12px",
     },
 
-    statTop: {
+    pageTitle: {
+        margin: 0,
+        fontSize: "38px",
+        lineHeight: 1.1,
+        fontWeight: 800,
+        letterSpacing: "-1.2px",
+        color: "#0f172a",
+    },
+
+    subtitle: {
+        margin: "10px 0 0",
+        color: "#64748b",
+        fontSize: "15px",
+        maxWidth: "650px",
+        lineHeight: 1.6,
+    },
+
+    cycleCard: {
+        minWidth: "180px",
+        padding: "18px 20px",
+        borderRadius: "18px",
+        background: "#ffffff",
+        border: "1px solid #e2e8f0",
+        boxShadow: "0 8px 30px rgba(15, 23, 42, 0.06)",
+    },
+
+    cycleLabel: {
+        fontSize: "10px",
+        fontWeight: 800,
+        color: "#94a3b8",
+        letterSpacing: "1.3px",
+    },
+
+    cycleNumber: {
+        marginTop: "5px",
+        fontSize: "25px",
+        fontWeight: 800,
+        color: "#4f46e5",
+    },
+
+    cycleStatus: {
+        marginTop: "3px",
+        fontSize: "12px",
+        color: "#64748b",
+    },
+
+    // ========================================================
+    // HERO
+    // ========================================================
+
+    hero: {
+        display: "grid",
+        gridTemplateColumns: "1fr 300px",
+        gap: "20px",
+        marginBottom: "22px",
+    },
+
+    heroLeft: {
+        padding: "30px",
+        borderRadius: "24px",
+        background:
+            "linear-gradient(135deg, #ffffff 0%, #f8faff 100%)",
+        border: "1px solid #e2e8f0",
+        boxShadow: "0 14px 45px rgba(15, 23, 42, 0.07)",
+    },
+
+    heroEyebrow: {
+        fontSize: "11px",
+        fontWeight: 800,
+        color: "#64748b",
+        letterSpacing: "1.4px",
+        marginBottom: "22px",
+    },
+
+    heroMasteryRow: {
         display: "flex",
         alignItems: "center",
-        gap: "12px",
-        marginBottom: "14px",
+        gap: "28px",
+    },
+
+    masteryCircle: {
+        width: "150px",
+        height: "150px",
+        minWidth: "150px",
+        borderRadius: "50%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        position: "relative",
+    },
+
+    masteryCircleInner: {
+        width: "122px",
+        height: "122px",
+        borderRadius: "50%",
+        background: "#ffffff",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexDirection: "column",
+    },
+
+    masteryNumber: {
+        fontSize: "25px",
+        fontWeight: 800,
+        lineHeight: 1,
+    },
+
+    masteryCircleText: {
+        marginTop: "7px",
+        fontSize: "11px",
+        color: "#94a3b8",
+        fontWeight: 600,
+    },
+
+    heroTitle: {
+        margin: "0 0 7px",
+        fontSize: "25px",
+        fontWeight: 800,
+    },
+
+    heroDescription: {
+        margin: 0,
+        color: "#64748b",
+        fontSize: "14px",
+        lineHeight: 1.6,
+    },
+
+    heroProgress: {
+        width: "100%",
+        maxWidth: "420px",
+        height: "8px",
+        marginTop: "20px",
+        borderRadius: "999px",
+        background: "#e2e8f0",
+        overflow: "hidden",
+    },
+
+    heroProgressFill: {
+        height: "100%",
+        borderRadius: "999px",
+        transition: "width 0.5s ease",
+    },
+
+    thetaCard: {
+        padding: "28px",
+        borderRadius: "24px",
+        background:
+            "linear-gradient(145deg, #312e81 0%, #4f46e5 100%)",
+        color: "#ffffff",
+        display: "flex",
+        alignItems: "center",
+        gap: "18px",
+        boxShadow: "0 14px 45px rgba(79, 70, 229, 0.22)",
+    },
+
+    thetaIcon: {
+        width: "58px",
+        height: "58px",
+        borderRadius: "17px",
+        background: "rgba(255,255,255,0.14)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: "30px",
+        fontWeight: 700,
+    },
+
+    thetaLabel: {
+        fontSize: "10px",
+        fontWeight: 800,
+        letterSpacing: "1.4px",
+        opacity: 0.7,
+    },
+
+    thetaValue: {
+        fontSize: "34px",
+        fontWeight: 800,
+        marginTop: "4px",
+    },
+
+    thetaDescription: {
+        fontSize: "12px",
+        opacity: 0.75,
+        marginTop: "2px",
+    },
+
+    // ========================================================
+    // STATS
+    // ========================================================
+
+    statsGrid: {
+        display: "grid",
+        gridTemplateColumns: "repeat(4, 1fr)",
+        gap: "16px",
+        marginBottom: "58px",
+    },
+
+    statCard: {
+        display: "flex",
+        alignItems: "center",
+        gap: "15px",
+        padding: "20px",
+        background: "#ffffff",
+        border: "1px solid #e2e8f0",
+        borderRadius: "18px",
+        boxShadow: "0 7px 25px rgba(15, 23, 42, 0.045)",
     },
 
     statIcon: {
-        width: "40px",
-        height: "40px",
-        borderRadius: "8px",
-        background: "#F3F4F6",
+        width: "45px",
+        height: "45px",
+        minWidth: "45px",
+        borderRadius: "14px",
+        background: "#eef2ff",
+        color: "#4f46e5",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: "19px",
+        fontWeight: 800,
+    },
+
+    statContent: {
+        minWidth: 0,
+    },
+
+    statLabel: {
+        display: "block",
+        fontSize: "11px",
+        fontWeight: 700,
+        color: "#94a3b8",
+        textTransform: "uppercase",
+        letterSpacing: "0.7px",
+    },
+
+    statValue: {
+        display: "block",
+        marginTop: "3px",
+        fontSize: "22px",
+        fontWeight: 800,
+        color: "#0f172a",
+    },
+
+    statDescription: {
+        display: "block",
+        marginTop: "2px",
+        fontSize: "11px",
+        color: "#94a3b8",
+    },
+
+    // ========================================================
+    // SECTION
+    // ========================================================
+
+    sectionHeader: {
+        marginBottom: "20px",
+    },
+
+    sectionEyebrow: {
+        fontSize: "10px",
+        fontWeight: 800,
+        letterSpacing: "1.5px",
+        color: "#6366f1",
+        marginBottom: "6px",
+    },
+
+    sectionTitle: {
+        margin: 0,
+        fontSize: "25px",
+        fontWeight: 800,
+        letterSpacing: "-0.5px",
+    },
+
+    sectionDescription: {
+        margin: "6px 0 0",
+        fontSize: "13px",
+        color: "#64748b",
+    },
+
+    // ========================================================
+    // BLOOM
+    // ========================================================
+
+    bloomGrid: {
+        display: "grid",
+        gridTemplateColumns: "repeat(3, 1fr)",
+        gap: "16px",
+        marginBottom: "58px",
+    },
+
+    bloomCard: {
+        padding: "22px",
+        background: "#ffffff",
+        border: "1px solid #e2e8f0",
+        borderRadius: "20px",
+        boxShadow: "0 7px 25px rgba(15, 23, 42, 0.045)",
+    },
+
+    bloomTop: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+    },
+
+    bloomIcon: {
+        width: "43px",
+        height: "43px",
+        borderRadius: "13px",
+        background: "#f1f5f9",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         fontSize: "20px",
     },
 
-    statLabel: {
-        color: "#6B7280",
-        fontSize: "13px",
-        fontWeight: 600,
-    },
-
-    statValue: {
-        fontSize: "24px",
-        fontWeight: 700,
-        color: "#111827",
-        marginBottom: "6px",
-    },
-
-    statDescription: {
-        color: "#9CA3AF",
+    bloomNumber: {
         fontSize: "12px",
+        fontWeight: 800,
+        color: "#cbd5e1",
     },
 
-    section: {
-        background: "#ffffff",
-        border: "1px solid #E5E7EB",
-        borderRadius: "12px",
-        padding: "24px",
-        marginBottom: "24px",
+    bloomTitle: {
+        margin: "18px 0 4px",
+        fontSize: "17px",
+        fontWeight: 800,
     },
 
-    sectionHeader: {
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        gap: "20px",
-        marginBottom: "24px",
-    },
-
-    sectionTitle: {
+    bloomDescription: {
         margin: 0,
-        fontSize: "18px",
-        fontWeight: 700,
-        color: "#111827",
+        minHeight: "38px",
+        color: "#64748b",
+        fontSize: "12px",
+        lineHeight: 1.5,
     },
 
-    sectionDescription: {
-        margin: "6px 0 0",
-        color: "#6B7280",
-        fontSize: "14px",
-    },
-
-    largeScore: {
-        fontSize: "28px",
-        fontWeight: 700,
+    bloomValue: {
+        marginTop: "18px",
+        fontSize: "27px",
+        fontWeight: 800,
     },
 
     progressTrack: {
-        height: "8px",
-        background: "#E5E7EB",
+        width: "100%",
+        height: "7px",
         borderRadius: "999px",
+        background: "#e2e8f0",
         overflow: "hidden",
     },
 
     progressFill: {
         height: "100%",
         borderRadius: "999px",
-        transition: "width 0.5s ease",
+        transition: "width 0.4s ease",
     },
 
-    bloomGrid: {
+    statusText: {
+        marginTop: "8px",
+        fontSize: "11px",
+        fontWeight: 700,
+    },
+
+    // ========================================================
+    // LEARNING AREAS
+    // ========================================================
+
+    areaGrid: {
         display: "grid",
-        gridTemplateColumns:
-            "repeat(auto-fit, minmax(240px, 1fr))",
-        gap: "14px",
+        gridTemplateColumns: "repeat(2, 1fr)",
+        gap: "16px",
+        marginBottom: "58px",
     },
 
-    bloomCard: {
+    areaCard: {
+        padding: "21px",
+        borderRadius: "19px",
+        background: "#ffffff",
+        border: "1px solid #e2e8f0",
+        boxShadow: "0 7px 25px rgba(15, 23, 42, 0.045)",
+    },
+
+    areaCardHeader: {
         display: "flex",
         alignItems: "center",
-        gap: "14px",
-        padding: "16px",
-        border: "1px solid #E5E7EB",
-        borderRadius: "10px",
-        backgroundColor: "#F9FAFB",
-        transition: "all 0.2s ease",
+        gap: "13px",
+        marginBottom: "16px",
     },
 
-    bloomNumber: {
-        width: "36px",
-        height: "36px",
-        borderRadius: "50%",
-        background: "#F3F4F6",
-        color: "#6366F1",
+    areaIcon: {
+        width: "44px",
+        height: "44px",
+        minWidth: "44px",
+        borderRadius: "13px",
+        background: "#eef2ff",
+        color: "#4f46e5",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        fontWeight: 700,
-        fontSize: "16px",
-    },
-
-    bloomContent: {
-        flex: 1,
-    },
-
-    bloomTitle: {
-        fontSize: "13px",
-        fontWeight: 600,
-        color: "#111827",
-    },
-
-    bloomScore: {
+        fontWeight: 800,
         fontSize: "18px",
-        fontWeight: 700,
-        margin: "6px 0 8px",
     },
 
-    smallTrack: {
-        height: "6px",
-        background: "#E5E7EB",
-        borderRadius: "999px",
-        overflow: "hidden",
+    areaTitle: {
+        margin: 0,
+        fontSize: "15px",
+        fontWeight: 800,
     },
 
-    smallFill: {
-        height: "100%",
-        borderRadius: "999px",
+    areaStatus: {
+        display: "block",
+        marginTop: "3px",
+        color: "#94a3b8",
+        fontSize: "11px",
     },
 
-    areaList: {
-        display: "flex",
-        flexDirection: "column",
-        gap: "14px",
+    areaValue: {
+        fontSize: "20px",
+        fontWeight: 800,
     },
 
-    areaRow: {
-        display: "flex",
-        flexDirection: "column",
-        gap: "8px",
-    },
-
-    areaInfo: {
-        display: "flex",
-        justifyContent: "space-between",
-        fontSize: "14px",
-        fontWeight: 500,
-    },
-
-    areaName: {
-        color: "#111827",
-    },
-
-    gapCount: {
-        background: "#FEE2E2",
-        color: "#DC2626",
-        padding: "6px 12px",
-        borderRadius: "6px",
-        fontSize: "12px",
-        fontWeight: 600,
-    },
+    // ========================================================
+    // GAPS
+    // ========================================================
 
     gapList: {
         display: "flex",
         flexDirection: "column",
-        gap: "10px",
+        gap: "12px",
+        marginBottom: "58px",
     },
 
-    gapItem: {
+    gapCard: {
         display: "flex",
-        alignItems: "center",
-        gap: "12px",
-        padding: "12px 14px",
-        background: "#FEF2F2",
-        border: "1px solid #FEE2E2",
-        borderRadius: "10px",
-        color: "#7F1D1D",
-        fontSize: "14px",
+        alignItems: "flex-start",
+        gap: "16px",
+        padding: "20px",
+        background: "#ffffff",
+        border: "1px solid #fecaca",
+        borderLeft: "4px solid #ef4444",
+        borderRadius: "16px",
+        boxShadow: "0 7px 25px rgba(15, 23, 42, 0.04)",
     },
 
     gapIcon: {
-        width: "24px",
-        height: "24px",
-        borderRadius: "50%",
-        background: "#DC2626",
-        color: "#ffffff",
+        width: "38px",
+        height: "38px",
+        minWidth: "38px",
+        borderRadius: "11px",
+        background: "#fef2f2",
+        color: "#dc2626",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        fontWeight: 700,
-        fontSize: "14px",
-        flexShrink: 0,
+        fontWeight: 900,
     },
 
-    successBox: {
-        padding: "14px 16px",
-        background: "#F0FDF4",
-        border: "1px solid #BBFDE2",
-        color: "#166534",
-        borderRadius: "10px",
-        fontSize: "14px",
+    gapHeader: {
+        display: "flex",
+        alignItems: "center",
+        gap: "10px",
+        flexWrap: "wrap",
     },
+
+    gapTitle: {
+        margin: 0,
+        fontSize: "15px",
+        fontWeight: 800,
+    },
+
+    gapArea: {
+        margin: "5px 0 0",
+        color: "#64748b",
+        fontSize: "12px",
+    },
+
+    gapMastery: {
+        display: "flex",
+        alignItems: "center",
+        gap: "10px",
+        marginTop: "10px",
+        fontSize: "12px",
+        color: "#64748b",
+    },
+
+    severityBadge: {
+        display: "inline-flex",
+        padding: "5px 9px",
+        borderRadius: "999px",
+        fontSize: "10px",
+        fontWeight: 800,
+        textTransform: "uppercase",
+        letterSpacing: "0.5px",
+    },
+
+    successCard: {
+        display: "flex",
+        alignItems: "center",
+        gap: "15px",
+        padding: "22px",
+        marginBottom: "58px",
+        borderRadius: "18px",
+        background: "#f0fdf4",
+        border: "1px solid #bbf7d0",
+    },
+
+    successIcon: {
+        width: "42px",
+        height: "42px",
+        borderRadius: "13px",
+        background: "#dcfce7",
+        color: "#16a34a",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontWeight: 900,
+    },
+
+    successTitle: {
+        margin: 0,
+        fontSize: "15px",
+        fontWeight: 800,
+        color: "#166534",
+    },
+
+    successText: {
+        margin: "4px 0 0",
+        fontSize: "12px",
+        color: "#4d7c0f",
+    },
+
+    // ========================================================
+    // CONCEPTS
+    // ========================================================
 
     conceptList: {
         display: "flex",
         flexDirection: "column",
         gap: "10px",
+        marginBottom: "50px",
     },
 
-    conceptCard: {
-        border: "1px solid #E5E7EB",
-        borderRadius: "10px",
+    conceptDetails: {
+        background: "#ffffff",
+        border: "1px solid #e2e8f0",
+        borderRadius: "17px",
         overflow: "hidden",
-        backgroundColor: "#F9FAFB",
+        boxShadow: "0 5px 20px rgba(15, 23, 42, 0.035)",
     },
 
     conceptSummary: {
-        listStyle: "none",
-        cursor: "pointer",
-        padding: "16px",
         display: "flex",
-        justifyContent: "space-between",
         alignItems: "center",
-        gap: "15px",
-        transition: "all 0.2s ease",
+        justifyContent: "space-between",
+        gap: "20px",
+        padding: "19px 21px",
+        cursor: "pointer",
     },
 
     conceptMain: {
         display: "flex",
-        flexDirection: "column",
-        gap: "4px",
+        alignItems: "center",
+        gap: "14px",
     },
 
-    conceptName: {
+    conceptIndex: {
+        width: "38px",
+        height: "38px",
+        minWidth: "38px",
+        borderRadius: "11px",
+        background: "#f1f5f9",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: "#64748b",
+        fontSize: "11px",
+        fontWeight: 800,
+    },
+
+    conceptTitle: {
+        margin: 0,
         fontSize: "14px",
-        color: "#111827",
+        fontWeight: 800,
     },
 
     conceptArea: {
-        color: "#6B7280",
-        fontSize: "12px",
+        margin: "3px 0 0",
+        color: "#94a3b8",
+        fontSize: "11px",
     },
 
     conceptRight: {
@@ -1167,124 +1989,240 @@ const styles: Record<
         gap: "12px",
     },
 
-    severityBadge: {
-        fontSize: "11px",
-        fontWeight: 600,
-        textTransform: "uppercase",
+    conceptMastery: {
+        fontSize: "18px",
+        fontWeight: 800,
     },
 
-    conceptDetails: {
-        borderTop: "1px solid #E5E7EB",
-        padding: "16px",
-        background: "#FFFFFF",
+    expandIcon: {
+        width: "28px",
+        height: "28px",
+        borderRadius: "9px",
+        background: "#f8fafc",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: "#64748b",
+        fontSize: "18px",
+        transition: "transform 0.2s ease",
+    },
+
+    conceptDetailsContent: {
+        padding: "0 21px 22px",
+        borderTop: "1px solid #f1f5f9",
     },
 
     detailGrid: {
         display: "grid",
-        gridTemplateColumns:
-            "repeat(auto-fit, minmax(140px, 1fr))",
-        gap: "14px",
-        marginBottom: "20px",
+        gridTemplateColumns: "repeat(4, 1fr)",
+        gap: "10px",
+        paddingTop: "18px",
+    },
+
+    detailItem: {
+        padding: "14px",
+        borderRadius: "13px",
+        background: "#f8fafc",
     },
 
     detailLabel: {
         display: "block",
-        color: "#6B7280",
-        fontSize: "12px",
-        marginBottom: "4px",
-        fontWeight: 500,
+        fontSize: "10px",
+        color: "#94a3b8",
+        fontWeight: 700,
+        textTransform: "uppercase",
+        letterSpacing: "0.5px",
     },
 
-    subHeading: {
+    detailValue: {
+        display: "block",
+        marginTop: "5px",
+        fontSize: "13px",
+        color: "#334155",
+    },
+
+    prerequisite: {
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
+        marginTop: "15px",
+        padding: "12px 14px",
+        borderRadius: "11px",
+        background: "#fff7ed",
+        color: "#c2410c",
+        fontSize: "12px",
+        fontWeight: 600,
+    },
+
+    bloomResults: {
+        marginTop: "20px",
+    },
+
+    bloomResultsTitle: {
         margin: "0 0 12px",
         fontSize: "13px",
-        fontWeight: 600,
-        color: "#111827",
+        fontWeight: 800,
     },
 
-    conceptBloomGrid: {
+    bloomResultGrid: {
         display: "grid",
-        gridTemplateColumns:
-            "repeat(auto-fit, minmax(240px, 1fr))",
-        gap: "12px",
+        gridTemplateColumns: "repeat(2, 1fr)",
+        gap: "10px",
     },
 
-    conceptBloom: {
-        background: "#F9FAFB",
-        border: "1px solid #E5E7EB",
-        borderRadius: "10px",
-        padding: "12px",
+    bloomResult: {
+        padding: "14px",
+        borderRadius: "12px",
+        background: "#f8fafc",
     },
 
-    conceptBloomHeader: {
+    bloomResultTop: {
         display: "flex",
-        justifyContent: "space-between",
         alignItems: "center",
-        marginBottom: "8px",
+        justifyContent: "space-between",
+        gap: "10px",
+        marginBottom: "9px",
         fontSize: "12px",
-        fontWeight: 600,
-        color: "#111827",
+        fontWeight: 700,
     },
 
     resultMeta: {
         display: "flex",
         justifyContent: "space-between",
-        gap: "8px",
         marginTop: "8px",
-        color: "#6B7280",
-        fontSize: "11px",
+        fontSize: "10px",
+        color: "#94a3b8",
     },
 
-    footerInfo: {
-        display: "flex",
-        justifyContent: "space-between",
-        gap: "20px",
-        color: "#9CA3AF",
-        fontSize: "12px",
-        padding: "16px",
-        backgroundColor: "#F9FAFB",
-        borderRadius: "10px",
-        border: "1px solid #E5E7EB",
-    },
+    // ========================================================
+    // EMPTY
+    // ========================================================
 
-    emptyCard: {
-        maxWidth: "500px",
-        margin: "80px auto",
-        background: "#ffffff",
-        borderRadius: "12px",
-        padding: "40px",
+    emptyState: {
+        padding: "45px 20px",
         textAlign: "center",
-        border: "1px solid #E5E7EB",
+        background: "#ffffff",
+        border: "1px dashed #cbd5e1",
+        borderRadius: "18px",
+        marginBottom: "58px",
+        color: "#64748b",
     },
 
     emptyIcon: {
-        fontSize: "48px",
-        marginBottom: "16px",
+        fontSize: "30px",
+        color: "#94a3b8",
+        marginBottom: "8px",
     },
 
-    emptyTitle: {
-        margin: 0,
-        fontSize: "22px",
+    // ========================================================
+    // FOOTER
+    // ========================================================
+
+    footer: {
+        display: "flex",
+        justifyContent: "space-between",
+        gap: "20px",
+        paddingTop: "22px",
+        borderTop: "1px solid #e2e8f0",
+        color: "#64748b",
+        fontSize: "12px",
+    },
+
+    footerLabel: {
+        marginRight: "8px",
+        color: "#94a3b8",
+        fontWeight: 600,
+    },
+
+    footerValue: {
         fontWeight: 700,
-        color: "#111827",
+        color: "#475569",
     },
 
-    emptyText: {
-        color: "#6B7280",
-        lineHeight: 1.6,
-        margin: "12px 0 24px",
+    // ========================================================
+    // LOADING
+    // ========================================================
+
+    loadingContainer: {
+        minHeight: "80vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexDirection: "column",
+        padding: "40px",
+    },
+
+    spinner: {
+        width: "42px",
+        height: "42px",
+        borderRadius: "50%",
+        border: "4px solid #e2e8f0",
+        borderTopColor: "#4f46e5",
+        animation: "spin 0.8s linear infinite",
+    },
+
+    loadingTitle: {
+        margin: "20px 0 5px",
+        fontSize: "20px",
+        fontWeight: 800,
+    },
+
+    loadingText: {
+        margin: 0,
+        color: "#64748b",
+        fontSize: "13px",
+    },
+
+    // ========================================================
+    // ERROR
+    // ========================================================
+
+    errorContainer: {
+        minHeight: "80vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexDirection: "column",
+        padding: "40px",
+        textAlign: "center",
+    },
+
+    errorIcon: {
+        width: "62px",
+        height: "62px",
+        borderRadius: "20px",
+        background: "#fef2f2",
+        color: "#dc2626",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: "28px",
+        fontWeight: 900,
+    },
+
+    errorTitle: {
+        margin: "18px 0 7px",
+        fontSize: "23px",
+        fontWeight: 800,
+    },
+
+    errorText: {
+        maxWidth: "500px",
+        margin: "0 0 20px",
+        color: "#64748b",
         fontSize: "14px",
+        lineHeight: 1.6,
     },
 
     primaryButton: {
         border: "none",
-        background: "#6366F1",
+        borderRadius: "12px",
+        padding: "12px 18px",
+        background: "#4f46e5",
         color: "#ffffff",
-        padding: "10px 20px",
-        borderRadius: "8px",
-        fontWeight: 600,
+        fontSize: "13px",
+        fontWeight: 700,
         cursor: "pointer",
-        fontSize: "14px",
-        transition: "all 0.2s ease",
+        boxShadow: "0 8px 20px rgba(79, 70, 229, 0.22)",
     },
 };

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import apiClient from '@/lib/apiClient';
 
@@ -54,7 +54,10 @@ interface KnowledgeProfile {
   concepts: ConceptResult[];
   overall_theta: number;
   overall_mastery: number;
-  critical_gaps: string[];
+
+  // Can be strings OR objects depending on backend response.
+  critical_gaps: any[];
+
   bloom_summary: Record<string, number>;
   learning_area_summary: Record<string, number>;
   total_questions: number;
@@ -84,6 +87,83 @@ interface GapHierarchy {
   }>;
 }
 
+const bloomLevels = [
+  { level: 1, label: 'Remember', icon: '🧩' },
+  { level: 2, label: 'Understand', icon: '💡' },
+  { level: 3, label: 'Apply', icon: '⚙️' },
+  { level: 4, label: 'Analyze', icon: '🔍' },
+  { level: 5, label: 'Evaluate', icon: '⚖️' },
+  { level: 6, label: 'Create', icon: '🚀' },
+];
+
+const confidenceLabels = [
+  'Not sure',
+  'Unsure',
+  'Moderate',
+  'Confident',
+  'Very confident',
+];
+
+function safeText(value: any): string {
+  if (typeof value === 'string') return value;
+
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+
+  if (value && typeof value === 'object') {
+    return (
+      value.label ??
+      value.text ??
+      value.title ??
+      value.name ??
+      value.concept ??
+      value.area ??
+      value.description ??
+      JSON.stringify(value)
+    );
+  }
+
+  return '';
+}
+
+function getMasteryColor(value: number) {
+  if (value >= 80) return '#10b981';
+  if (value >= 60) return '#f59e0b';
+  if (value >= 40) return '#f97316';
+  return '#ef4444';
+}
+
+function getMasteryLabel(value: number) {
+  if (value >= 90) return 'Excellent';
+  if (value >= 75) return 'Strong';
+  if (value >= 60) return 'Developing';
+  if (value >= 40) return 'Needs attention';
+  return 'Foundation needed';
+}
+
+function formatGap(gap: any): string {
+  if (typeof gap === 'string') return gap;
+
+  if (gap && typeof gap === 'object') {
+    const concept = safeText(gap.concept);
+    const area = safeText(gap.area);
+    const severity = safeText(gap.severity);
+
+    if (concept && area) {
+      return `${concept} · ${area}`;
+    }
+
+    if (concept) return concept;
+    if (area) return area;
+    if (severity) return `${severity} knowledge gap`;
+
+    return safeText(gap);
+  }
+
+  return String(gap ?? 'Knowledge gap');
+}
+
 export default function DiagnosticPage() {
   const router = useRouter();
   const fetchedRef = useRef(false);
@@ -91,23 +171,32 @@ export default function DiagnosticPage() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [step, setStep] = useState<'intro' | 'questions' | 'results'>('intro');
+
+  const [step, setStep] = useState<'intro' | 'questions' | 'results'>(
+    'intro'
+  );
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
+
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [confidences, setConfidences] = useState<Record<string, number>>({});
+
   const [startTime, setStartTime] = useState<number | null>(null);
+
   const [results, setResults] = useState<DiagnosticResult | null>(null);
 
-  // Background task status
-  const [backgroundStatus, setBackgroundStatus] = useState<'waiting' | 'complete'>('waiting');
+  const [backgroundStatus, setBackgroundStatus] = useState<
+    'waiting' | 'complete'
+  >('waiting');
+
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
 
   const fetchQuestions = async (area?: string | null) => {
     try {
       setLoading(true);
       setErrorMsg(null);
+
       const token = localStorage.getItem('edni_access');
 
       if (!token) {
@@ -115,33 +204,33 @@ export default function DiagnosticPage() {
         return;
       }
 
-      // Build API call with learning area and limit to 10 questions
-      let url = `/diagnostic/questions?limit=10`;
+      let url = '/diagnostic/questions?limit=10';
 
       if (area) {
         url += `&learning_area=${encodeURIComponent(area)}`;
-        console.log(`[Diagnostic] Fetching 10 questions for area: ${area}`);
-      } else {
-        console.log(`[Diagnostic] Fetching 10 general questions`);
       }
 
       const res = await apiClient.get(url);
 
-      console.log('Questions response:', res.data);
-
-      let fetchedQuestions = [];
+      let fetchedQuestions: Question[] = [];
 
       if (Array.isArray(res.data)) {
         fetchedQuestions = res.data;
-      } else if (res.data?.questions && Array.isArray(res.data.questions)) {
+      } else if (
+        res.data?.questions &&
+        Array.isArray(res.data.questions)
+      ) {
         fetchedQuestions = res.data.questions;
       } else if (res.data?.data && Array.isArray(res.data.data)) {
         fetchedQuestions = res.data.data;
       }
 
-      if (fetchedQuestions.length === 0) {
-        fetchedQuestions = generateMockQuestions();
-        console.log('No questions from API, using mock data');
+      if (!fetchedQuestions.length) {
+        setErrorMsg(
+          'No diagnostic questions are available for this learning area.'
+        );
+        setQuestions([]);
+        return;
       }
 
       setQuestions(fetchedQuestions);
@@ -155,59 +244,20 @@ export default function DiagnosticPage() {
         return;
       }
 
-      setQuestions(generateMockQuestions());
-      setErrorMsg(null);
+      setErrorMsg(
+        err.response?.data?.detail ||
+        'Unable to load diagnostic questions.'
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const generateMockQuestions = (): Question[] => {
-    return [
-      {
-        id: '1',
-        question_text: 'What is a variable in programming?',
-        options: [
-          { id: 'a', label: 'A named container for storing data' },
-          { id: 'b', label: 'A type of loop' },
-          { id: 'c', label: 'A function parameter' },
-          { id: 'd', label: 'A constant value' }
-        ],
-        bloom_label: 'Understand',
-        learning_area: 'Foundations'
-      },
-      {
-        id: '2',
-        question_text: 'Which sorting algorithm has the best average time complexity?',
-        options: [
-          { id: 'a', label: 'Bubble Sort' },
-          { id: 'b', label: 'Quick Sort' },
-          { id: 'c', label: 'Selection Sort' },
-          { id: 'd', label: 'Insertion Sort' }
-        ],
-        bloom_label: 'Analyze',
-        learning_area: 'Algorithms'
-      },
-      {
-        id: '3',
-        question_text: 'What is Big O notation used for?',
-        options: [
-          { id: 'a', label: 'Measuring algorithm efficiency' },
-          { id: 'b', label: 'Naming variables' },
-          { id: 'c', label: 'Writing comments' },
-          { id: 'd', label: 'Testing code' }
-        ],
-        bloom_label: 'Understand',
-        learning_area: 'Complexity Analysis'
-      }
-    ];
-  };
-
   useEffect(() => {
     if (fetchedRef.current) return;
+
     fetchedRef.current = true;
 
-    // Get learning area from URL query params
     const params = new URLSearchParams(window.location.search);
     const areaParam = params.get('area');
 
@@ -218,44 +268,58 @@ export default function DiagnosticPage() {
 
     fetchQuestions(areaParam);
 
-    // Check background status
-    const diagnosticResults = localStorage.getItem('diagnostic_results');
-    if (diagnosticResults) {
+    const savedResults = localStorage.getItem('diagnostic_results');
+
+    if (savedResults) {
       try {
-        const results = JSON.parse(diagnosticResults);
-        setBackgroundStatus(results.study_plan_id ? 'complete' : 'waiting');
-      } catch (err) {
-        console.log('Failed to parse diagnostic results');
+        const parsed = JSON.parse(savedResults);
+        setBackgroundStatus(
+          parsed.study_plan_id ? 'complete' : 'waiting'
+        );
+      } catch {
+        console.log('Could not parse saved diagnostic results.');
       }
     }
   }, []);
 
   const handleStartDiagnostic = () => {
-    if (questions.length === 0) {
-      alert('Questions are not loaded yet. Please wait or reload.');
-      return;
-    }
+    if (!questions.length) return;
+
     setStartTime(Date.now());
     setStep('questions');
   };
 
-  const handleAnswerChange = (questionId: string, answer: string) => {
-    setAnswers((prev) => ({ ...prev, [questionId]: answer }));
+  const handleAnswerChange = (
+    questionId: string,
+    answer: string
+  ) => {
+    setAnswers((prev) => ({
+      ...prev,
+      [questionId]: answer,
+    }));
   };
 
-  const handleConfidenceChange = (questionId: string, confidence: number) => {
-    setConfidences((prev) => ({ ...prev, [questionId]: confidence }));
+  const handleConfidenceChange = (
+    questionId: string,
+    confidence: number
+  ) => {
+    setConfidences((prev) => ({
+      ...prev,
+      [questionId]: confidence,
+    }));
   };
 
   const handleNext = () => {
     if (currentQuestionIdx < questions.length - 1) {
       setCurrentQuestionIdx((prev) => prev + 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
   const handlePrev = () => {
     if (currentQuestionIdx > 0) {
       setCurrentQuestionIdx((prev) => prev - 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -269,24 +333,27 @@ export default function DiagnosticPage() {
         const qid = String(q.id);
         const selectedAnswer = answers[qid];
 
-        if (selectedAnswer) {
-          let answerKey = selectedAnswer;
+        if (!selectedAnswer) return;
 
-          if (Array.isArray(q.options)) {
-            const matchedOption = q.options.find((opt) => {
-              const optLabel = typeof opt === 'string' ? opt : (opt.label || opt.text || '');
-              return optLabel === selectedAnswer;
-            });
-            if (matchedOption && typeof matchedOption === 'object') {
-              answerKey = matchedOption.id || selectedAnswer;
-            }
+        let answerKey = selectedAnswer;
+
+        if (Array.isArray(q.options)) {
+          const matchedOption = q.options.find((opt) => {
+            const label =
+              typeof opt === 'string'
+                ? opt
+                : opt?.label ?? opt?.text ?? '';
+
+            return label === selectedAnswer;
+          });
+
+          if (matchedOption && typeof matchedOption === 'object') {
+            answerKey = matchedOption.id ?? selectedAnswer;
           }
-
-          answersForSubmit[qid] = answerKey;
         }
-      });
 
-      console.log('Submitting diagnostic:', { answers: answersForSubmit });
+        answersForSubmit[qid] = answerKey;
+      });
 
       const elapsedTime = startTime
         ? (Date.now() - startTime) / 1000
@@ -298,28 +365,47 @@ export default function DiagnosticPage() {
         time_sec: elapsedTime,
       });
 
-      console.log('Diagnostic result (immediate):', res.data);
-
       const diagnosticResults: DiagnosticResult = res.data;
+
       setResults(diagnosticResults);
 
-      // Save to localStorage for persistence
-      localStorage.setItem('diagnostic_results', JSON.stringify(diagnosticResults));
+      localStorage.setItem(
+        'diagnostic_results',
+        JSON.stringify(diagnosticResults)
+      );
+
+      if (diagnosticResults.answered_questions) {
+        localStorage.setItem(
+          'diagnostic_answered_questions',
+          JSON.stringify(diagnosticResults.answered_questions)
+        );
+      }
 
       setStep('results');
 
-      pollForStudyPlan(diagnosticResults.knowledge_profile.student_id);
-
+      pollForStudyPlan(
+        diagnosticResults.knowledge_profile.student_id
+      );
     } catch (err: any) {
-      console.error('Failed to submit diagnostic:', err.response?.data || err.message);
-      const errorDetail = err.response?.data?.detail || err.message || 'Unknown error';
-      alert(`Failed to submit: ${errorDetail}`);
+      console.error(
+        'Failed to submit diagnostic:',
+        err.response?.data || err.message
+      );
+
+      const detail =
+        err.response?.data?.detail ||
+        err.message ||
+        'Unable to submit assessment.';
+
+      alert(detail);
     } finally {
       setSubmitting(false);
     }
   };
 
   const pollForStudyPlan = (studentId: string) => {
+    void studentId;
+
     let attempts = 0;
     const maxAttempts = 30;
 
@@ -329,252 +415,420 @@ export default function DiagnosticPage() {
       try {
         const res = await apiClient.get('/study-plan/planner');
 
-        if (res.data && res.data.id) {
-          console.log('Study plan ready:', res.data);
+        if (res.data?.id) {
           setBackgroundStatus('complete');
           clearInterval(interval);
         }
       } catch (err: any) {
         if (err.response?.status === 404) {
           if (attempts >= maxAttempts) {
-            console.warn('Study plan polling timeout');
             clearInterval(interval);
           }
+
           return;
         }
 
-        console.warn('Study plan poll error:', err.message);
         clearInterval(interval);
       }
     }, 2000);
-
-    return () => clearInterval(interval);
-  };
-
-  const renderText = (value: any): string => {
-    if (typeof value === 'object' && value !== null) {
-      return value.label || value.desc || value.text || value.title || JSON.stringify(value);
-    }
-    return String(value ?? '');
-  };
-
-  const styles = {
-    pageBg: { minHeight: '100vh', backgroundColor: '#ffffff', color: '#1f2937', fontFamily: 'sans-serif' },
-    centerContainer: { minHeight: '100vh', backgroundColor: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', color: '#1f2937' },
-    card: { backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '0.75rem', padding: '1.5rem', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)' },
-    btnPrimary: { width: '100%', backgroundColor: '#6366f1', color: '#ffffff', border: 'none', borderRadius: '0.5rem', padding: '0.75rem 1rem', fontWeight: 600, cursor: 'pointer' },
-    btnSecondary: { width: '100%', backgroundColor: '#e5e7eb', color: '#1f2937', border: 'none', borderRadius: '0.5rem', padding: '0.75rem 1rem', fontWeight: 600, cursor: 'pointer' },
-    btnGhost: { width: '100%', backgroundColor: 'transparent', color: '#6b7280', border: '1px solid #d1d5db', borderRadius: '0.5rem', padding: '0.75rem 1rem', fontWeight: 600, cursor: 'pointer' },
-    textMuted: { color: '#6b7280' },
-    flexGap: { display: 'flex', gap: '1rem' }
   };
 
   if (loading) {
     return (
-      <div style={styles.centerContainer}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ width: '2.5rem', height: '2.5rem', border: '4px solid #e5e7eb', borderTopColor: '#6366f1', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-          <p style={styles.textMuted}>Loading assessment questions...</p>
+      <>
+        <style>{globalStyles}</style>
+
+        <div className="loading-page">
+          <div className="loading-card">
+            <div className="brand-mark">E</div>
+
+            <div className="loader" />
+
+            <h2>Preparing your assessment</h2>
+
+            <p>
+              Edni AI is loading questions based on your
+              learning profile.
+            </p>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   if (step === 'intro') {
     return (
-      <div style={styles.centerContainer}>
-        <div style={{ ...styles.card, maxWidth: '42rem', width: '100%' }}>
-          <div style={{ marginBottom: '2rem' }}>
-            <div style={{ fontSize: '3.75rem', marginBottom: '1rem' }}>📊</div>
-            <h1 style={{ fontSize: '2.25rem', fontWeight: 'bold', marginBottom: '1rem', marginTop: 0, color: '#1f2937' }}>Diagnostic Assessment</h1>
-            <p style={{ fontSize: '1.125rem', color: '#6b7280', marginBottom: '1.5rem' }}>
-              Take our comprehensive diagnostic to identify your knowledge gaps and get a personalized study plan.
+      <>
+        <style>{globalStyles}</style>
+
+        <main className="diagnostic-page">
+          <div className="intro-shell">
+            <div className="intro-topbar">
+              <button
+                className="brand"
+                onClick={() => router.push('/dashboard')}
+              >
+                <span className="brand-icon">E</span>
+                <span>Edni AI</span>
+              </button>
+
+              <button
+                className="back-button"
+                onClick={() => router.push('/dashboard')}
+              >
+                ← Dashboard
+              </button>
+            </div>
+
+            <section className="hero-card">
+              <div className="hero-glow glow-one" />
+              <div className="hero-glow glow-two" />
+
+              <div className="hero-content">
+                <div className="hero-badge">
+                  <span>✦</span>
+                  AI-powered diagnostic
+                </div>
+
+                <h1>
+                  Discover what you
+                  <br />
+                  <span>really know.</span>
+                </h1>
+
+                <p>
+                  Take a short diagnostic assessment and let
+                  Edni AI identify your knowledge gaps,
+                  cognitive strengths, and areas that need
+                  attention.
+                </p>
+
+                {selectedArea && (
+                  <div className="selected-area">
+                    <span>📚</span>
+                    <div>
+                      <small>Assessment area</small>
+                      <strong>{selectedArea}</strong>
+                    </div>
+                  </div>
+                )}
+
+                <div className="hero-actions">
+                  <button
+                    className="primary-button large"
+                    onClick={handleStartDiagnostic}
+                    disabled={!questions.length}
+                  >
+                    Start assessment
+                    <span>→</span>
+                  </button>
+                </div>
+
+                {errorMsg && (
+                  <div className="error-box">
+                    <span>⚠</span>
+                    {errorMsg}
+                  </div>
+                )}
+              </div>
+
+              <div className="hero-visual">
+                <div className="orb">
+                  <div className="orb-inner">
+                    <span>🧠</span>
+                  </div>
+                </div>
+
+                <div className="floating-card card-top">
+                  <span className="mini-icon purple">✦</span>
+                  <div>
+                    <strong>Bloom's Taxonomy</strong>
+                    <small>6 cognitive levels</small>
+                  </div>
+                </div>
+
+                <div className="floating-card card-bottom">
+                  <span className="mini-icon green">✓</span>
+                  <div>
+                    <strong>Personalized insights</strong>
+                    <small>Based on your answers</small>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section className="intro-features">
+              <FeatureCard
+                icon="⏱"
+                title={`${questions.length} questions`}
+                text="A focused assessment designed to understand your current ability."
+              />
+
+              <FeatureCard
+                icon="🧠"
+                title="IRT + Bloom's"
+                text="Your performance is evaluated using cognitive and ability models."
+              />
+
+              <FeatureCard
+                icon="✦"
+                title="Adaptive planning"
+                text="Your results become the foundation for a personalized learning plan."
+              />
+            </section>
+
+            <p className="privacy-note">
+              Your answers are used to build your Edni AI
+              knowledge profile.
             </p>
           </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem', padding: '1rem', backgroundColor: '#f9fafb', borderRadius: '0.5rem', border: '1px solid #e5e7eb' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-              <span style={{ fontSize: '1.5rem' }}>⏱️</span>
-              <div>
-                <p style={{ fontWeight: 600, margin: 0, color: '#1f2937' }}>{questions.length} Questions Available</p>
-                <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>Estimated time: 5-10 minutes</p>
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-              <span style={{ fontSize: '1.5rem' }}>⚡</span>
-              <div>
-                <p style={{ fontWeight: 600, margin: 0, color: '#1f2937' }}>Instant Results</p>
-                <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>See your knowledge profile immediately. Study plan generates in background.</p>
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-              <span style={{ fontSize: '1.5rem' }}>🎓</span>
-              <div>
-                <p style={{ fontWeight: 600, margin: 0, color: '#1f2937' }}>Bloom's Taxonomy</p>
-                <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>Questions across cognitive levels</p>
-              </div>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <button onClick={handleStartDiagnostic} style={styles.btnPrimary}>
-              Begin Assessment →
-            </button>
-            <button onClick={() => router.push('/dashboard')} style={styles.btnGhost}>
-              Back to Dashboard
-            </button>
-          </div>
-        </div>
-      </div>
+        </main>
+      </>
     );
   }
 
   if (step === 'questions' && questions.length > 0) {
     const q = questions[currentQuestionIdx];
-    const progress = ((currentQuestionIdx + 1) / questions.length) * 100;
+
+    const progress =
+      ((currentQuestionIdx + 1) / questions.length) * 100;
+
+    const answeredCount = Object.keys(answers).length;
+
+    const currentAnswer = answers[String(q.id)];
 
     return (
-      <div style={styles.pageBg}>
-        <div style={{ position: 'sticky', top: 0, backgroundColor: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(8px)', borderBottom: '1px solid #e5e7eb', zIndex: 40 }}>
-          <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#6b7280' }}>
-                Question {currentQuestionIdx + 1} of {questions.length}
-              </span>
-              <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#6366f1' }}>
-                {Math.round(progress)}% Complete
-              </span>
-            </div>
-            <div style={{ width: '100%', backgroundColor: '#e5e7eb', borderRadius: '9999px', height: '0.5rem' }}>
-              <div
-                style={{
-                  height: '0.5rem',
-                  backgroundColor: '#6366f1',
-                  borderRadius: '9999px',
-                  transition: 'all 300ms ease',
-                  width: `${progress}%`
-                }}
-              ></div>
-            </div>
-          </div>
-        </div>
+      <>
+        <style>{globalStyles}</style>
 
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem 1rem' }}>
-          <div style={{ maxWidth: '42rem', margin: '0 auto' }}>
-            <div style={{ ...styles.card, marginBottom: '2rem' }}>
-              <div style={{ marginBottom: '1.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                  {q.bloom_label && (
-                    <span style={{ padding: '0.25rem 0.75rem', backgroundColor: 'rgba(99, 102, 241, 0.1)', color: '#6366f1', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 600 }}>
-                      {renderText(q.bloom_label)}
-                    </span>
-                  )}
-                  {q.learning_area && (
-                    <span style={{ padding: '0.25rem 0.75rem', backgroundColor: '#f3f4f6', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 600, color: '#6b7280' }}>
-                      {renderText(q.learning_area)}
-                    </span>
-                  )}
+        <main className="assessment-page">
+          <header className="assessment-header">
+            <div className="assessment-header-inner">
+              <button
+                className="assessment-brand"
+                onClick={() => router.push('/dashboard')}
+              >
+                <span className="brand-icon small">E</span>
+                Edni AI
+              </button>
+
+              <div className="assessment-progress-info">
+                <div>
+                  <strong>
+                    Question {currentQuestionIdx + 1}
+                  </strong>
+                  <span> of {questions.length}</span>
                 </div>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem', marginTop: 0, color: '#1f2937' }}>
-                  {renderText(q.question_text)}
-                </h2>
+
+                <span className="progress-percent">
+                  {Math.round(progress)}%
+                </span>
+              </div>
+            </div>
+
+            <div className="progress-track">
+              <div
+                className="progress-value"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </header>
+
+          <div className="assessment-layout">
+            <aside className="question-sidebar">
+              <div className="sidebar-heading">
+                <span>Assessment</span>
+                <strong>
+                  {answeredCount}/{questions.length}
+                </strong>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '2rem' }}>
-                {Array.isArray(q.options) && q.options.map((option, idx) => {
-                  const optionLabel = renderText(option);
-                  const isSelected = answers[String(q.id)] === optionLabel;
+              <div className="question-grid">
+                {questions.map((item, index) => {
+                  const id = String(item.id);
+                  const answered = Boolean(answers[id]);
+                  const active = index === currentQuestionIdx;
+
                   return (
-                    <label
-                      key={idx}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '1rem',
-                        borderRadius: '0.5rem',
-                        border: isSelected ? '2px solid #6366f1' : '2px solid #e5e7eb',
-                        backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.05)' : '#ffffff',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                      }}
+                    <button
+                      key={id}
+                      onClick={() => setCurrentQuestionIdx(index)}
+                      className={`question-number ${active ? 'active' : ''
+                        } ${answered ? 'answered' : ''}`}
                     >
-                      <input
-                        type="radio"
-                        name={`question-${q.id}`}
-                        value={optionLabel}
-                        checked={isSelected}
-                        onChange={() => handleAnswerChange(String(q.id), optionLabel)}
-                        style={{ marginRight: '0.75rem', accentColor: '#6366f1' }}
-                      />
-                      <span style={{ color: '#1f2937' }}>{optionLabel}</span>
-                    </label>
+                      {answered ? '✓' : index + 1}
+                    </button>
                   );
                 })}
               </div>
 
-              <div style={{ padding: '1rem', backgroundColor: '#f9fafb', borderRadius: '0.5rem', border: '1px solid #e5e7eb' }}>
-                <label style={{ display: 'block' }}>
-                  <p style={{ fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem', marginTop: 0, color: '#1f2937' }}>How confident are you?</p>
+              <div className="sidebar-tip">
+                <span>💡</span>
+                <p>
+                  Choose the answer that best reflects
+                  what you currently know.
+                </p>
+              </div>
+            </aside>
+
+            <section className="question-main">
+              <div className="question-card-modern">
+                <div className="question-meta">
+                  {q.bloom_label && (
+                    <span className="tag purple-tag">
+                      🧠 {safeText(q.bloom_label)}
+                    </span>
+                  )}
+
+                  {q.learning_area && (
+                    <span className="tag gray-tag">
+                      📚 {safeText(q.learning_area)}
+                    </span>
+                  )}
+
+                  {q.difficulty && (
+                    <span className="tag gray-tag">
+                      {safeText(q.difficulty)}
+                    </span>
+                  )}
+                </div>
+
+                <div className="question-number-label">
+                  QUESTION {currentQuestionIdx + 1}
+                </div>
+
+                <h1 className="question-title">
+                  {safeText(q.question_text)}
+                </h1>
+
+                <div className="options-list">
+                  {Array.isArray(q.options) &&
+                    q.options.map((option, index) => {
+                      const optionLabel = safeText(option);
+                      const selected =
+                        currentAnswer === optionLabel;
+
+                      const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+                      return (
+                        <button
+                          key={index}
+                          type="button"
+                          className={`option-card ${selected ? 'selected' : ''
+                            }`}
+                          onClick={() =>
+                            handleAnswerChange(
+                              String(q.id),
+                              optionLabel
+                            )
+                          }
+                        >
+                          <span className="option-letter">
+                            {letters[index] ?? index + 1}
+                          </span>
+
+                          <span className="option-text">
+                            {optionLabel}
+                          </span>
+
+                          <span className="option-check">
+                            {selected ? '✓' : ''}
+                          </span>
+                        </button>
+                      );
+                    })}
+                </div>
+
+                <div className="confidence-panel">
+                  <div className="confidence-header">
+                    <div>
+                      <strong>How confident are you?</strong>
+                      <span>
+                        This helps Edni understand your
+                        certainty, not just correctness.
+                      </span>
+                    </div>
+
+                    <div className="confidence-value">
+                      {confidenceLabels[
+                        (confidences[String(q.id)] || 3) - 1
+                      ] ?? 'Moderate'}
+                    </div>
+                  </div>
+
                   <input
+                    className="confidence-range"
                     type="range"
                     min="1"
                     max="5"
                     value={confidences[String(q.id)] || 3}
-                    onChange={(e) => handleConfidenceChange(String(q.id), parseInt(e.target.value))}
-                    style={{ width: '100%', accentColor: '#6366f1' }}
+                    onChange={(e) =>
+                      handleConfidenceChange(
+                        String(q.id),
+                        Number(e.target.value)
+                      )
+                    }
                   />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem' }}>
-                    <span>Not sure</span>
-                    <span style={{ color: '#6366f1', fontWeight: 600 }}>
-                      {['Not sure', 'Unsure', 'Moderate', 'Confident', 'Very Confident'][
-                        (confidences[String(q.id)] || 3) - 1
-                      ]}
-                    </span>
-                    <span>Very sure</span>
-                  </div>
-                </label>
-              </div>
-            </div>
 
-            <div style={styles.flexGap}>
-              <button
-                onClick={handlePrev}
-                disabled={currentQuestionIdx === 0}
-                style={{
-                  ...styles.btnSecondary,
-                  flex: 1,
-                  opacity: currentQuestionIdx === 0 ? 0.5 : 1,
-                  cursor: currentQuestionIdx === 0 ? 'not-allowed' : 'pointer'
-                }}
-              >
-                ← Previous
-              </button>
-              {currentQuestionIdx === questions.length - 1 ? (
+                  <div className="confidence-scale">
+                    <span>Not sure</span>
+
+                    <div className="confidence-dots">
+                      {[1, 2, 3, 4, 5].map((value) => (
+                        <span
+                          key={value}
+                          className={
+                            value <=
+                              (confidences[String(q.id)] || 3)
+                              ? 'filled'
+                              : ''
+                          }
+                        />
+                      ))}
+                    </div>
+
+                    <span>Very confident</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="question-actions">
                 <button
-                  onClick={handleSubmit}
-                  disabled={submitting}
-                  style={{
-                    ...styles.btnPrimary,
-                    flex: 1,
-                    opacity: submitting ? 0.5 : 1,
-                    cursor: submitting ? 'not-allowed' : 'pointer'
-                  }}
+                  className="secondary-button"
+                  onClick={handlePrev}
+                  disabled={currentQuestionIdx === 0}
                 >
-                  {submitting ? 'Submitting...' : 'Submit Assessment →'}
+                  ← Previous
                 </button>
-              ) : (
-                <button onClick={handleNext} style={{ ...styles.btnPrimary, flex: 1 }}>
-                  Next →
-                </button>
-              )}
-            </div>
+
+                {currentQuestionIdx === questions.length - 1 ? (
+                  <button
+                    className="primary-button"
+                    onClick={handleSubmit}
+                    disabled={submitting}
+                  >
+                    {submitting
+                      ? 'Analyzing your answers...'
+                      : 'Finish assessment'}
+                    {!submitting && <span>→</span>}
+                  </button>
+                ) : (
+                  <button
+                    className="primary-button"
+                    onClick={handleNext}
+                  >
+                    Next question
+                    <span>→</span>
+                  </button>
+                )}
+              </div>
+            </section>
           </div>
-        </div>
-      </div>
+        </main>
+      </>
     );
   }
 
-  // Results Step
   if (step === 'results' && results) {
     return (
       <DiagnosticResultsDisplay
@@ -585,63 +839,91 @@ export default function DiagnosticPage() {
     );
   }
 
+  return null;
+}
+
+function FeatureCard({
+  icon,
+  title,
+  text,
+}: {
+  icon: string;
+  title: string;
+  text: string;
+}) {
   return (
-    <div style={styles.centerContainer}>
-      <div style={{ ...styles.card, textAlign: 'center' }}>
-        <p style={{ color: '#1f2937' }}>No questions available</p>
-        <button onClick={() => setStep('intro')} style={styles.btnSecondary}>Back to Intro</button>
+    <div className="feature-card">
+      <div className="feature-icon">{icon}</div>
+
+      <div>
+        <strong>{title}</strong>
+        <p>{text}</p>
       </div>
     </div>
   );
 }
 
-// Enhanced Diagnostic Results Display Component
 interface DiagnosticResultsDisplayProps {
   result: DiagnosticResult;
   backgroundStatus: 'waiting' | 'complete';
   onNavigate: (path: string) => void;
 }
 
-function DiagnosticResultsDisplay({ result, backgroundStatus, onNavigate }: DiagnosticResultsDisplayProps) {
-  const [tab, setTab] = useState<'overview' | 'blooms' | 'areas' | 'gaps' | 'questions' | 'hierarchy'>('overview');
-  const [answeredQuestions, setAnsweredQuestions] = useState<AnsweredQuestion[]>([]);
-  const [gapHierarchy, setGapHierarchy] = useState<GapHierarchy[]>([]);
+function DiagnosticResultsDisplay({
+  result,
+  backgroundStatus,
+  onNavigate,
+}: DiagnosticResultsDisplayProps) {
+  const [tab, setTab] = useState<
+    'overview' | 'questions' | 'hierarchy' | 'blooms' | 'areas' | 'gaps'
+  >('overview');
+
+  const [answeredQuestions, setAnsweredQuestions] =
+    useState<AnsweredQuestion[]>([]);
+
+  const [gapHierarchy, setGapHierarchy] = useState<GapHierarchy[]>(
+    []
+  );
 
   const kp = result.knowledge_profile;
-  const mastery = kp.overall_mastery || 0;
-  const theta = kp.overall_theta || 0;
+
+  const mastery = Number(kp.overall_mastery) || 0;
+  const theta = Number(kp.overall_theta) || 0;
+
   const bloomSummary = kp.bloom_summary || {};
   const learningAreas = kp.learning_area_summary || {};
-  const criticalGaps = kp.critical_gaps || [];
+
+  const criticalGaps = Array.isArray(kp.critical_gaps)
+    ? kp.critical_gaps
+    : [];
 
   useEffect(() => {
-    // Load answered questions from localStorage or API response
-    const savedQuestions = localStorage.getItem('diagnostic_answered_questions');
+    const savedQuestions = localStorage.getItem(
+      'diagnostic_answered_questions'
+    );
+
     if (savedQuestions) {
       try {
         setAnsweredQuestions(JSON.parse(savedQuestions));
-      } catch (e) {
-        console.log('Failed to parse saved questions');
-        setAnsweredQuestions(generateMockAnsweredQuestions());
+      } catch {
+        setAnsweredQuestions([]);
       }
     } else if (result.answered_questions) {
       setAnsweredQuestions(result.answered_questions);
-    } else {
-      setAnsweredQuestions(generateMockAnsweredQuestions());
     }
 
-    // Build gap hierarchy from concepts
-    if (kp.concepts && kp.concepts.length > 0) {
-      const hierarchy = buildGapHierarchy(kp.concepts);
-      setGapHierarchy(hierarchy);
+    if (kp.concepts?.length) {
+      setGapHierarchy(buildGapHierarchy(kp.concepts));
     }
   }, [result, kp.concepts]);
 
-  const buildGapHierarchy = (concepts: ConceptResult[]): GapHierarchy[] => {
+  const buildGapHierarchy = (
+    concepts: ConceptResult[]
+  ): GapHierarchy[] => {
     const hierarchyMap: Record<string, GapHierarchy> = {};
 
     concepts.forEach((concept) => {
-      const area = concept.learning_area;
+      const area = safeText(concept.learning_area) || 'Other';
 
       if (!hierarchyMap[area]) {
         hierarchyMap[area] = {
@@ -650,875 +932,2430 @@ function DiagnosticResultsDisplay({ result, backgroundStatus, onNavigate }: Diag
         };
       }
 
-      Object.entries(concept.bloom_results).forEach(([bloomLabel]) => {
-        hierarchyMap[area].gaps.push({
-          concept: concept.concept,
-          bloom_level: bloomLabel,
-          severity: concept.highest_gap_severity >= 0.7 ? 'Critical' : 'Moderate',
-          mastery: concept.overall_mastery,
-        });
-      });
+      Object.entries(concept.bloom_results || {}).forEach(
+        ([bloomLabel]) => {
+          hierarchyMap[area].gaps.push({
+            concept: safeText(concept.concept),
+            bloom_level: safeText(bloomLabel),
+            severity:
+              concept.highest_gap_severity >= 0.7
+                ? 'Critical'
+                : 'Moderate',
+            mastery: Number(concept.overall_mastery) || 0,
+          });
+        }
+      );
     });
 
     return Object.values(hierarchyMap);
   };
 
-  const generateMockAnsweredQuestions = (): AnsweredQuestion[] => {
-    return [
-      {
-        id: '1',
-        question_text: 'What is a variable in programming?',
-        learning_area: 'Foundations',
-        bloom_label: 'Understand',
-        concept: 'Data Types',
-        user_answer: 'A named container for storing data',
-        correct_answer: 'A named container for storing data',
-        is_correct: true,
-        confidence: 5,
-        options: [
-          'A named container for storing data',
-          'A type of loop',
-          'A function parameter',
-          'A constant value'
-        ]
-      },
-      {
-        id: '2',
-        question_text: 'Which sorting algorithm has the best average time complexity?',
-        learning_area: 'Algorithms',
-        bloom_label: 'Analyze',
-        concept: 'Sorting',
-        user_answer: 'Bubble Sort',
-        correct_answer: 'Quick Sort',
-        is_correct: false,
-        confidence: 2,
-        options: [
-          'Bubble Sort',
-          'Quick Sort',
-          'Selection Sort',
-          'Insertion Sort'
-        ]
-      },
-      {
-        id: '3',
-        question_text: 'What is Big O notation used for?',
-        learning_area: 'Complexity Analysis',
-        bloom_label: 'Understand',
-        concept: 'Algorithm Complexity',
-        user_answer: 'Measuring algorithm efficiency',
-        correct_answer: 'Measuring algorithm efficiency',
-        is_correct: true,
-        confidence: 4,
-        options: [
-          'Measuring algorithm efficiency',
-          'Naming variables',
-          'Writing comments',
-          'Testing code'
-        ]
-      },
-      {
-        id: '4',
-        question_text: 'What is the time complexity of binary search?',
-        learning_area: 'Algorithms',
-        bloom_label: 'Understand',
-        concept: 'Search Algorithms',
-        user_answer: 'O(n)',
-        correct_answer: 'O(log n)',
-        is_correct: false,
-        confidence: 3,
-        options: [
-          'O(n)',
-          'O(log n)',
-          'O(n²)',
-          'O(1)'
-        ]
-      },
-      {
-        id: '5',
-        question_text: 'Which data structure uses LIFO?',
-        learning_area: 'Data Structures',
-        bloom_label: 'Remember',
-        concept: 'Stacks',
-        user_answer: 'Stack',
-        correct_answer: 'Stack',
-        is_correct: true,
-        confidence: 5,
-        options: [
-          'Queue',
-          'Stack',
-          'Linked List',
-          'Array'
-        ]
-      },
-      {
-        id: '6',
-        question_text: 'What is polymorphism in OOP?',
-        learning_area: 'OOP Concepts',
-        bloom_label: 'Understand',
-        concept: 'Polymorphism',
-        user_answer: 'Multiple inheritance',
-        correct_answer: 'Method overriding and overloading',
-        is_correct: false,
-        confidence: 2,
-        options: [
-          'Multiple inheritance',
-          'Method overriding and overloading',
-          'Encapsulation',
-          'Abstraction'
-        ]
-      },
-      {
-        id: '7',
-        question_text: 'What is the purpose of a hash function?',
-        learning_area: 'Data Structures',
-        bloom_label: 'Understand',
-        concept: 'Hash Tables',
-        user_answer: 'To map keys to array indices',
-        correct_answer: 'To map keys to array indices',
-        is_correct: true,
-        confidence: 4,
-        options: [
-          'To map keys to array indices',
-          'To sort data',
-          'To encrypt data',
-          'To validate input'
-        ]
-      },
-      {
-        id: '8',
-        question_text: 'Which sorting algorithm is most efficient for nearly sorted data?',
-        learning_area: 'Algorithms',
-        bloom_label: 'Analyze',
-        concept: 'Sorting',
-        user_answer: 'Insertion Sort',
-        correct_answer: 'Insertion Sort',
-        is_correct: true,
-        confidence: 3,
-        options: [
-          'Bubble Sort',
-          'Quick Sort',
-          'Insertion Sort',
-          'Merge Sort'
-        ]
-      },
-      {
-        id: '9',
-        question_text: 'What is the main advantage of recursion?',
-        learning_area: 'Foundations',
-        bloom_label: 'Understand',
-        concept: 'Recursion',
-        user_answer: 'Faster execution',
-        correct_answer: 'Solving problems with a tree-like structure naturally',
-        is_correct: false,
-        confidence: 2,
-        options: [
-          'Faster execution',
-          'Uses less memory',
-          'Solving problems with a tree-like structure naturally',
-          'Easier to debug'
-        ]
-      },
-      {
-        id: '10',
-        question_text: 'What does DRY stand for?',
-        learning_area: 'Best Practices',
-        bloom_label: 'Remember',
-        concept: 'Code Quality',
-        user_answer: 'Do not Repeat Yourself',
-        correct_answer: 'Do not Repeat Yourself',
-        is_correct: true,
-        confidence: 5,
-        options: [
-          'Do not Repeat Yourself',
-          'Data Retrieval Yield',
-          'Database Record Yield',
-          'Dynamic Runtime Yield'
-        ]
-      }
-    ];
-  };
+  const correctCount = answeredQuestions.filter(
+    (q) => q.is_correct
+  ).length;
 
-  const getMasteryColor = (mastery: number) => {
-    if (mastery >= 80) return '#10b981';
-    if (mastery >= 60) return '#f59e0b';
-    if (mastery >= 40) return '#ef4444';
-    return '#dc2626';
-  };
+  const totalCount =
+    answeredQuestions.length || kp.total_questions || 0;
 
-  const getMasteryLabel = (mastery: number) => {
-    if (mastery >= 90) return '🌟 Excellent';
-    if (mastery >= 75) return '✅ Good';
-    if (mastery >= 60) return '⚠️ Fair';
-    if (mastery >= 40) return '📚 Needs Work';
-    return '🚀 Get Started';
-  };
-
-  const bloomLevels = [
-    { level: 1, label: 'Remember' },
-    { level: 2, label: 'Understand' },
-    { level: 3, label: 'Apply' },
-    { level: 4, label: 'Analyze' },
-    { level: 5, label: 'Evaluate' },
-    { level: 6, label: 'Create' },
-  ];
-
-  const correctCount = answeredQuestions.filter(q => q.is_correct).length;
-  const totalCount = answeredQuestions.length;
-
-  const styles = {
-    pageBg: {
-      minHeight: '100vh',
-      backgroundColor: '#ffffff',
-      color: '#1f2937',
-      fontFamily: 'sans-serif',
-      padding: '2rem 1rem',
-    },
-    container: {
-      maxWidth: '1200px',
-      margin: '0 auto',
-    },
-    header: {
-      marginBottom: '2rem',
-      textAlign: 'center' as const,
-    },
-    title: {
-      fontSize: '2.25rem',
-      fontWeight: 'bold',
-      marginBottom: '0.5rem',
-      marginTop: 0,
-      color: '#1f2937',
-    },
-    subtitle: {
-      color: '#6b7280',
-      fontSize: '1.125rem',
-    },
-    card: {
-      backgroundColor: '#ffffff',
-      border: '1px solid #e5e7eb',
-      borderRadius: '0.75rem',
-      padding: '1.5rem',
-      marginBottom: '1.5rem',
-    },
-    backgroundStatusCard: {
-      backgroundColor: backgroundStatus === 'complete'
-        ? 'rgba(16, 185, 129, 0.05)'
-        : 'rgba(99, 102, 241, 0.05)',
-      border: `1px solid ${backgroundStatus === 'complete' ? '#10b981' : '#6366f1'}`,
-      borderRadius: '0.75rem',
-      padding: '1.5rem',
-      marginBottom: '1.5rem',
-    },
-    masterySummary: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-      gap: '1rem',
-      marginBottom: '2rem',
-    },
-    statsCard: {
-      backgroundColor: '#ffffff',
-      border: '1px solid #e5e7eb',
-      borderRadius: '0.75rem',
-      padding: '1.5rem',
-      textAlign: 'center' as const,
-    },
-    statValue: {
-      fontSize: '2.25rem',
-      fontWeight: 'bold',
-      marginBottom: '0.5rem',
-      color: '#1f2937',
-    },
-    statLabel: {
-      color: '#6b7280',
-      fontSize: '0.875rem',
-    },
-    progressBar: {
-      width: '100%',
-      height: '12px',
-      backgroundColor: '#e5e7eb',
-      borderRadius: '9999px',
-      overflow: 'hidden' as const,
-      marginTop: '0.75rem',
-    },
-    progressFill: (val: number) => ({
-      height: '100%',
-      width: `${Math.min(Math.max(val, 0), 100)}%`,
-      backgroundColor: getMasteryColor(val),
-      transition: 'width 0.5s ease',
-    }),
-    tabs: {
-      display: 'flex',
-      gap: '0.5rem',
-      marginBottom: '1.5rem',
-      borderBottom: '1px solid #e5e7eb',
-      paddingBottom: '1rem',
-      overflowX: 'auto' as const,
-    },
-    tabButton: (isActive: boolean) => ({
-      padding: '0.75rem 1.5rem',
-      backgroundColor: 'transparent',
-      color: isActive ? '#6366f1' : '#6b7280',
-      border: 'none',
-      borderBottom: isActive ? '2px solid #6366f1' : '2px solid transparent',
-      cursor: 'pointer',
-      fontWeight: 600,
-      fontSize: '0.875rem',
-      whiteSpace: 'nowrap' as const,
-    }),
-    gapsList: {
-      display: 'flex',
-      flexDirection: 'column' as const,
-      gap: '0.75rem',
-    },
-    gapItem: {
-      padding: '1rem',
-      backgroundColor: 'rgba(239, 68, 68, 0.05)',
-      borderLeft: '4px solid #ef4444',
-      borderRadius: '0.5rem',
-      color: '#1f2937',
-    },
-    bloomGrid: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-      gap: '1rem',
-    },
-    bloomCard: {
-      padding: '1rem',
-      backgroundColor: 'rgba(99, 102, 241, 0.05)',
-      borderRadius: '0.5rem',
-      border: '1px solid rgba(99, 102, 241, 0.2)',
-    },
-    questionCard: {
-      padding: '1.5rem',
-      backgroundColor: '#ffffff',
-      border: '1px solid #e5e7eb',
-      borderRadius: '0.75rem',
-      marginBottom: '1rem',
-    },
-    correctQuestion: {
-      borderLeft: '4px solid #10b981',
-      backgroundColor: 'rgba(16, 185, 129, 0.02)',
-    },
-    incorrectQuestion: {
-      borderLeft: '4px solid #ef4444',
-      backgroundColor: 'rgba(239, 68, 68, 0.02)',
-    },
-    buttonGroup: {
-      display: 'flex',
-      gap: '0.75rem',
-      marginTop: '2rem',
-      flexWrap: 'wrap' as const,
-    },
-    btnPrimary: {
-      flex: 1,
-      minWidth: '200px',
-      backgroundColor: '#6366f1',
-      color: '#ffffff',
-      border: 'none',
-      borderRadius: '0.5rem',
-      padding: '0.75rem 1rem',
-      fontWeight: 600,
-      cursor: 'pointer',
-    },
-    btnSecondary: {
-      flex: 1,
-      minWidth: '200px',
-      backgroundColor: '#e5e7eb',
-      color: '#1f2937',
-      border: 'none',
-      borderRadius: '0.5rem',
-      padding: '0.75rem 1rem',
-      fontWeight: 600,
-      cursor: 'pointer',
-    },
-    btnDisabled: {
-      flex: 1,
-      minWidth: '200px',
-      backgroundColor: '#e5e7eb',
-      color: '#9ca3af',
-      border: 'none',
-      borderRadius: '0.5rem',
-      padding: '0.75rem 1rem',
-      fontWeight: 600,
-      cursor: 'not-allowed',
-      opacity: 0.5,
-    },
-  };
+  const accuracy =
+    totalCount > 0 ? (correctCount / totalCount) * 100 : 0;
 
   return (
-    <div style={styles.pageBg}>
-      <div style={styles.container}>
-        {/* Header */}
-        <div style={styles.header}>
-          <p style={{ fontSize: '3rem', marginTop: 0, marginBottom: '1rem' }}>📊</p>
-          <h1 style={styles.title}>Diagnostic Assessment Results</h1>
-          <p style={styles.subtitle}>{getMasteryLabel(mastery)} — Cycle {kp.feedback_cycle + 1}</p>
-        </div>
+    <>
+      <style>{globalStyles}</style>
 
-        {/* Background Status Alert */}
-        {backgroundStatus === 'waiting' && (
-          <div style={styles.backgroundStatusCard}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
-              <div style={{ fontSize: '1.5rem', animation: 'spin 2s linear infinite' }}>⏳</div>
-              <div>
-                <h3 style={{ margin: '0 0 0.5rem 0', color: '#6366f1' }}>Study Plan Generating</h3>
-                <p style={{ margin: 0, color: '#4b5563', fontSize: '0.875rem' }}>
-                  Your knowledge profile is ready! Your personalized study plan and learning resources are being prepared in the background.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
+      <main className="results-page">
+        <div className="results-container">
+          <header className="results-header">
+            <button
+              className="assessment-brand"
+              onClick={() => onNavigate('/dashboard')}
+            >
+              <span className="brand-icon small">E</span>
+              Edni AI
+            </button>
 
-        {backgroundStatus === 'complete' && (
-          <div style={styles.backgroundStatusCard}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
-              <div style={{ fontSize: '1.5rem' }}>✅</div>
-              <div>
-                <h3 style={{ margin: '0 0 0.5rem 0', color: '#10b981' }}>Study Plan Ready</h3>
-                <p style={{ margin: 0, color: '#4b5563', fontSize: '0.875rem' }}>
-                  Your personalized 16-week study plan and resources are now available!
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
+            <span className="results-cycle">
+              Diagnostic cycle {kp.feedback_cycle + 1}
+            </span>
+          </header>
 
-        {/* Mastery Summary */}
-        <div style={styles.masterySummary}>
-          <div style={styles.statsCard}>
-            <div style={{ ...styles.statValue, color: getMasteryColor(mastery) }}>
-              {mastery.toFixed(1)}%
-            </div>
-            <div style={styles.statLabel}>Overall Mastery</div>
-            <div style={styles.progressBar}>
-              <div style={styles.progressFill(mastery)}></div>
-            </div>
-          </div>
+          <section className="results-hero">
+            <div className="results-hero-left">
+              <span className="success-badge">
+                ✓ Assessment complete
+              </span>
 
-          <div style={styles.statsCard}>
-            <div style={styles.statValue}>{theta.toFixed(2)}</div>
-            <div style={styles.statLabel}>Ability (IRT θ)</div>
-            <p style={{ color: '#6366f1', fontSize: '0.75rem', marginTop: '0.75rem' }}>
-              Range: -4 to +4
-            </p>
-          </div>
+              <h1>
+                Here&apos;s your
+                <br />
+                <span>knowledge snapshot.</span>
+              </h1>
 
-          <div style={styles.statsCard}>
-            <div style={styles.statValue}>
-              {correctCount}/{totalCount}
-            </div>
-            <div style={styles.statLabel}>Questions Correct</div>
-            <p style={{ color: '#10b981', fontSize: '0.875rem', marginTop: '0.75rem' }}>
-              {totalCount > 0 ? ((correctCount / totalCount) * 100).toFixed(0) : '0'}% accuracy
-            </p>
-          </div>
-        </div>
+              <p>
+                Your results reveal where you are strong,
+                where you have gaps, and what Edni should
+                prioritize next.
+              </p>
 
-        {/* Tabs */}
-        <div style={styles.tabs}>
-          <button onClick={() => setTab('overview')} style={styles.tabButton(tab === 'overview')}>
-            📈 Overview
-          </button>
-          <button onClick={() => setTab('questions')} style={styles.tabButton(tab === 'questions')}>
-            ✍️ Questions ({correctCount}/{totalCount})
-          </button>
-          <button onClick={() => setTab('hierarchy')} style={styles.tabButton(tab === 'hierarchy')}>
-            🏗️ Gap Hierarchy
-          </button>
-          <button onClick={() => setTab('blooms')} style={styles.tabButton(tab === 'blooms')}>
-            🧠 Bloom's Levels
-          </button>
-          <button onClick={() => setTab('areas')} style={styles.tabButton(tab === 'areas')}>
-            📚 Learning Areas
-          </button>
-          <button onClick={() => setTab('gaps')} style={styles.tabButton(tab === 'gaps')}>
-            ⚠️ Gaps ({criticalGaps.length})
-          </button>
-        </div>
+              {backgroundStatus === 'waiting' ? (
+                <div className="plan-status waiting">
+                  <span className="status-spinner">◌</span>
 
-        {/* Tab Content */}
-        {tab === 'overview' && (
-          <div style={styles.card}>
-            <h2 style={{ marginTop: 0, marginBottom: '1.5rem', color: '#1f2937' }}>Performance Overview</h2>
-
-            <div style={{ display: 'grid', gap: '1.5rem' }}>
-              <div>
-                <p style={{ margin: '0 0 0.75rem 0', fontWeight: 600, color: '#1f2937' }}>Assessment Details</p>
-                <div style={{ color: '#6b7280', fontSize: '0.875rem' }}>
-                  <p style={{ margin: '0.25rem 0' }}>📋 Diagnostic ID: {kp.diagnostic_id}</p>
-                  <p style={{ margin: '0.25rem 0' }}>⏱️ Time taken: {Math.round(kp.diagnostic_time_sec / 60)} minutes</p>
-                  <p style={{ margin: '0.25rem 0' }}>🔄 Feedback Cycle: {kp.feedback_cycle + 1}</p>
-                  <p style={{ margin: '0.25rem 0' }}>📝 Total Questions: {totalCount}</p>
+                  <div>
+                    <strong>Building your study plan</strong>
+                    <p>
+                      Edni AI is preparing personalized
+                      learning recommendations.
+                    </p>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="plan-status ready">
+                  <span>✓</span>
 
-              {result.mastery_delta !== 0 && (
-                <div>
-                  <p style={{ margin: '0 0 0.75rem 0', fontWeight: 600, color: '#1f2937' }}>Progress</p>
-                  <div style={{
-                    padding: '1rem',
-                    backgroundColor: result.mastery_delta > 0 ? 'rgba(16, 185, 129, 0.05)' : 'rgba(239, 68, 68, 0.05)',
-                    borderLeft: `4px solid ${result.mastery_delta > 0 ? '#10b981' : '#ef4444'}`,
-                    borderRadius: '0.5rem',
-                  }}>
-                    <p style={{ margin: 0, color: '#1f2937' }}>
-                      {result.mastery_delta > 0 ? '📈' : '📉'} Mastery changed by {Math.abs(result.mastery_delta).toFixed(1)}%
+                  <div>
+                    <strong>Your study plan is ready</strong>
+                    <p>
+                      Your personalized learning pathway is
+                      available.
                     </p>
                   </div>
                 </div>
               )}
-
-              {result.evaluation_notes && (
-                <div>
-                  <p style={{ margin: '0 0 0.75rem 0', fontWeight: 600, color: '#1f2937' }}>Evaluation Notes</p>
-                  <p style={{ color: '#374151', margin: 0 }}>{result.evaluation_notes}</p>
-                </div>
-              )}
             </div>
-          </div>
-        )}
 
-        {tab === 'questions' && (
-          <div style={styles.card}>
-            <h2 style={{ marginTop: 0, marginBottom: '1.5rem', color: '#1f2937' }}>Question Review</h2>
-            <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
-              You answered {totalCount} questions with {correctCount} correct ({totalCount > 0 ? ((correctCount / totalCount) * 100).toFixed(0) : '0'}% accuracy)
-            </p>
-
-            {answeredQuestions.map((q, idx) => (
+            <div className="mastery-ring">
               <div
-                key={q.id}
+                className="ring"
                 style={{
-                  ...styles.questionCard,
-                  ...(q.is_correct ? styles.correctQuestion : styles.incorrectQuestion),
+                  background: `conic-gradient(
+                    ${getMasteryColor(mastery)}
+                    ${Math.min(mastery, 100)}%,
+                    rgba(255,255,255,.12) 0
+                  )`,
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-                  <div style={{
-                    fontSize: '1.5rem',
-                    color: q.is_correct ? '#10b981' : '#ef4444',
-                  }}>
-                    {q.is_correct ? '✓' : '✗'}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ margin: '0 0 0.5rem 0', fontWeight: 600, color: '#1f2937' }}>
-                      Q{idx + 1}: {q.question_text}
-                    </p>
-                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      <span style={{
-                        padding: '0.25rem 0.75rem',
-                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                        color: '#6366f1',
-                        borderRadius: '9999px',
-                        fontSize: '0.75rem',
-                        fontWeight: 600,
-                      }}>
-                        {q.bloom_label}
-                      </span>
-                      <span style={{
-                        padding: '0.25rem 0.75rem',
-                        backgroundColor: '#f3f4f6',
-                        color: '#6b7280',
-                        borderRadius: '9999px',
-                        fontSize: '0.75rem',
-                        fontWeight: 600,
-                      }}>
-                        {q.learning_area}
-                      </span>
-                      {q.concept && (
-                        <span style={{
-                          padding: '0.25rem 0.75rem',
-                          backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                          color: '#3b82f6',
-                          borderRadius: '9999px',
-                          fontSize: '0.75rem',
-                          fontWeight: 600,
-                        }}>
-                          {q.concept}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gap: '0.75rem', marginTop: '1rem' }}>
-                  <div>
-                    <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.875rem', fontWeight: 600, color: '#1f2937' }}>
-                      Your answer:
-                    </p>
-                    <p style={{
-                      margin: '0 0 0 0.5rem',
-                      padding: '0.5rem',
-                      backgroundColor: q.is_correct ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                      borderLeft: `3px solid ${q.is_correct ? '#10b981' : '#ef4444'}`,
-                      color: '#1f2937',
-                      fontSize: '0.875rem',
-                    }}>
-                      {q.user_answer}
-                    </p>
-                  </div>
-
-                  {!q.is_correct && (
-                    <div>
-                      <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.875rem', fontWeight: 600, color: '#1f2937' }}>
-                        Correct answer:
-                      </p>
-                      <p style={{
-                        margin: '0 0 0 0.5rem',
-                        padding: '0.5rem',
-                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                        borderLeft: '3px solid #10b981',
-                        color: '#1f2937',
-                        fontSize: '0.875rem',
-                      }}>
-                        {q.correct_answer}
-                      </p>
-                    </div>
-                  )}
-
-                  <div>
-                    <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.875rem', fontWeight: 600, color: '#1f2937' }}>
-                      Confidence:
-                    </p>
-                    <div style={{ display: 'flex', gap: '0.25rem' }}>
-                      {[1, 2, 3, 4, 5].map((i) => (
-                        <div
-                          key={i}
-                          style={{
-                            width: '1.5rem',
-                            height: '1.5rem',
-                            borderRadius: '50%',
-                            backgroundColor: i <= q.confidence ? '#6366f1' : '#e5e7eb',
-                            cursor: 'default',
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </div>
+                <div className="ring-center">
+                  <strong>{mastery.toFixed(0)}%</strong>
+                  <span>mastery</span>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
 
-        {tab === 'hierarchy' && (
-          <div style={styles.card}>
-            <h2 style={{ marginTop: 0, marginBottom: '1.5rem', color: '#1f2937' }}>Knowledge Gap Hierarchy</h2>
-            <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
-              Understanding gaps by Learning Area → Concept → Bloom Level
-            </p>
+              <p>{getMasteryLabel(mastery)}</p>
+            </div>
+          </section>
 
-            {gapHierarchy.length > 0 ? (
-              gapHierarchy.map((area) => (
+          <section className="result-stat-grid">
+            <ResultStat
+              icon="🎯"
+              value={`${mastery.toFixed(1)}%`}
+              label="Overall mastery"
+              accent={getMasteryColor(mastery)}
+            />
+
+            <ResultStat
+              icon="θ"
+              value={theta.toFixed(2)}
+              label="IRT ability"
+              accent="#8b5cf6"
+            />
+
+            <ResultStat
+              icon="✓"
+              value={`${correctCount}/${totalCount}`}
+              label="Correct answers"
+              accent="#10b981"
+            />
+
+            <ResultStat
+              icon="⚡"
+              value={`${accuracy.toFixed(0)}%`}
+              label="Accuracy"
+              accent="#f59e0b"
+            />
+          </section>
+
+          <nav className="results-tabs">
+            <ResultTab
+              active={tab === 'overview'}
+              onClick={() => setTab('overview')}
+              icon="◉"
+              label="Overview"
+            />
+
+            <ResultTab
+              active={tab === 'questions'}
+              onClick={() => setTab('questions')}
+              icon="✓"
+              label={`Questions ${totalCount}`}
+            />
+
+            <ResultTab
+              active={tab === 'hierarchy'}
+              onClick={() => setTab('hierarchy')}
+              icon="⌘"
+              label="Gap hierarchy"
+            />
+
+            <ResultTab
+              active={tab === 'blooms'}
+              onClick={() => setTab('blooms')}
+              icon="🧠"
+              label="Bloom's"
+            />
+
+            <ResultTab
+              active={tab === 'areas'}
+              onClick={() => setTab('areas')}
+              icon="▦"
+              label="Learning areas"
+            />
+
+            <ResultTab
+              active={tab === 'gaps'}
+              onClick={() => setTab('gaps')}
+              icon="!"
+              label={`Gaps ${criticalGaps.length}`}
+            />
+          </nav>
+
+          {tab === 'overview' && (
+            <div className="result-content-grid">
+              <section className="result-panel large-panel">
+                <PanelHeader
+                  eyebrow="PERFORMANCE"
+                  title="Your assessment overview"
+                />
+
+                <div className="overview-list">
+                  <OverviewRow
+                    label="Diagnostic ID"
+                    value={kp.diagnostic_id}
+                  />
+
+                  <OverviewRow
+                    label="Time taken"
+                    value={`${Math.round(
+                      kp.diagnostic_time_sec / 60
+                    )} min`}
+                  />
+
+                  <OverviewRow
+                    label="Questions answered"
+                    value={`${totalCount}`}
+                  />
+
+                  <OverviewRow
+                    label="Feedback cycle"
+                    value={`${kp.feedback_cycle + 1}`}
+                  />
+                </div>
+              </section>
+
+              <section className="result-panel">
+                <PanelHeader
+                  eyebrow="PROGRESS"
+                  title="Mastery change"
+                />
+
                 <div
-                  key={area.learning_area}
-                  style={{
-                    marginBottom: '2rem',
-                    padding: '1.5rem',
-                    backgroundColor: '#f9fafb',
-                    borderRadius: '0.75rem',
-                    border: '1px solid #e5e7eb',
-                  }}
+                  className={`delta-card ${result.mastery_delta >= 0
+                      ? 'positive'
+                      : 'negative'
+                    }`}
                 >
-                  <h3 style={{
-                    margin: '0 0 1rem 0',
-                    fontSize: '1.125rem',
-                    fontWeight: 700,
-                    color: '#1f2937',
-                  }}>
-                    📚 {area.learning_area}
-                  </h3>
+                  <span>
+                    {result.mastery_delta >= 0 ? '↗' : '↘'}
+                  </span>
 
-                  <div style={{ display: 'grid', gap: '0.75rem' }}>
-                    {area.gaps.map((gap, gIdx) => (
-                      <div
-                        key={`${gap.concept}-${gap.bloom_level}-${gIdx}`}
-                        style={{
-                          padding: '1rem',
-                          backgroundColor: '#ffffff',
-                          borderLeft: `4px solid ${gap.severity === 'Critical' ? '#ef4444' : '#f59e0b'
-                            }`,
-                          borderRadius: '0.5rem',
-                          border: `1px solid #e5e7eb`,
-                        }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '1rem' }}>
-                          <div style={{ flex: 1 }}>
-                            <p style={{ margin: '0 0 0.25rem 0', fontWeight: 600, color: '#1f2937' }}>
-                              🎯 {gap.concept}
-                            </p>
-                            <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', color: '#6b7280' }}>
-                              Bloom Level: <span style={{ fontWeight: 600 }}>{gap.bloom_level}</span>
-                            </p>
-                          </div>
-                          <div style={{ textAlign: 'right' }}>
-                            <p style={{
-                              margin: '0 0 0.25rem 0',
-                              padding: '0.25rem 0.75rem',
-                              backgroundColor: gap.severity === 'Critical'
-                                ? 'rgba(239, 68, 68, 0.1)'
-                                : 'rgba(245, 158, 11, 0.1)',
-                              color: gap.severity === 'Critical'
-                                ? '#dc2626'
-                                : '#d97706',
-                              borderRadius: '0.25rem',
-                              fontSize: '0.75rem',
-                              fontWeight: 600,
-                              display: 'inline-block',
-                            }}>
-                              {gap.severity}
-                            </p>
-                            <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.875rem', fontWeight: 600, color: '#1f2937' }}>
-                              Mastery: {gap.mastery.toFixed(1)}%
-                            </p>
-                          </div>
-                        </div>
-                        <div style={{
-                          marginTop: '0.75rem',
-                          height: '6px',
-                          backgroundColor: '#e5e7eb',
-                          borderRadius: '9999px',
-                          overflow: 'hidden',
-                        }}>
-                          <div style={{
-                            height: '100%',
-                            width: `${gap.mastery}%`,
-                            backgroundColor: gap.mastery >= 60 ? '#10b981' : gap.mastery >= 40 ? '#f59e0b' : '#ef4444',
-                            transition: 'width 0.5s ease',
-                          }}></div>
-                        </div>
-                      </div>
-                    ))}
+                  <div>
+                    <strong>
+                      {result.mastery_delta >= 0 ? '+' : ''}
+                      {result.mastery_delta.toFixed(1)}%
+                    </strong>
+
+                    <p>
+                      change in overall mastery
+                    </p>
                   </div>
                 </div>
-              ))
-            ) : (
-              <div style={{
-                padding: '2rem',
-                textAlign: 'center',
-                backgroundColor: 'rgba(16, 185, 129, 0.05)',
-                borderRadius: '0.5rem',
-                color: '#10b981',
-                border: '1px solid rgba(16, 185, 129, 0.2)',
-              }}>
-                <p style={{ margin: 0, fontSize: '1.125rem', fontWeight: 600 }}>
-                  ✨ No critical gaps in hierarchy!
-                </p>
-              </div>
-            )}
-          </div>
-        )}
+              </section>
 
-        {tab === 'blooms' && (
-          <div style={styles.card}>
-            <h2 style={{ marginTop: 0, marginBottom: '1.5rem', color: '#1f2937' }}>Bloom's Taxonomy Levels</h2>
-            <div style={styles.bloomGrid}>
-              {bloomLevels.map((bl) => {
-                const levelMastery = bloomSummary[String(bl.level)] || 0;
-                return (
-                  <div key={bl.level} style={styles.bloomCard}>
-                    <p style={{ margin: '0 0 0.75rem 0', fontWeight: 600, color: '#6366f1' }}>
-                      L{bl.level}: {bl.label}
-                    </p>
-                    <div style={{ fontSize: '1.75rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#1f2937' }}>
-                      {levelMastery.toFixed(1)}%
-                    </div>
-                    <div style={styles.progressBar}>
-                      <div style={styles.progressFill(levelMastery)}></div>
-                    </div>
-                  </div>
-                );
-              })}
+              <section className="result-panel full-width">
+                <PanelHeader
+                  eyebrow="AI EVALUATION"
+                  title="What Edni noticed"
+                />
+
+                <div className="evaluation-box">
+                  <div className="evaluation-icon">✦</div>
+
+                  <p>
+                    {result.evaluation_notes ||
+                      'Your diagnostic has been analyzed. Review the sections below to understand your strengths and knowledge gaps.'}
+                  </p>
+                </div>
+              </section>
             </div>
-            <p style={{ color: '#6b7280', fontSize: '0.875rem', marginTop: '1.5rem' }}>
-              💡 Focus on lower Bloom levels first (Remember, Understand) before advancing to higher-order thinking (Analyze, Evaluate, Create).
-            </p>
-          </div>
-        )}
+          )}
 
-        {tab === 'areas' && (
-          <div style={styles.card}>
-            <h2 style={{ marginTop: 0, marginBottom: '1.5rem', color: '#1f2937' }}>Learning Area Mastery</h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              {Object.entries(learningAreas).length > 0 ? (
-                Object.entries(learningAreas).map(([area, areaMastery]) => {
-                  const val = typeof areaMastery === 'number' ? areaMastery : 0;
-                  return (
-                    <div key={area}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                        <p style={{ margin: 0, fontWeight: 600, color: '#1f2937' }}>{area}</p>
-                        <p style={{ margin: 0, color: getMasteryColor(val) }}>
-                          {val.toFixed(1)}%
-                        </p>
+          {tab === 'questions' && (
+            <section className="result-panel">
+              <PanelHeader
+                eyebrow="QUESTION REVIEW"
+                title="How you answered"
+              />
+
+              <p className="panel-description">
+                {correctCount} of {totalCount} questions
+                answered correctly — {accuracy.toFixed(0)}%
+                accuracy.
+              </p>
+
+              <div className="review-list">
+                {answeredQuestions.map((q, index) => (
+                  <div
+                    key={q.id}
+                    className={`review-card ${q.is_correct ? 'correct' : 'incorrect'
+                      }`}
+                  >
+                    <div className="review-number">
+                      {q.is_correct ? '✓' : '×'}
+                    </div>
+
+                    <div className="review-body">
+                      <div className="review-meta">
+                        <span className="tag purple-tag">
+                          {safeText(q.bloom_label)}
+                        </span>
+
+                        <span className="tag gray-tag">
+                          {safeText(q.learning_area)}
+                        </span>
+
+                        {q.concept && (
+                          <span className="tag blue-tag">
+                            {safeText(q.concept)}
+                          </span>
+                        )}
                       </div>
-                      <div style={styles.progressBar}>
-                        <div style={styles.progressFill(val)}></div>
+
+                      <h3>
+                        Q{index + 1}.{' '}
+                        {safeText(q.question_text)}
+                      </h3>
+
+                      <div className="answer-comparison">
+                        <div className="answer-block">
+                          <small>Your answer</small>
+
+                          <p
+                            className={
+                              q.is_correct
+                                ? 'answer-correct'
+                                : 'answer-wrong'
+                            }
+                          >
+                            {safeText(q.user_answer)}
+                          </p>
+                        </div>
+
+                        {!q.is_correct && (
+                          <div className="answer-block">
+                            <small>Correct answer</small>
+
+                            <p className="answer-correct">
+                              {safeText(q.correct_answer)}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="confidence-result">
+                        <span>Confidence</span>
+
+                        <div>
+                          {[1, 2, 3, 4, 5].map((i) => (
+                            <span
+                              key={i}
+                              className={
+                                i <= q.confidence
+                                  ? 'confidence-dot active'
+                                  : 'confidence-dot'
+                              }
+                            />
+                          ))}
+                        </div>
                       </div>
                     </div>
-                  );
-                })
-              ) : (
-                <p style={{ color: '#6b7280' }}>No learning area data available</p>
-              )}
-            </div>
-          </div>
-        )}
-
-        {tab === 'gaps' && (
-          <div style={styles.card}>
-            <h2 style={{ marginTop: 0, marginBottom: '1.5rem', color: '#1f2937' }}>Critical Knowledge Gaps</h2>
-            {criticalGaps.length > 0 ? (
-              <div style={styles.gapsList}>
-                {criticalGaps.map((gap, idx) => (
-                  <div key={idx} style={styles.gapItem}>
-                    <p style={{ margin: 0, fontWeight: 600 }}>📌 {gap}</p>
                   </div>
                 ))}
               </div>
-            ) : (
-              <div style={{
-                padding: '2rem',
-                textAlign: 'center',
-                backgroundColor: 'rgba(16, 185, 129, 0.05)',
-                borderRadius: '0.5rem',
-                color: '#10b981',
-                border: '1px solid rgba(16, 185, 129, 0.2)',
-              }}>
-                <p style={{ margin: 0, fontSize: '1.125rem', fontWeight: 600 }}>
-                  ✨ No critical gaps detected!
-                </p>
-                <p style={{ margin: '0.5rem 0 0 0', color: '#059669', fontSize: '0.875rem' }}>
-                  You're doing great! Keep up the momentum.
-                </p>
-              </div>
-            )}
-          </div>
-        )}
+            </section>
+          )}
 
-        {/* Action Buttons */}
-        <div style={styles.buttonGroup}>
-          <button
-            onClick={() => onNavigate('/study-planner')}
-            style={backgroundStatus === 'complete' ? styles.btnPrimary : styles.btnDisabled}
-            disabled={backgroundStatus === 'waiting'}
-          >
-            📅 View Study Plan →
-          </button>
-          <button
-            onClick={() => onNavigate('/dashboard')}
-            style={styles.btnSecondary}
-          >
-            Back to Dashboard
-          </button>
+          {tab === 'hierarchy' && (
+            <section className="result-panel">
+              <PanelHeader
+                eyebrow="KNOWLEDGE MODEL"
+                title="Knowledge gap hierarchy"
+              />
+
+              <p className="panel-description">
+                Learning Area → Concept → Bloom&apos;s level
+              </p>
+
+              {gapHierarchy.length ? (
+                <div className="hierarchy-list">
+                  {gapHierarchy.map((area) => (
+                    <div
+                      key={area.learning_area}
+                      className="hierarchy-area"
+                    >
+                      <div className="hierarchy-area-header">
+                        <div className="area-symbol">◈</div>
+
+                        <div>
+                          <span>LEARNING AREA</span>
+                          <h3>{area.learning_area}</h3>
+                        </div>
+
+                        <strong>
+                          {area.gaps.length} gaps
+                        </strong>
+                      </div>
+
+                      <div className="hierarchy-items">
+                        {area.gaps.map((gap, index) => (
+                          <div
+                            key={`${gap.concept}-${gap.bloom_level}-${index}`}
+                            className="hierarchy-item"
+                          >
+                            <div>
+                              <strong>{gap.concept}</strong>
+
+                              <span>
+                                {gap.bloom_level}
+                              </span>
+                            </div>
+
+                            <div className="hierarchy-mastery">
+                              <strong>
+                                {gap.mastery.toFixed(0)}%
+                              </strong>
+
+                              <div className="mini-progress">
+                                <div
+                                  style={{
+                                    width: `${Math.min(
+                                      Math.max(
+                                        gap.mastery,
+                                        0
+                                      ),
+                                      100
+                                    )}%`,
+                                    background:
+                                      getMasteryColor(
+                                        gap.mastery
+                                      ),
+                                  }}
+                                />
+                              </div>
+                            </div>
+
+                            <span
+                              className={`severity ${gap.severity === 'Critical'
+                                  ? 'critical'
+                                  : 'moderate'
+                                }`}
+                            >
+                              {gap.severity}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState
+                  icon="✓"
+                  title="No hierarchy gaps detected"
+                  text="Your concept-level results are looking good."
+                />
+              )}
+            </section>
+          )}
+
+          {tab === 'blooms' && (
+            <section className="result-panel">
+              <PanelHeader
+                eyebrow="COGNITIVE PROFILE"
+                title="Bloom's Taxonomy"
+              />
+
+              <p className="panel-description">
+                Your mastery across six levels of cognitive
+                complexity.
+              </p>
+
+              <div className="bloom-results-grid">
+                {bloomLevels.map((bloom) => {
+                  const value =
+                    Number(
+                      bloomSummary[String(bloom.level)]
+                    ) || 0;
+
+                  return (
+                    <div
+                      key={bloom.level}
+                      className="bloom-result-card"
+                    >
+                      <div className="bloom-result-top">
+                        <span className="bloom-icon">
+                          {bloom.icon}
+                        </span>
+
+                        <span>L{bloom.level}</span>
+                      </div>
+
+                      <h3>{bloom.label}</h3>
+
+                      <strong>{value.toFixed(0)}%</strong>
+
+                      <div className="bloom-progress">
+                        <div
+                          style={{
+                            width: `${Math.min(
+                              Math.max(value, 0),
+                              100
+                            )}%`,
+                            background:
+                              getMasteryColor(value),
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {tab === 'areas' && (
+            <section className="result-panel">
+              <PanelHeader
+                eyebrow="DOMAIN PERFORMANCE"
+                title="Learning area mastery"
+              />
+
+              <div className="area-results">
+                {Object.entries(learningAreas).length ? (
+                  Object.entries(learningAreas).map(
+                    ([area, rawValue]) => {
+                      const value =
+                        typeof rawValue === 'number'
+                          ? rawValue
+                          : 0;
+
+                      return (
+                        <div
+                          key={area}
+                          className="area-result"
+                        >
+                          <div className="area-result-header">
+                            <div>
+                              <span className="area-dot" />
+                              <strong>{area}</strong>
+                            </div>
+
+                            <strong
+                              style={{
+                                color:
+                                  getMasteryColor(value),
+                              }}
+                            >
+                              {value.toFixed(1)}%
+                            </strong>
+                          </div>
+
+                          <div className="area-progress">
+                            <div
+                              style={{
+                                width: `${Math.min(
+                                  Math.max(value, 0),
+                                  100
+                                )}%`,
+                                background:
+                                  getMasteryColor(value),
+                              }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    }
+                  )
+                ) : (
+                  <EmptyState
+                    icon="◈"
+                    title="No learning area data"
+                    text="Learning area performance will appear after your diagnostic."
+                  />
+                )}
+              </div>
+            </section>
+          )}
+
+          {tab === 'gaps' && (
+            <section className="result-panel">
+              <PanelHeader
+                eyebrow="PRIORITY AREAS"
+                title="Critical knowledge gaps"
+              />
+
+              <p className="panel-description">
+                These are the areas Edni should prioritize
+                during your next learning cycle.
+              </p>
+
+              {criticalGaps.length ? (
+                <div className="critical-gap-list">
+                  {criticalGaps.map((gap, index) => (
+                    <div
+                      key={index}
+                      className="critical-gap"
+                    >
+                      <div className="critical-icon">!</div>
+
+                      <div>
+                        <span>PRIORITY GAP</span>
+
+                        <strong>
+                          {formatGap(gap)}
+                        </strong>
+                      </div>
+
+                      <span className="critical-arrow">
+                        →
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState
+                  icon="✓"
+                  title="No critical gaps detected"
+                  text="Excellent. Keep building on your current knowledge."
+                />
+              )}
+            </section>
+          )}
+
+          <section className="final-actions">
+            <button
+              className={
+                backgroundStatus === 'complete'
+                  ? 'primary-button large'
+                  : 'disabled-button large'
+              }
+              disabled={backgroundStatus !== 'complete'}
+              onClick={() => onNavigate('/study-planner')}
+            >
+              View personalized study plan
+              <span>→</span>
+            </button>
+
+            <button
+              className="secondary-button large"
+              onClick={() => onNavigate('/dashboard')}
+            >
+              Back to dashboard
+            </button>
+          </section>
         </div>
+      </main>
+    </>
+  );
+}
+
+function ResultStat({
+  icon,
+  value,
+  label,
+  accent,
+}: {
+  icon: string;
+  value: string;
+  label: string;
+  accent: string;
+}) {
+  return (
+    <div className="result-stat">
+      <div
+        className="result-stat-icon"
+        style={{
+          color: accent,
+          background: `${accent}15`,
+        }}
+      >
+        {icon}
       </div>
 
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
+      <strong>{value}</strong>
+
+      <span>{label}</span>
     </div>
   );
 }
+
+function ResultTab({
+  active,
+  onClick,
+  icon,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: string;
+  label: string;
+}) {
+  return (
+    <button
+      className={`result-tab ${active ? 'active' : ''}`}
+      onClick={onClick}
+    >
+      <span>{icon}</span>
+      {label}
+    </button>
+  );
+}
+
+function PanelHeader({
+  eyebrow,
+  title,
+}: {
+  eyebrow: string;
+  title: string;
+}) {
+  return (
+    <div className="panel-header">
+      <span>{eyebrow}</span>
+      <h2>{title}</h2>
+    </div>
+  );
+}
+
+function OverviewRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="overview-row">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function EmptyState({
+  icon,
+  title,
+  text,
+}: {
+  icon: string;
+  title: string;
+  text: string;
+}) {
+  return (
+    <div className="empty-state">
+      <div>{icon}</div>
+      <h3>{title}</h3>
+      <p>{text}</p>
+    </div>
+  );
+}
+
+const globalStyles = `
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+button {
+  font-family: inherit;
+}
+
+.diagnostic-page,
+.assessment-page,
+.results-page,
+.loading-page {
+  min-height: 100vh;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+.diagnostic-page {
+  background:
+    radial-gradient(circle at 15% 10%, rgba(124,58,237,.12), transparent 28%),
+    radial-gradient(circle at 85% 20%, rgba(99,102,241,.10), transparent 25%),
+    #f7f7fb;
+  color: #171725;
+}
+
+.intro-shell {
+  max-width: 1240px;
+  margin: auto;
+  padding: 28px 24px 50px;
+}
+
+.intro-topbar,
+.assessment-header-inner,
+.results-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brand,
+.assessment-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  background: transparent;
+  color: #171725;
+  font-size: 18px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.brand-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  color: white;
+  font-size: 17px;
+  font-weight: 900;
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  box-shadow: 0 8px 25px rgba(99,102,241,.28);
+}
+
+.brand-icon.small {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.back-button {
+  border: 1px solid #e4e4ed;
+  background: rgba(255,255,255,.8);
+  padding: 10px 16px;
+  border-radius: 11px;
+  cursor: pointer;
+  color: #555568;
+  font-weight: 650;
+}
+
+.hero-card {
+  position: relative;
+  overflow: hidden;
+  margin-top: 38px;
+  min-height: 540px;
+  border-radius: 30px;
+  padding: 70px;
+  display: grid;
+  grid-template-columns: 1.1fr .9fr;
+  align-items: center;
+  background:
+    linear-gradient(135deg, #171529 0%, #242044 55%, #30235c 100%);
+  color: white;
+  box-shadow: 0 30px 80px rgba(39,28,76,.25);
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+  max-width: 650px;
+}
+
+.hero-badge {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 13px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 999px;
+  background: rgba(255,255,255,.07);
+  color: #d9ccff;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: .03em;
+}
+
+.hero-card h1 {
+  font-size: clamp(42px, 5vw, 70px);
+  line-height: .98;
+  letter-spacing: -3px;
+  margin: 24px 0;
+}
+
+.hero-card h1 span {
+  color: #b8a5ff;
+}
+
+.hero-card p {
+  max-width: 600px;
+  color: #c8c5d8;
+  font-size: 17px;
+  line-height: 1.7;
+}
+
+.hero-actions {
+  margin-top: 28px;
+}
+
+.primary-button,
+.secondary-button,
+.disabled-button {
+  border: 0;
+  border-radius: 13px;
+  padding: 13px 20px;
+  font-size: 14px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: .2s ease;
+}
+
+.primary-button {
+  color: white;
+  background: linear-gradient(135deg, #7c3aed, #5b4ce6);
+  box-shadow: 0 12px 25px rgba(99,102,241,.23);
+}
+
+.primary-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 17px 30px rgba(99,102,241,.3);
+}
+
+.primary-button span,
+.secondary-button span,
+.disabled-button span {
+  margin-left: 12px;
+}
+
+.primary-button.large,
+.secondary-button.large,
+.disabled-button.large {
+  padding: 16px 22px;
+  min-height: 52px;
+}
+
+.primary-button:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+.secondary-button {
+  color: #373746;
+  background: white;
+  border: 1px solid #e2e2eb;
+}
+
+.secondary-button:hover:not(:disabled) {
+  background: #f5f5fa;
+}
+
+.secondary-button:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+
+.disabled-button {
+  color: #a1a1b0;
+  background: #ececf2;
+  cursor: not-allowed;
+}
+
+.selected-area {
+  display: flex;
+  gap: 13px;
+  align-items: center;
+  margin-top: 25px;
+  width: fit-content;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: rgba(255,255,255,.07);
+  border: 1px solid rgba(255,255,255,.1);
+}
+
+.selected-area > span {
+  font-size: 22px;
+}
+
+.selected-area small,
+.selected-area strong {
+  display: block;
+}
+
+.selected-area small {
+  color: #aaa6bc;
+  font-size: 11px;
+  margin-bottom: 3px;
+}
+
+.selected-area strong {
+  font-size: 13px;
+}
+
+.hero-visual {
+  min-height: 390px;
+  display: grid;
+  place-items: center;
+  position: relative;
+}
+
+.orb {
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle, rgba(167,139,250,.45), rgba(124,58,237,.08) 60%, transparent 70%);
+  border: 1px solid rgba(255,255,255,.1);
+  box-shadow:
+    0 0 80px rgba(139,92,246,.3),
+    inset 0 0 50px rgba(139,92,246,.12);
+}
+
+.orb-inner {
+  width: 140px;
+  height: 140px;
+  border-radius: 40px;
+  display: grid;
+  place-items: center;
+  font-size: 65px;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.14);
+  backdrop-filter: blur(20px);
+}
+
+.floating-card {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 13px 16px;
+  border-radius: 14px;
+  background: rgba(255,255,255,.09);
+  border: 1px solid rgba(255,255,255,.12);
+  backdrop-filter: blur(18px);
+}
+
+.floating-card strong,
+.floating-card small {
+  display: block;
+}
+
+.floating-card strong {
+  font-size: 12px;
+}
+
+.floating-card small {
+  color: #aaa6bc;
+  font-size: 10px;
+  margin-top: 3px;
+}
+
+.card-top {
+  top: 50px;
+  right: 20px;
+}
+
+.card-bottom {
+  bottom: 50px;
+  left: 15px;
+}
+
+.mini-icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+}
+
+.mini-icon.purple {
+  background: rgba(167,139,250,.16);
+  color: #c4b5fd;
+}
+
+.mini-icon.green {
+  background: rgba(16,185,129,.14);
+  color: #6ee7b7;
+}
+
+.hero-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(5px);
+}
+
+.glow-one {
+  width: 300px;
+  height: 300px;
+  background: rgba(124,58,237,.18);
+  top: -150px;
+  right: 20%;
+}
+
+.glow-two {
+  width: 220px;
+  height: 220px;
+  background: rgba(79,70,229,.15);
+  bottom: -120px;
+  left: 10%;
+}
+
+.intro-features {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.feature-card {
+  display: flex;
+  gap: 15px;
+  padding: 22px;
+  background: rgba(255,255,255,.75);
+  border: 1px solid #e8e8f0;
+  border-radius: 18px;
+}
+
+.feature-icon {
+  flex: 0 0 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #f0edff;
+  color: #6d4ce8;
+  font-size: 19px;
+}
+
+.feature-card strong {
+  font-size: 14px;
+}
+
+.feature-card p {
+  color: #777789;
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 6px 0 0;
+}
+
+.privacy-note {
+  text-align: center;
+  color: #9999a8;
+  font-size: 11px;
+  margin-top: 22px;
+}
+
+.error-box {
+  margin-top: 20px;
+  padding: 12px 15px;
+  border-radius: 12px;
+  color: #fecaca;
+  background: rgba(239,68,68,.1);
+  border: 1px solid rgba(239,68,68,.2);
+}
+
+/* Assessment */
+
+.assessment-page {
+  background: #f7f7fb;
+  color: #1d1d2a;
+}
+
+.assessment-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(255,255,255,.92);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid #e9e9f0;
+}
+
+.assessment-header-inner {
+  max-width: 1320px;
+  margin: auto;
+  padding: 15px 24px;
+}
+
+.assessment-progress-info {
+  display: flex;
+  align-items: center;
+  gap: 25px;
+  font-size: 13px;
+  color: #888897;
+}
+
+.assessment-progress-info strong {
+  color: #252532;
+}
+
+.progress-percent {
+  color: #6946df;
+  font-weight: 800;
+}
+
+.progress-track {
+  height: 4px;
+  background: #e8e8ef;
+}
+
+.progress-value {
+  height: 100%;
+  background: linear-gradient(90deg, #7c3aed, #6366f1);
+  transition: width .35s ease;
+}
+
+.assessment-layout {
+  max-width: 1320px;
+  margin: auto;
+  padding: 35px 24px;
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 30px;
+}
+
+.question-sidebar {
+  position: sticky;
+  top: 95px;
+  height: fit-content;
+  padding: 20px;
+  border-radius: 18px;
+  background: white;
+  border: 1px solid #e7e7ef;
+}
+
+.sidebar-heading {
+  display: flex;
+  justify-content: space-between;
+  color: #777787;
+  font-size: 12px;
+  margin-bottom: 18px;
+}
+
+.sidebar-heading strong {
+  color: #6946df;
+}
+
+.question-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.question-number {
+  width: 34px;
+  height: 34px;
+  border: 1px solid #e4e4ed;
+  background: #fafafd;
+  color: #777787;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.question-number.active {
+  color: white;
+  border-color: #6d4ce8;
+  background: #6d4ce8;
+  box-shadow: 0 5px 14px rgba(109,76,232,.22);
+}
+
+.question-number.answered:not(.active) {
+  color: #10a878;
+  background: #ecfdf5;
+  border-color: #b7efd9;
+}
+
+.sidebar-tip {
+  display: flex;
+  gap: 9px;
+  margin-top: 22px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #f8f6ff;
+}
+
+.sidebar-tip span {
+  font-size: 15px;
+}
+
+.sidebar-tip p {
+  margin: 0;
+  color: #7c7b8b;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.question-main {
+  max-width: 850px;
+  width: 100%;
+  margin: auto;
+}
+
+.question-card-modern {
+  padding: 42px;
+  background: white;
+  border: 1px solid #e7e7ef;
+  border-radius: 24px;
+  box-shadow: 0 20px 55px rgba(29,25,58,.06);
+}
+
+.question-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 30px;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.purple-tag {
+  color: #6946df;
+  background: #f0edff;
+}
+
+.gray-tag {
+  color: #747484;
+  background: #f3f3f7;
+}
+
+.blue-tag {
+  color: #2674cf;
+  background: #edf6ff;
+}
+
+.question-number-label {
+  color: #9a9aa8;
+  font-size: 10px;
+  letter-spacing: .12em;
+  font-weight: 800;
+}
+
+.question-title {
+  margin: 10px 0 30px;
+  max-width: 750px;
+  font-size: 28px;
+  line-height: 1.35;
+  letter-spacing: -.5px;
+}
+
+.options-list {
+  display: grid;
+  gap: 11px;
+}
+
+.option-card {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  text-align: left;
+  gap: 15px;
+  padding: 17px;
+  border: 1.5px solid #e6e6ed;
+  border-radius: 14px;
+  background: white;
+  cursor: pointer;
+  transition: .18s ease;
+}
+
+.option-card:hover {
+  border-color: #b6a7ee;
+  transform: translateX(2px);
+}
+
+.option-card.selected {
+  border-color: #7351e6;
+  background: #f8f6ff;
+  box-shadow: 0 7px 20px rgba(115,81,230,.09);
+}
+
+.option-letter {
+  width: 35px;
+  height: 35px;
+  flex: 0 0 35px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  color: #777786;
+  background: #f3f3f7;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.option-card.selected .option-letter {
+  color: white;
+  background: #7351e6;
+}
+
+.option-text {
+  flex: 1;
+  color: #3d3d4c;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.option-check {
+  color: #7351e6;
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.confidence-panel {
+  margin-top: 28px;
+  padding: 19px;
+  border-radius: 16px;
+  background: #f8f8fb;
+  border: 1px solid #ececf2;
+}
+
+.confidence-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.confidence-header strong,
+.confidence-header span {
+  display: block;
+}
+
+.confidence-header strong {
+  font-size: 13px;
+}
+
+.confidence-header span {
+  color: #8b8b99;
+  font-size: 10px;
+  margin-top: 4px;
+}
+
+.confidence-value {
+  color: #6946df;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.confidence-range {
+  width: 100%;
+  margin: 18px 0 5px;
+  accent-color: #7351e6;
+}
+
+.confidence-scale {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #9999a6;
+  font-size: 9px;
+}
+
+.confidence-dots {
+  display: flex;
+  gap: 5px;
+}
+
+.confidence-dots span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #d9d9e2;
+}
+
+.confidence-dots span.filled {
+  background: #7351e6;
+}
+
+.question-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 17px;
+}
+
+.question-actions button {
+  flex: 1;
+}
+
+/* Results */
+
+.results-page {
+  background: #f7f7fb;
+  color: #1d1d2a;
+}
+
+.results-container {
+  max-width: 1240px;
+  margin: auto;
+  padding: 25px 24px 70px;
+}
+
+.results-cycle {
+  color: #888895;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.results-hero {
+  margin-top: 28px;
+  padding: 48px 55px;
+  min-height: 340px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 30px;
+  border-radius: 28px;
+  color: white;
+  background:
+    radial-gradient(circle at 85% 50%, rgba(139,92,246,.4), transparent 25%),
+    linear-gradient(135deg, #19162c, #2a2450);
+  box-shadow: 0 25px 70px rgba(40,30,75,.2);
+}
+
+.results-hero-left {
+  max-width: 680px;
+}
+
+.success-badge {
+  display: inline-flex;
+  padding: 7px 11px;
+  border-radius: 999px;
+  color: #86efac;
+  background: rgba(34,197,94,.1);
+  border: 1px solid rgba(134,239,172,.15);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.results-hero h1 {
+  margin: 18px 0 15px;
+  font-size: 48px;
+  line-height: 1;
+  letter-spacing: -2px;
+}
+
+.results-hero h1 span {
+  color: #b9a8ff;
+}
+
+.results-hero p {
+  color: #c6c2d5;
+  font-size: 14px;
+  line-height: 1.7;
+  max-width: 600px;
+}
+
+.mastery-ring {
+  min-width: 220px;
+  text-align: center;
+}
+
+.ring {
+  width: 190px;
+  height: 190px;
+  margin: auto;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+
+.ring-center {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: #211d38;
+}
+
+.ring-center strong {
+  font-size: 35px;
+}
+
+.ring-center span {
+  color: #9f9aae;
+  font-size: 10px;
+  margin-top: 3px;
+}
+
+.mastery-ring > p {
+  color: #b9a8ff;
+  font-weight: 750;
+  margin-top: 12px;
+}
+
+.plan-status {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  width: fit-content;
+  margin-top: 22px;
+  padding: 12px 15px;
+  border-radius: 13px;
+}
+
+.plan-status.waiting {
+  background: rgba(124,58,237,.13);
+  border: 1px solid rgba(167,139,250,.12);
+}
+
+.plan-status.ready {
+  background: rgba(16,185,129,.12);
+  border: 1px solid rgba(110,231,183,.12);
+}
+
+.plan-status > span {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: rgba(255,255,255,.08);
+}
+
+.plan-status strong {
+  display: block;
+  font-size: 11px;
+}
+
+.plan-status p {
+  margin: 3px 0 0;
+  font-size: 9px;
+}
+
+.result-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 13px;
+  margin-top: 18px;
+}
+
+.result-stat {
+  padding: 20px;
+  border: 1px solid #e7e7ef;
+  border-radius: 17px;
+  background: white;
+}
+
+.result-stat-icon {
+  width: 35px;
+  height: 35px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  font-weight: 800;
+  margin-bottom: 15px;
+}
+
+.result-stat strong,
+.result-stat span {
+  display: block;
+}
+
+.result-stat strong {
+  font-size: 25px;
+  letter-spacing: -.5px;
+}
+
+.result-stat > span {
+  color: #888895;
+  font-size: 10px;
+  margin-top: 4px;
+}
+
+.results-tabs {
+  display: flex;
+  gap: 5px;
+  margin-top: 28px;
+  padding: 5px;
+  overflow-x: auto;
+  background: #ececf2;
+  border-radius: 14px;
+}
+
+.result-tab {
+  flex: 1;
+  white-space: nowrap;
+  border: 0;
+  padding: 11px 14px;
+  border-radius: 10px;
+  background: transparent;
+  color: #777785;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.result-tab span {
+  margin-right: 6px;
+}
+
+.result-tab.active {
+  color: #6041d5;
+  background: white;
+  box-shadow: 0 3px 10px rgba(30,25,60,.06);
+}
+
+.result-content-grid {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: 1.3fr .7fr;
+  gap: 15px;
+}
+
+.result-panel {
+  padding: 27px;
+  border: 1px solid #e7e7ef;
+  border-radius: 20px;
+  background: white;
+}
+
+.large-panel {
+  min-height: 280px;
+}
+
+.full-width {
+  grid-column: 1 / -1;
+}
+
+.panel-header {
+  margin-bottom: 22px;
+}
+
+.panel-header > span {
+  color: #8d8d9a;
+  font-size: 9px;
+  letter-spacing: .12em;
+  font-weight: 800;
+}
+
+.panel-header h2 {
+  margin: 5px 0 0;
+  font-size: 20px;
+  letter-spacing: -.3px;
+}
+
+.panel-description {
+  color: #898996;
+  font-size: 12px;
+  margin-top: -12px;
+  margin-bottom: 20px;
+}
+
+.overview-list {
+  display: grid;
+}
+
+.overview-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px 0;
+  border-bottom: 1px solid #eeeeF3;
+}
+
+.overview-row:last-child {
+  border-bottom: 0;
+}
+
+.overview-row span {
+  color: #8a8a98;
+  font-size: 11px;
+}
+
+.overview-row strong {
+  color: #33333f;
+  font-size: 12px;
+  max-width: 60%;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.delta-card {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  padding: 20px;
+  border-radius: 15px;
+}
+
+.delta-card.positive {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.delta-card.negative {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.delta-card > span {
+  font-size: 25px;
+}
+
+.delta-card strong {
+  display: block;
+  font-size: 26px;
+}
+
+.delta-card p {
+  color: #7e7e8a;
+  margin: 4px 0 0;
+  font-size: 10px;
+}
+
+.evaluation-box {
+  display: flex;
+  gap: 15px;
+  padding: 20px;
+  border-radius: 15px;
+  background: #f8f6ff;
+  border: 1px solid #ece7ff;
+}
+
+.evaluation-icon {
+  width: 37px;
+  height: 37px;
+  flex: 0 0 37px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  color: #6946df;
+  background: #ece7ff;
+}
+
+.evaluation-box p {
+  margin: 0;
+  color: #555563;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.review-list {
+  display: grid;
+  gap: 13px;
+}
+
+.review-card {
+  display: flex;
+  gap: 15px;
+  padding: 19px;
+  border: 1px solid #e9e9f0;
+  border-radius: 16px;
+}
+
+.review-card.correct {
+  border-left: 4px solid #10b981;
+}
+
+.review-card.incorrect {
+  border-left: 4px solid #ef4444;
+}
+
+.review-number {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  font-weight: 900;
+  background: #f3f3f7;
+}
+
+.correct .review-number {
+  color: #059669;
+  background: #ecfdf5;
+}
+
+.incorrect .review-number {
+  color: #dc2626;
+  background: #fef2f2;
+}
+
+.review-body {
+  flex: 1;
+}
+
+.review-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.review-body h3 {
+  margin: 12px 0 17px;
+  color: #292936;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.answer-comparison {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.answer-block small {
+  display: block;
+  color: #9999a5;
+  font-size: 9px;
+  font-weight: 750;
+  margin-bottom: 5px;
+}
+
+.answer-block p {
+  margin: 0;
+  padding: 10px;
+  border-radius: 9px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.answer-correct {
+  color: #047857;
+  background: #ecfdf5;
+}
+
+.answer-wrong {
+  color: #b91c1c;
+  background: #fef2f2;
+}
+
+.confidence-result {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  color: #9999a5;
+  font-size: 9px;
+}
+
+.confidence-result > div {
+  display: flex;
+  gap: 4px;
+}
+
+.confidence-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #dddde5;
+}
+
+.confidence-dot.active {
+  background: #7351e6;
+}
+
+.hierarchy-list {
+  display: grid;
+  gap: 17px;
+}
+
+.hierarchy-area {
+  border: 1px solid #e9e9f0;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.hierarchy-area-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px;
+  background: #fafafe;
+}
+
+.area-symbol {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  color: #6946df;
+  background: #f0edff;
+  border-radius: 11px;
+}
+
+.hierarchy-area-header span {
+  display: block;
+  color: #9b9ba8;
+  font-size: 8px;
+  letter-spacing: .1em;
+  font-weight: 800;
+}
+
+.hierarchy-area-header h3 {
+  margin: 3px 0 0;
+  font-size: 13px;
+}
+
+.hierarchy-area-header > strong {
+  margin-left: auto;
+  color: #777785;
+  font-size: 10px;
+}
+
+.hierarchy-items {
+  padding: 8px 18px 18px;
+}
+
+.hierarchy-item {
+  display: grid;
+  grid-template-columns: 1fr 150px auto;
+  gap: 20px;
+  align-items: center;
+  padding: 15px 0;
+  border-bottom: 1px solid #eeeeF3;
+}
+
+.hierarchy-item:last-child {
+  border-bottom: 0;
+}
+
+.hierarchy-item > div:first-child strong {
+  display: block;
+  font-size: 12px;
+}
+
+.hierarchy-item > div:first-child span {
+  display: inline-block;
+  margin-top: 5px;
+  color: #888895;
+  font-size: 9px;
+}
+
+.hierarchy-mastery strong {
+  display: block;
+  text-align: right;
+  font-size: 10px;
+}
+
+.mini-progress {
+  height: 5px;
+  margin-top: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e8e8ef;
+}
+
+.mini-progress > div {
+  height: 100%;
+}
+
+.severity {
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.severity.critical {
+  color: #dc2626;
+  background: #fef2f2;
+}
+
+.severity.moderate {
+  color: #b45309;
+  background: #fffbeb;
+}
+
+.bloom-results-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 13px;
+}
+
+.bloom-result-card {
+  padding: 19px;
+  border: 1px solid #e8e8ef;
+  border-radius: 15px;
+}
+
+.bloom-result-top {
+  display: flex;
+  justify-content: space-between;
+  color: #9999a5;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.bloom-icon {
+  font-size: 20px;
+}
+
+.bloom-result-card h3 {
+  margin: 14px 0 5px;
+  font-size: 13px;
+}
+
+.bloom-result-card > strong {
+  font-size: 23px;
+}
+
+.bloom-progress,
+.area-progress {
+  height: 7px;
+  margin-top: 12px;
+  overflow: hidden;
+  background: #ececf2;
+  border-radius: 999px;
+}
+
+.bloom-progress > div,
+.area-progress > div {
+  height: 100%;
+}
+
+.area-results {
+  display: grid;
+  gap: 17px;
+}
+
+.area-result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.area-result-header > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.area-result-header strong {
+  font-size: 12px;
+}
+
+.area-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #7351e6;
+}
+
+.critical-gap-list {
+  display: grid;
+  gap: 10px;
+}
+
+.critical-gap {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid #f1dcdc;
+  border-left: 4px solid #ef4444;
+  border-radius: 13px;
+  background: #fffafa;
+}
+
+.critical-icon {
+  width: 33px;
+  height: 33px;
+  display: grid;
+  place-items: center;
+  color: #dc2626;
+  background: #fee2e2;
+  border-radius: 10px;
+  font-weight: 900;
+}
+
+.critical-gap div:nth-child(2) {
+  flex: 1;
+}
+
+.critical-gap div span {
+  display: block;
+  color: #b9a0a0;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .1em;
+}
+
+.critical-gap div strong {
+  display: block;
+  margin-top: 4px;
+  color: #383038;
+  font-size: 12px;
+}
+
+.critical-arrow {
+  color: #aaa;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 50px 20px;
+  border-radius: 15px;
+  background: #fafafe;
+  border: 1px dashed #ddddE8;
+}
+
+.empty-state > div {
+  width: 48px;
+  height: 48px;
+  margin: auto;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  color: #059669;
+  background: #ecfdf5;
+  font-size: 20px;
+}
+
+.empty-state h3 {
+  margin: 14px 0 5px;
+  font-size: 14px;
+}
+
+.empty-state p {
+  margin: 0;
+  color: #9999a5;
+  font-size: 11px;
+}
+
+.final-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.final-actions button {
+  flex: 1;
+}
+
+/* Loading */
+
+.loading-page {
+  display: grid;
+  place-items: center;
+  background: #f7f7fb;
+}
+
+.loading-card {
+  width: min(90%, 420px);
+  padding: 40px;
+  text-align: center;
+  border: 1px solid #e7e7ef;
+  border-radius: 24px;
+  background: white;
+  box-shadow: 0 20px 60px rgba(30,25,60,.07);
+}
+
+.loading-card .brand-mark {
+  width: 48px;
+  height: 48px;
+  margin: auto;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  color: white;
+  font-weight: 900;
+  font-size: 20px;
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+}
+
+.loading-card h2 {
+  margin: 20px 0 8px;
+  font-size: 19px;
+}
+
+.loading-card p {
+  color: #888895;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.loader {
+  width: 30px;
+  height: 30px;
+  margin: 25px auto 0;
+  border: 3px solid #e7e2fb;
+  border-top-color: #7351e6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.status-spinner {
+  animation: spin 1.2s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 900px) {
+  .hero-card {
+    grid-template-columns: 1fr;
+    padding: 45px 35px;
+  }
+
+  .hero-visual {
+    min-height: 260px;
+  }
+
+  .intro-features {
+    grid-template-columns: 1fr;
+  }
+
+  .assessment-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .question-sidebar {
+    position: static;
+  }
+
+  .question-grid {
+    grid-template-columns: repeat(10, 1fr);
+  }
+
+  .results-hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .result-stat-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .result-content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .full-width {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 620px) {
+  .intro-shell,
+  .results-container,
+  .assessment-layout {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .hero-card {
+    padding: 32px 22px;
+    border-radius: 22px;
+  }
+
+  .hero-card h1 {
+    font-size: 42px;
+  }
+
+  .hero-visual {
+    display: none;
+  }
+
+  .assessment-header-inner {
+    padding: 13px 14px;
+  }
+
+  .assessment-progress-info {
+    gap: 8px;
+  }
+
+  .question-card-modern {
+    padding: 24px 17px;
+    border-radius: 18px;
+  }
+
+  .question-title {
+    font-size: 22px;
+  }
+
+  .question-actions,
+  .final-actions {
+    flex-direction: column;
+  }
+
+  .results-hero {
+    padding: 32px 24px;
+    border-radius: 22px;
+  }
+
+  .results-hero h1 {
+    font-size: 38px;
+  }
+
+  .result-stat-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .result-stat {
+    padding: 15px;
+  }
+
+  .bloom-results-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .answer-comparison {
+    grid-template-columns: 1fr;
+  }
+
+  .hierarchy-item {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .hierarchy-mastery strong {
+    text-align: left;
+  }
+
+  .severity {
+    width: fit-content;
+  }
+
+  .results-tabs {
+    margin-left: -4px;
+    margin-right: -4px;
+  }
+}
+`;

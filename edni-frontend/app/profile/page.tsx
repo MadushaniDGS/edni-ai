@@ -11,18 +11,23 @@ const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1';
 
 const COLORS = {
-  primary: '#6C63FF',
-  primaryHover: '#4F46E5',
-  secondary: '#A855F7',
-  bg: '#F7F8FC',
+  primary: '#7C6FF6',
+  primaryDark: '#6558E8',
+  lavender: '#A78BFA',
+  pink: '#F9A8D4',
+  peach: '#FDBA8C',
+  yellow: '#FDE68A',
+  mint: '#A7F3D0',
+  blue: '#BAE6FD',
+  bg: '#FAF9FF',
   card: '#FFFFFF',
-  textPrimary: '#111827',
-  textSecondary: '#6B7280',
-  textMuted: '#9CA3AF',
-  border: '#E5E7EB',
-  success: '#10B981',
-  warning: '#F59E0B',
-  error: '#EF4444',
+  textPrimary: '#29243A',
+  textSecondary: '#77718A',
+  textMuted: '#A6A1B2',
+  border: '#EEEAF7',
+  success: '#34D399',
+  warning: '#FBBF24',
+  error: '#F87171',
 };
 
 interface UserProfile {
@@ -52,7 +57,6 @@ export default function ProfilePage() {
 
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
-
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -74,7 +78,7 @@ export default function ProfilePage() {
   });
 
   // ─────────────────────────────────────────────
-  // Fetch profile + statistics
+  // FETCH PROFILE + STATISTICS
   // ─────────────────────────────────────────────
 
   useEffect(() => {
@@ -197,8 +201,6 @@ export default function ProfilePage() {
     } catch (err) {
       console.error('Failed to fetch statistics:', err);
 
-      // No mock data.
-      // If the API fails, simply show zero values.
       setStats({
         total_study_hours: 0,
         concepts_mastered: 0,
@@ -262,24 +264,37 @@ export default function ProfilePage() {
         }
       );
 
-      // Use returned API data if available.
       if (response.data) {
         setProfile(response.data);
 
         setFormData({
-          first_name: response.data.first_name ?? formData.first_name,
-          last_name: response.data.last_name ?? formData.last_name,
+          first_name:
+            response.data.first_name ??
+            formData.first_name,
+
+          last_name:
+            response.data.last_name ??
+            formData.last_name,
+
           institution:
-            response.data.institution ?? formData.institution,
+            response.data.institution ??
+            formData.institution,
+
           degree:
-            response.data.degree ?? formData.degree,
+            response.data.degree ??
+            formData.degree,
+
           year_of_study:
             response.data.year_of_study ??
             formData.year_of_study,
-          gpa:
-            Number(response.data.gpa ?? formData.gpa),
+
+          gpa: Number(
+            response.data.gpa ?? formData.gpa
+          ),
+
           semester:
-            response.data.semester ?? formData.semester,
+            response.data.semester ??
+            formData.semester,
         });
       } else {
         await fetchProfile(token);
@@ -318,7 +333,7 @@ export default function ProfilePage() {
   };
 
   // ─────────────────────────────────────────────
-  // RESET FORM
+  // RESET
   // ─────────────────────────────────────────────
 
   const handleReset = () => {
@@ -344,47 +359,82 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div
-        style={{
-          minHeight: '100vh',
-          background: COLORS.bg,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <div style={{ textAlign: 'center' }}>
-          <div
-            style={{
-              width: 42,
-              height: 42,
-              borderRadius: '50%',
-              border: `3px solid ${COLORS.border}`,
-              borderTopColor: COLORS.primary,
-              margin: '0 auto 16px',
-              animation: 'spin 1s linear infinite',
-            }}
-          />
+      <div className="loading-page">
+        <div className="loading-sticker">🌸</div>
 
-          <p
-            style={{
-              margin: 0,
-              color: COLORS.textSecondary,
-              fontSize: 14,
-              fontWeight: 500,
-            }}
-          >
-            Loading your profile...
-          </p>
-        </div>
+        <div className="loading-spinner" />
 
-        <style>{`
+        <h3>Preparing your little space...</h3>
+
+        <p>Loading your profile ✨</p>
+
+        <style jsx>{`
+          .loading-page {
+            min-height: 100vh;
+            background:
+              radial-gradient(
+                circle at 20% 20%,
+                #ede9fe 0,
+                transparent 30%
+              ),
+              radial-gradient(
+                circle at 80% 80%,
+                #fce7f3 0,
+                transparent 30%
+              ),
+              ${COLORS.bg};
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family:
+              Inter,
+              -apple-system,
+              BlinkMacSystemFont,
+              'Segoe UI',
+              sans-serif;
+          }
+
+          .loading-sticker {
+            font-size: 48px;
+            margin-bottom: 18px;
+            animation: float 2s ease-in-out infinite;
+          }
+
+          .loading-spinner {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            border: 4px solid #ebe7fb;
+            border-top-color: ${COLORS.primary};
+            animation: spin 0.9s linear infinite;
+          }
+
+          h3 {
+            margin: 18px 0 4px;
+            color: ${COLORS.textPrimary};
+          }
+
+          p {
+            margin: 0;
+            color: ${COLORS.textSecondary};
+            font-size: 14px;
+          }
+
           @keyframes spin {
-            from {
-              transform: rotate(0deg);
-            }
             to {
               transform: rotate(360deg);
+            }
+          }
+
+          @keyframes float {
+            0%,
+            100% {
+              transform: translateY(0);
+            }
+
+            50% {
+              transform: translateY(-8px);
             }
           }
         `}</style>
@@ -393,484 +443,362 @@ export default function ProfilePage() {
   }
 
   // ─────────────────────────────────────────────
-  // PROFILE HELPERS
+  // HELPERS
   // ─────────────────────────────────────────────
 
   const fullName =
-    `${profile?.first_name ?? ''} ${profile?.last_name ?? ''}`.trim() ||
-    'Student';
+    `${profile?.first_name ?? ''} ${profile?.last_name ?? ''
+      }`.trim() || 'Student';
 
   const initials =
-    `${profile?.first_name?.[0] ?? ''}${profile?.last_name?.[0] ?? ''}`.toUpperCase() ||
-    'S';
+    `${profile?.first_name?.[0] ?? ''}${profile?.last_name?.[0] ?? ''
+      }`.toUpperCase() || 'S';
 
   const joinedDate = profile?.created_at
-    ? new Date(profile.created_at).toLocaleDateString(
-      'en-US',
-      {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      }
-    )
+    ? new Date(
+      profile.created_at
+    ).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    })
     : '—';
 
   const mastery = Math.min(
     100,
-    Math.max(0, stats?.overall_mastery ?? 0)
+    Math.max(
+      0,
+      Number(stats?.overall_mastery ?? 0)
+    )
   );
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        background: COLORS.bg,
-        fontFamily:
-          "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-      }}
-    >
-      {/* ─────────────────────────────────────── */}
-      {/* GLOBAL SIDEBAR */}
-      {/* ─────────────────────────────────────── */}
+    <div className="page">
 
       <Sidebar />
 
-      {/* ─────────────────────────────────────── */}
-      {/* MAIN AREA */}
-      {/* ─────────────────────────────────────── */}
+      <div className="main">
 
-      <div
-        style={{
-          marginLeft: 240,
-          minHeight: '100vh',
-        }}
-      >
         <TopBar title="Profile" />
 
-        {/* ───────────────────────────────────── */}
-        {/* PROFILE HERO */}
-        {/* ───────────────────────────────────── */}
+        {/* FLOATING DECORATIONS */}
 
-        <section
-          style={{
-            background:
-              'linear-gradient(135deg, #6C63FF 0%, #4F46E5 55%, #7C3AED 100%)',
-            padding: '38px 40px',
-            color: 'white',
-          }}
-        >
-          <div
-            style={{
-              maxWidth: 1180,
-              margin: '0 auto',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 30,
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 22,
-              }}
-            >
-              {/* Avatar */}
+        <div className="floating-decoration flower">
+          🌸
+        </div>
 
-              <div
-                style={{
-                  width: 92,
-                  height: 92,
-                  borderRadius: '50%',
-                  background: 'rgba(255,255,255,0.18)',
-                  border:
-                    '3px solid rgba(255,255,255,0.7)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 30,
-                  fontWeight: 800,
-                  flexShrink: 0,
-                  overflow: 'hidden',
-                  backdropFilter: 'blur(10px)',
-                }}
-              >
-                {profile?.avatar_url ? (
-                  <img
-                    src={profile.avatar_url}
-                    alt={fullName}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                    }}
-                  />
-                ) : (
-                  initials
-                )}
+        <div className="floating-decoration star">
+          ✨
+        </div>
+
+        <div className="floating-decoration heart">
+          💗
+        </div>
+
+        {/* HERO */}
+
+        <section className="hero">
+
+          <div className="hero-cloud cloud-one" />
+          <div className="hero-cloud cloud-two" />
+
+          <div className="hero-inner">
+
+            <div className="profile-left">
+
+              <div className="avatar-wrapper">
+
+                <div className="avatar-ring">
+
+                  {profile?.avatar_url ? (
+                    <img
+                      src={profile.avatar_url}
+                      alt={fullName}
+                      className="avatar-image"
+                    />
+                  ) : (
+                    <span>{initials}</span>
+                  )}
+
+                </div>
+
+                <div className="avatar-sticker">
+                  ✨
+                </div>
+
+              </div>
+
+              <div className="hero-info">
+
+                <div className="cute-label">
+                  🌷 EDNI AI STUDENT
+                </div>
+
+                <h1>{fullName}</h1>
+
+                <p>{profile?.email}</p>
+
+                <div className="student-pill">
+                  🎓 Learning with EDNI
+                </div>
+
+              </div>
+
+            </div>
+
+            {/* MASTERY */}
+
+            <div className="mastery-box">
+
+              <div className="mastery-emoji">
+                🐰
               </div>
 
               <div>
+
+                <span className="mastery-label">
+                  Overall Mastery
+                </span>
+
+                <strong>
+                  {mastery.toFixed(1)}%
+                </strong>
+
+              </div>
+
+              <div className="mastery-progress">
                 <div
                   style={{
-                    fontSize: 13,
-                    opacity: 0.8,
-                    marginBottom: 5,
-                    fontWeight: 600,
-                  }}
-                >
-                  EDNI AI STUDENT PROFILE
-                </div>
-
-                <h1
-                  style={{
-                    margin: 0,
-                    fontSize: 30,
-                    fontWeight: 800,
-                    letterSpacing: '-0.5px',
-                  }}
-                >
-                  {fullName}
-                </h1>
-
-                <p
-                  style={{
-                    margin: '7px 0 0',
-                    fontSize: 14,
-                    opacity: 0.9,
-                  }}
-                >
-                  {profile?.email}
-                </p>
-              </div>
-            </div>
-
-            {/* Mastery */}
-
-            <div
-              style={{
-                minWidth: 190,
-                padding: '18px 22px',
-                borderRadius: 14,
-                background: 'rgba(255,255,255,0.13)',
-                border:
-                  '1px solid rgba(255,255,255,0.2)',
-                backdropFilter: 'blur(10px)',
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  opacity: 0.8,
-                  textTransform: 'uppercase',
-                  letterSpacing: 0.6,
-                  marginBottom: 7,
-                }}
-              >
-                Overall Mastery
-              </div>
-
-              <div
-                style={{
-                  fontSize: 28,
-                  fontWeight: 800,
-                }}
-              >
-                {mastery}%
-              </div>
-
-              <div
-                style={{
-                  height: 5,
-                  background:
-                    'rgba(255,255,255,0.2)',
-                  borderRadius: 5,
-                  overflow: 'hidden',
-                  marginTop: 10,
-                }}
-              >
-                <div
-                  style={{
-                    height: '100%',
                     width: `${mastery}%`,
-                    background: 'white',
-                    borderRadius: 5,
                   }}
                 />
               </div>
+
+              <small>
+                Keep learning! 🌟
+              </small>
+
             </div>
+
           </div>
         </section>
 
-        {/* ───────────────────────────────────── */}
-        {/* CONTENT */}
-        {/* ───────────────────────────────────── */}
+        <main className="content">
 
-        <main
-          style={{
-            maxWidth: 1180,
-            margin: '0 auto',
-            padding: '30px 40px 50px',
-          }}
-        >
-          {/* Alerts */}
+          {/* ALERTS */}
 
           {error && (
-            <div
-              style={{
-                padding: '13px 16px',
-                marginBottom: 20,
-                background: '#FEF2F2',
-                border: '1px solid #FECACA',
-                borderRadius: 10,
-                color: '#991B1B',
-                fontSize: 14,
-                fontWeight: 500,
-              }}
-            >
-              ⚠️ {error}
+            <div className="alert error-alert">
+              <span>😿</span>
+              <div>{error}</div>
             </div>
           )}
 
           {success && (
-            <div
-              style={{
-                padding: '13px 16px',
-                marginBottom: 20,
-                background: '#ECFDF5',
-                border: '1px solid #A7F3D0',
-                borderRadius: 10,
-                color: '#047857',
-                fontSize: 14,
-                fontWeight: 500,
-              }}
-            >
-              ✓ {success}
+            <div className="alert success-alert">
+              <span>🎉</span>
+              <div>{success}</div>
             </div>
           )}
 
-          {/* Tabs */}
+          {/* TABS */}
 
-          <div
-            style={{
-              display: 'flex',
-              gap: 8,
-              marginBottom: 24,
-              borderBottom: `1px solid ${COLORS.border}`,
-            }}
-          >
+          <div className="tabs">
+
             <button
-              onClick={() => setActiveTab('profile')}
-              style={{
-                padding: '13px 20px',
-                border: 'none',
-                borderBottom:
-                  activeTab === 'profile'
-                    ? `3px solid ${COLORS.primary}`
-                    : '3px solid transparent',
-                background: 'transparent',
-                color:
-                  activeTab === 'profile'
-                    ? COLORS.primary
-                    : COLORS.textSecondary,
-                fontSize: 14,
-                fontWeight:
-                  activeTab === 'profile' ? 700 : 600,
-                cursor: 'pointer',
-              }}
+              className={
+                activeTab === 'profile'
+                  ? 'tab active'
+                  : 'tab'
+              }
+              onClick={() =>
+                setActiveTab('profile')
+              }
             >
-              👤 Personal Information
+              <span>👤</span>
+              Personal Space
             </button>
 
             <button
-              onClick={() => setActiveTab('stats')}
-              style={{
-                padding: '13px 20px',
-                border: 'none',
-                borderBottom:
-                  activeTab === 'stats'
-                    ? `3px solid ${COLORS.primary}`
-                    : '3px solid transparent',
-                background: 'transparent',
-                color:
-                  activeTab === 'stats'
-                    ? COLORS.primary
-                    : COLORS.textSecondary,
-                fontSize: 14,
-                fontWeight:
-                  activeTab === 'stats' ? 700 : 600,
-                cursor: 'pointer',
-              }}
+              className={
+                activeTab === 'stats'
+                  ? 'tab active'
+                  : 'tab'
+              }
+              onClick={() =>
+                setActiveTab('stats')
+              }
             >
-              📊 Learning Statistics
+              <span>🌟</span>
+              Learning Journey
             </button>
+
           </div>
 
-          {/* ─────────────────────────────────── */}
-          {/* PROFILE TAB */}
-          {/* ─────────────────────────────────── */}
+          {/* PROFILE */}
 
           {activeTab === 'profile' && (
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns:
-                  'minmax(0, 1fr) 300px',
-                gap: 24,
-              }}
-            >
-              {/* Personal Information */}
+            <div className="profile-grid">
 
-              <div
-                style={{
-                  background: COLORS.card,
-                  border: `1px solid ${COLORS.border}`,
-                  borderRadius: 16,
-                  padding: 28,
-                  boxShadow:
-                    '0 2px 8px rgba(15,23,42,0.04)',
-                }}
-              >
-                <div style={{ marginBottom: 25 }}>
-                  <h2
-                    style={{
-                      margin: 0,
-                      color: COLORS.textPrimary,
-                      fontSize: 20,
-                      fontWeight: 800,
-                    }}
-                  >
-                    Personal Information
-                  </h2>
+              {/* FORM */}
 
-                  <p
-                    style={{
-                      margin: '6px 0 0',
-                      color: COLORS.textSecondary,
-                      fontSize: 13,
-                    }}
-                  >
-                    Keep your academic information up to
-                    date for a better personalized learning
-                    experience.
-                  </p>
+              <div className="cute-card">
+
+                <div className="card-heading">
+
+                  <div className="heading-icon">
+                    🌷
+                  </div>
+
+                  <div>
+                    <h2>
+                      Personal Information
+                    </h2>
+
+                    <p>
+                      Tell EDNI a little more about
+                      your academic journey 💕
+                    </p>
+                  </div>
+
                 </div>
 
-                <form onSubmit={handleUpdateProfile}>
-                  <div
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns:
-                        '1fr 1fr',
-                      gap: 18,
-                    }}
-                  >
-                    {/* First Name */}
+                <form
+                  onSubmit={
+                    handleUpdateProfile
+                  }
+                >
+
+                  <div className="form-grid">
 
                     <FormField label="First Name">
                       <input
                         type="text"
                         name="first_name"
-                        value={formData.first_name}
-                        onChange={handleInputChange}
+                        value={
+                          formData.first_name
+                        }
+                        onChange={
+                          handleInputChange
+                        }
                         style={inputStyle}
                         required
                       />
                     </FormField>
-
-                    {/* Last Name */}
 
                     <FormField label="Last Name">
                       <input
                         type="text"
                         name="last_name"
-                        value={formData.last_name}
-                        onChange={handleInputChange}
+                        value={
+                          formData.last_name
+                        }
+                        onChange={
+                          handleInputChange
+                        }
                         style={inputStyle}
                         required
                       />
                     </FormField>
 
-                    {/* Email */}
-
                     <FormField label="Email Address">
-                      <input
-                        type="email"
-                        value={profile?.email || ''}
-                        readOnly
-                        style={{
-                          ...inputStyle,
-                          background: '#F8FAFC',
-                          color: COLORS.textMuted,
-                          cursor: 'not-allowed',
-                        }}
-                      />
-                    </FormField>
+                      <div className="locked-input">
+                        <input
+                          type="email"
+                          value={
+                            profile?.email || ''
+                          }
+                          readOnly
+                          style={{
+                            ...inputStyle,
+                            background:
+                              '#F8F7FC',
+                            color:
+                              COLORS.textMuted,
+                            cursor:
+                              'not-allowed',
+                          }}
+                        />
 
-                    {/* Institution */}
+                        <span>🔒</span>
+                      </div>
+                    </FormField>
 
                     <FormField label="Institution">
                       <input
                         type="text"
                         name="institution"
-                        value={formData.institution}
-                        onChange={handleInputChange}
+                        value={
+                          formData.institution
+                        }
+                        onChange={
+                          handleInputChange
+                        }
                         style={inputStyle}
                       />
                     </FormField>
-
-                    {/* Degree */}
 
                     <FormField label="Degree">
                       <input
                         type="text"
                         name="degree"
-                        value={formData.degree}
-                        onChange={handleInputChange}
+                        value={
+                          formData.degree
+                        }
+                        onChange={
+                          handleInputChange
+                        }
                         style={inputStyle}
                       />
                     </FormField>
 
-                    {/* Year */}
-
                     <FormField label="Year of Study">
                       <select
                         name="year_of_study"
-                        value={formData.year_of_study}
-                        onChange={handleInputChange}
+                        value={
+                          formData.year_of_study
+                        }
+                        onChange={
+                          handleInputChange
+                        }
                         style={inputStyle}
                       >
                         <option value="">
                           Select year
                         </option>
+
                         <option value="Year 1">
                           Year 1
                         </option>
+
                         <option value="Year 2">
                           Year 2
                         </option>
+
                         <option value="Year 3">
                           Year 3
                         </option>
+
                         <option value="Final Year">
                           Final Year
                         </option>
+
                         <option value="Post-Grad">
                           Post-Grad
                         </option>
                       </select>
                     </FormField>
 
-                    {/* GPA */}
-
                     <FormField label="GPA">
                       <input
                         type="number"
                         name="gpa"
-                        value={formData.gpa}
-                        onChange={handleInputChange}
+                        value={
+                          formData.gpa
+                        }
+                        onChange={
+                          handleInputChange
+                        }
                         min="0"
                         max="4"
                         step="0.1"
@@ -878,101 +806,72 @@ export default function ProfilePage() {
                       />
                     </FormField>
 
-                    {/* Semester */}
-
                     <FormField label="Current Semester">
                       <input
                         type="text"
                         name="semester"
-                        value={formData.semester}
-                        onChange={handleInputChange}
+                        value={
+                          formData.semester
+                        }
+                        onChange={
+                          handleInputChange
+                        }
                         style={inputStyle}
                         placeholder="e.g. Semester 1"
                       />
                     </FormField>
+
                   </div>
 
-                  {/* Buttons */}
+                  <div className="form-actions">
 
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'flex-end',
-                      gap: 12,
-                      marginTop: 28,
-                      paddingTop: 22,
-                      borderTop: `1px solid ${COLORS.border}`,
-                    }}
-                  >
                     <button
                       type="button"
-                      onClick={handleReset}
-                      style={{
-                        padding: '11px 20px',
-                        borderRadius: 9,
-                        border: `1px solid ${COLORS.border}`,
-                        background: 'white',
-                        color: COLORS.textSecondary,
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        fontSize: 14,
-                      }}
+                      onClick={
+                        handleReset
+                      }
+                      className="reset-button"
                     >
-                      Reset
+                      ↩ Reset
                     </button>
 
                     <button
                       type="submit"
                       disabled={updating}
-                      style={{
-                        padding: '11px 24px',
-                        borderRadius: 9,
-                        border: 'none',
-                        background:
-                          'linear-gradient(135deg,#6C63FF,#4F46E5)',
-                        color: 'white',
-                        fontWeight: 700,
-                        cursor: updating
-                          ? 'not-allowed'
-                          : 'pointer',
-                        opacity: updating ? 0.7 : 1,
-                        fontSize: 14,
-                        boxShadow:
-                          '0 4px 12px rgba(108,99,255,0.25)',
-                      }}
+                      className="save-button"
                     >
                       {updating
-                        ? 'Saving...'
-                        : 'Save Changes'}
+                        ? '💫 Saving...'
+                        : '✨ Save Changes'}
                     </button>
+
                   </div>
+
                 </form>
               </div>
 
-              {/* Academic Summary */}
+              {/* RIGHT SIDE */}
 
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 18,
-                }}
-              >
+              <div className="side-column">
+
                 <InfoCard
                   title="Academic Summary"
                   icon="🎓"
                 >
+
                   <InfoRow
                     label="Institution"
                     value={
-                      profile?.institution || 'Not provided'
+                      profile?.institution ||
+                      'Not provided'
                     }
                   />
 
                   <InfoRow
                     label="Degree"
                     value={
-                      profile?.degree || 'Not provided'
+                      profile?.degree ||
+                      'Not provided'
                     }
                   />
 
@@ -987,7 +886,8 @@ export default function ProfilePage() {
                   <InfoRow
                     label="Semester"
                     value={
-                      profile?.semester || 'Not provided'
+                      profile?.semester ||
+                      'Not provided'
                     }
                   />
 
@@ -999,12 +899,14 @@ export default function ProfilePage() {
                         : '—'
                     }
                   />
+
                 </InfoCard>
 
                 <InfoCard
                   title="Account Information"
                   icon="🔐"
                 >
+
                   <InfoRow
                     label="Member Since"
                     value={joinedDate}
@@ -1013,34 +915,47 @@ export default function ProfilePage() {
                   <InfoRow
                     label="Account Status"
                     value="Active"
-                    valueColor={COLORS.success}
+                    valueColor={
+                      COLORS.success
+                    }
                   />
+
+                  <div className="happy-note">
+                    <span>🐻</span>
+
+                    <div>
+                      <strong>
+                        You're doing great!
+                      </strong>
+
+                      <small>
+                        Keep growing one concept
+                        at a time 🌱
+                      </small>
+                    </div>
+                  </div>
+
                 </InfoCard>
+
               </div>
+
             </div>
           )}
 
-          {/* ─────────────────────────────────── */}
-          {/* STATS TAB */}
-          {/* ─────────────────────────────────── */}
+          {/* STATS */}
 
           {activeTab === 'stats' && (
             <div>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns:
-                    'repeat(4, minmax(0, 1fr))',
-                  gap: 18,
-                  marginBottom: 24,
-                }}
-              >
+
+              <div className="stats-grid">
+
                 <StatCard
-                  icon="⏱️"
+                  icon="⏰"
                   label="Study Hours"
                   value={`${stats?.total_study_hours ?? 0}h`}
                   description="Total learning time"
                   color={COLORS.primary}
+                  sticker="🌸"
                 />
 
                 <StatCard
@@ -1048,7 +963,8 @@ export default function ProfilePage() {
                   label="Concepts Mastered"
                   value={`${stats?.concepts_mastered ?? 0}`}
                   description="Successfully mastered"
-                  color={COLORS.secondary}
+                  color={COLORS.primary}
+                  sticker="⭐"
                 />
 
                 <StatCard
@@ -1057,160 +973,1240 @@ export default function ProfilePage() {
                   value={`${stats?.current_streak ?? 0}d`}
                   description="Keep your momentum"
                   color={COLORS.success}
+                  sticker="🐰"
                 />
 
                 <StatCard
                   icon="📈"
                   label="Overall Mastery"
-                  value={`${mastery}%`}
+                  value={`${mastery.toFixed(1)}%`}
                   description="Average mastery score"
                   color={COLORS.primary}
+                  sticker="💜"
                 />
+
               </div>
 
-              {/* Mastery Card */}
+              {/* PROGRESS */}
 
-              <div
-                style={{
-                  background: 'white',
-                  border: `1px solid ${COLORS.border}`,
-                  borderRadius: 16,
-                  padding: 28,
-                  boxShadow:
-                    '0 2px 8px rgba(15,23,42,0.04)',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent:
-                      'space-between',
-                    alignItems: 'center',
-                    marginBottom: 18,
-                  }}
-                >
+              <div className="progress-card">
+
+                <div className="progress-top">
+
                   <div>
-                    <h2
-                      style={{
-                        margin: 0,
-                        fontSize: 18,
-                        fontWeight: 800,
-                        color: COLORS.textPrimary,
-                      }}
-                    >
+
+                    <div className="little-badge">
+                      🌱 YOUR JOURNEY
+                    </div>
+
+                    <h2>
                       Learning Progress
                     </h2>
 
-                    <p
-                      style={{
-                        margin: '5px 0 0',
-                        color: COLORS.textSecondary,
-                        fontSize: 13,
-                      }}
-                    >
-                      Your current overall mastery
+                    <p>
+                      Every small step counts.
+                      Keep going! ✨
+                    </p>
+
+                  </div>
+
+                  <div className="big-mastery">
+                    {mastery.toFixed(1)}%
+                  </div>
+
+                </div>
+
+                <div className="large-progress">
+
+                  <div
+                    style={{
+                      width: `${mastery}%`,
+                    }}
+                  />
+
+                </div>
+
+                <div className="progress-labels">
+                  <span>🌱 Starting</span>
+                  <span>🌸 Growing</span>
+                  <span>🌟 Mastered</span>
+                </div>
+
+                <div className="motivation-box">
+                  <div className="motivation-character">
+                    🐻
+                  </div>
+
+                  <div>
+                    <strong>
+                      You're on your way! 💕
+                    </strong>
+
+                    <p>
+                      Keep studying consistently
+                      and your mastery will grow.
                     </p>
                   </div>
 
-                  <span
-                    style={{
-                      fontSize: 24,
-                      fontWeight: 800,
-                      color: COLORS.primary,
-                    }}
-                  >
-                    {mastery}%
-                  </span>
+                  <div className="mini-stars">
+                    ✨ ⭐ ✨
+                  </div>
                 </div>
 
-                <div
-                  style={{
-                    height: 12,
-                    background: '#EEF2F7',
-                    borderRadius: 10,
-                    overflow: 'hidden',
-                  }}
-                >
-                  <div
-                    style={{
-                      height: '100%',
-                      width: `${mastery}%`,
-                      background:
-                        'linear-gradient(90deg,#6C63FF,#A855F7)',
-                      borderRadius: 10,
-                      transition:
-                        'width 0.5s ease',
-                    }}
-                  />
-                </div>
-
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent:
-                      'space-between',
-                    marginTop: 9,
-                    fontSize: 12,
-                    color: COLORS.textMuted,
-                  }}
-                >
-                  <span>0%</span>
-                  <span>50%</span>
-                  <span>100%</span>
-                </div>
               </div>
+
             </div>
           )}
+
         </main>
       </div>
 
-      {/* Responsive styles */}
+      {/* STYLES */}
 
-      <style>{`
+      <style jsx>{`
+
         * {
           box-sizing: border-box;
         }
 
+        .page {
+          min-height: 100vh;
+          background:
+            radial-gradient(
+              circle at 5% 10%,
+              #f3efff 0,
+              transparent 25%
+            ),
+            radial-gradient(
+              circle at 90% 90%,
+              #fdf0f7 0,
+              transparent 25%
+            ),
+            ${COLORS.bg};
+
+          color: ${COLORS.textPrimary};
+
+          font-family:
+            Inter,
+            -apple-system,
+            BlinkMacSystemFont,
+            'Segoe UI',
+            sans-serif;
+        }
+
+        .main {
+          margin-left: 240px;
+          min-height: 100vh;
+          position: relative;
+        }
+
+        /* FLOATING STICKERS */
+
+        .floating-decoration {
+          position: fixed;
+          z-index: 20;
+          pointer-events: none;
+          font-size: 27px;
+          animation: floatSticker 4s ease-in-out infinite;
+        }
+
+        .flower {
+          right: 26px;
+          top: 115px;
+        }
+
+        .star {
+          right: 70px;
+          bottom: 90px;
+          animation-delay: 1s;
+        }
+
+        .heart {
+          left: 255px;
+          bottom: 45px;
+          animation-delay: 1.8s;
+        }
+
+        @keyframes floatSticker {
+          0%,
+          100% {
+            transform: translateY(0) rotate(-5deg);
+          }
+
+          50% {
+            transform: translateY(-9px) rotate(5deg);
+          }
+        }
+
+        /* HERO */
+
+        .hero {
+          position: relative;
+          overflow: hidden;
+          padding: 40px 40px;
+          background:
+            linear-gradient(
+              135deg,
+              #8176f7 0%,
+              #7669ef 45%,
+              #9b75e9 100%
+            );
+
+          color: white;
+        }
+
+        .hero::before {
+          content: '';
+          position: absolute;
+          width: 260px;
+          height: 260px;
+          border-radius: 50%;
+          background: rgba(255,255,255,0.08);
+          top: -130px;
+          right: 15%;
+        }
+
+        .hero::after {
+          content: '';
+          position: absolute;
+          width: 180px;
+          height: 180px;
+          border-radius: 50%;
+          background: rgba(255,255,255,0.06);
+          bottom: -100px;
+          left: 10%;
+        }
+
+        .hero-inner {
+          max-width: 1180px;
+          margin: auto;
+
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+
+          gap: 30px;
+
+          position: relative;
+          z-index: 2;
+        }
+
+        .profile-left {
+          display: flex;
+          align-items: center;
+          gap: 22px;
+        }
+
+        .avatar-wrapper {
+          position: relative;
+        }
+
+        .avatar-ring {
+          width: 100px;
+          height: 100px;
+
+          border-radius: 32px;
+
+          background:
+            linear-gradient(
+              145deg,
+              rgba(255,255,255,0.4),
+              rgba(255,255,255,0.12)
+            );
+
+          border: 3px solid
+            rgba(255,255,255,0.75);
+
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          font-size: 32px;
+          font-weight: 800;
+
+          box-shadow:
+            0 12px 30px
+            rgba(47,35,100,0.2);
+
+          overflow: hidden;
+          backdrop-filter: blur(10px);
+        }
+
+        .avatar-image {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .avatar-sticker {
+          position: absolute;
+          right: -10px;
+          bottom: -9px;
+
+          width: 34px;
+          height: 34px;
+
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          border-radius: 50%;
+
+          background: white;
+
+          box-shadow:
+            0 5px 15px
+            rgba(0,0,0,0.12);
+        }
+
+        .cute-label {
+          display: inline-flex;
+          padding: 6px 10px;
+
+          border-radius: 20px;
+
+          background:
+            rgba(255,255,255,0.15);
+
+          border:
+            1px solid
+            rgba(255,255,255,0.22);
+
+          font-size: 11px;
+          font-weight: 800;
+          letter-spacing: 0.5px;
+
+          margin-bottom: 8px;
+        }
+
+        .hero-info h1 {
+          margin: 0;
+          font-size: 31px;
+          font-weight: 850;
+          letter-spacing: -0.7px;
+        }
+
+        .hero-info p {
+          margin: 6px 0 10px;
+          font-size: 14px;
+          opacity: 0.88;
+        }
+
+        .student-pill {
+          display: inline-flex;
+
+          padding: 6px 11px;
+
+          border-radius: 20px;
+
+          background: rgba(255,255,255,0.16);
+
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        /* MASTERY */
+
+        .mastery-box {
+          width: 230px;
+          padding: 17px 18px;
+
+          border-radius: 22px;
+
+          background:
+            rgba(255,255,255,0.14);
+
+          border:
+            1px solid
+            rgba(255,255,255,0.2);
+
+          backdrop-filter: blur(15px);
+
+          box-shadow:
+            0 10px 25px
+            rgba(55,40,120,0.12);
+
+          position: relative;
+        }
+
+        .mastery-emoji {
+          position: absolute;
+          right: 13px;
+          top: 11px;
+          font-size: 29px;
+        }
+
+        .mastery-label {
+          display: block;
+
+          font-size: 10px;
+          font-weight: 800;
+
+          opacity: 0.72;
+
+          text-transform: uppercase;
+          letter-spacing: 0.6px;
+
+          margin-bottom: 4px;
+        }
+
+        .mastery-box strong {
+          font-size: 29px;
+          font-weight: 850;
+        }
+
+        .mastery-progress {
+          height: 7px;
+
+          margin-top: 11px;
+
+          background:
+            rgba(255,255,255,0.2);
+
+          border-radius: 20px;
+          overflow: hidden;
+        }
+
+        .mastery-progress div {
+          height: 100%;
+
+          border-radius: 20px;
+
+          background:
+            linear-gradient(
+              90deg,
+              white,
+              #fce7f3
+            );
+
+          transition: width 0.5s ease;
+        }
+
+        .mastery-box small {
+          display: block;
+          margin-top: 7px;
+
+          font-size: 11px;
+          opacity: 0.75;
+        }
+
+        /* CONTENT */
+
+        .content {
+          max-width: 1180px;
+          margin: auto;
+
+          padding:
+            30px 40px 60px;
+        }
+
+        /* ALERT */
+
+        .alert {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+
+          padding: 13px 16px;
+          margin-bottom: 20px;
+
+          border-radius: 15px;
+
+          font-size: 14px;
+          font-weight: 600;
+        }
+
+        .error-alert {
+          background: #fff1f2;
+          border: 1px solid #fecdd3;
+          color: #be123c;
+        }
+
+        .success-alert {
+          background: #ecfdf5;
+          border: 1px solid #bbf7d0;
+          color: #047857;
+        }
+
+        /* TABS */
+
+        .tabs {
+          display: flex;
+          gap: 8px;
+
+          padding: 6px;
+
+          background: #f0edf9;
+
+          border-radius: 16px;
+
+          width: fit-content;
+
+          margin-bottom: 25px;
+        }
+
+        .tab {
+          border: none;
+
+          background: transparent;
+
+          padding: 11px 18px;
+
+          border-radius: 12px;
+
+          color: ${COLORS.textSecondary};
+
+          font-size: 13px;
+          font-weight: 700;
+
+          cursor: pointer;
+
+          transition:
+            all 0.2s ease;
+        }
+
+        .tab:hover {
+          color: ${COLORS.primary};
+        }
+
+        .tab.active {
+          background: white;
+
+          color: ${COLORS.primary};
+
+          box-shadow:
+            0 3px 12px
+            rgba(92,77,150,0.1);
+        }
+
+        .tab span {
+          margin-right: 7px;
+        }
+
+        /* PROFILE GRID */
+
+        .profile-grid {
+          display: grid;
+
+          grid-template-columns:
+            minmax(0, 1fr) 300px;
+
+          gap: 22px;
+
+          align-items: start;
+        }
+
+        /* CARD */
+
+        .cute-card {
+          background: white;
+
+          border:
+            1px solid
+            ${COLORS.border};
+
+          border-radius: 24px;
+
+          padding: 28px;
+
+          box-shadow:
+            0 8px 30px
+            rgba(66,48,130,0.055);
+        }
+
+        .card-heading {
+          display: flex;
+          align-items: center;
+          gap: 13px;
+
+          margin-bottom: 25px;
+        }
+
+        .heading-icon {
+          width: 46px;
+          height: 46px;
+
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          border-radius: 15px;
+
+          background: #f3efff;
+
+          font-size: 23px;
+        }
+
+        .card-heading h2 {
+          margin: 0;
+
+          font-size: 20px;
+          font-weight: 850;
+
+          color: ${COLORS.textPrimary};
+        }
+
+        .card-heading p {
+          margin: 5px 0 0;
+
+          color: ${COLORS.textSecondary};
+
+          font-size: 12px;
+        }
+
+        .form-grid {
+          display: grid;
+
+          grid-template-columns:
+            1fr 1fr;
+
+          gap: 18px;
+        }
+
+        .locked-input {
+          position: relative;
+        }
+
+        .locked-input > span {
+          position: absolute;
+
+          right: 12px;
+          top: 50%;
+
+          transform:
+            translateY(-50%);
+
+          font-size: 13px;
+        }
+
+        .form-actions {
+          display: flex;
+
+          justify-content: flex-end;
+
+          gap: 10px;
+
+          margin-top: 27px;
+
+          padding-top: 22px;
+
+          border-top:
+            1px dashed
+            ${COLORS.border};
+        }
+
+        .reset-button,
+        .save-button {
+          border-radius: 13px;
+
+          padding: 11px 19px;
+
+          font-size: 13px;
+
+          font-weight: 750;
+
+          cursor: pointer;
+
+          transition:
+            all 0.2s ease;
+        }
+
+        .reset-button {
+          border:
+            1px solid
+            ${COLORS.border};
+
+          background: #faf9fd;
+
+          color:
+            ${COLORS.textSecondary};
+        }
+
+        .reset-button:hover {
+          background: #f4f1fa;
+        }
+
+        .save-button {
+          border: none;
+
+          color: white;
+
+          background:
+            linear-gradient(
+              135deg,
+              #8175f6,
+              #6d5ce7
+            );
+
+          box-shadow:
+            0 7px 17px
+            rgba(124,111,246,0.25);
+        }
+
+        .save-button:hover {
+          transform: translateY(-1px);
+
+          box-shadow:
+            0 10px 22px
+            rgba(124,111,246,0.3);
+        }
+
+        .save-button:disabled {
+          opacity: 0.65;
+          cursor: not-allowed;
+          transform: none;
+        }
+
+        /* SIDE */
+
+        .side-column {
+          display: flex;
+          flex-direction: column;
+          gap: 18px;
+        }
+
+        /* INFO CARD */
+
+        .info-card {
+          background: white;
+
+          border:
+            1px solid
+            ${COLORS.border};
+
+          border-radius: 22px;
+
+          padding: 20px;
+
+          box-shadow:
+            0 7px 25px
+            rgba(66,48,130,0.045);
+        }
+
+        .info-card-title {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+
+          margin-bottom: 18px;
+
+          font-size: 15px;
+          font-weight: 850;
+        }
+
+        .info-row {
+          padding-bottom: 12px;
+          margin-bottom: 12px;
+
+          border-bottom:
+            1px dashed
+            ${COLORS.border};
+        }
+
+        .info-row:last-of-type {
+          border-bottom: none;
+          margin-bottom: 0;
+        }
+
+        .info-label {
+          display: block;
+
+          margin-bottom: 4px;
+
+          font-size: 10px;
+
+          color:
+            ${COLORS.textMuted};
+
+          font-weight: 800;
+
+          text-transform: uppercase;
+
+          letter-spacing: 0.5px;
+        }
+
+        .info-value {
+          font-size: 13px;
+
+          font-weight: 700;
+
+          color:
+            ${COLORS.textPrimary};
+        }
+
+        .happy-note {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+
+          padding: 12px;
+
+          margin-top: 4px;
+
+          border-radius: 15px;
+
+          background:
+            linear-gradient(
+              135deg,
+              #fff7ed,
+              #fff1f7
+            );
+        }
+
+        .happy-note > span {
+          font-size: 25px;
+        }
+
+        .happy-note strong {
+          display: block;
+
+          font-size: 12px;
+        }
+
+        .happy-note small {
+          display: block;
+
+          margin-top: 2px;
+
+          color:
+            ${COLORS.textSecondary};
+
+          font-size: 10px;
+        }
+
+        /* STATS */
+
+        .stats-grid {
+          display: grid;
+
+          grid-template-columns:
+            repeat(4, minmax(0, 1fr));
+
+          gap: 16px;
+
+          margin-bottom: 22px;
+        }
+
+        .stat-card {
+          position: relative;
+
+          overflow: hidden;
+
+          background: white;
+
+          border:
+            1px solid
+            ${COLORS.border};
+
+          border-radius: 22px;
+
+          padding: 20px;
+
+          box-shadow:
+            0 7px 25px
+            rgba(66,48,130,0.045);
+        }
+
+        .stat-card::after {
+          content: '';
+
+          position: absolute;
+
+          width: 75px;
+          height: 75px;
+
+          border-radius: 50%;
+
+          background: #faf8ff;
+
+          right: -25px;
+          bottom: -25px;
+        }
+
+        .stat-sticker {
+          position: absolute;
+
+          top: 13px;
+          right: 14px;
+
+          font-size: 18px;
+        }
+
+        .stat-icon {
+          width: 43px;
+          height: 43px;
+
+          border-radius: 14px;
+
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          font-size: 20px;
+
+          margin-bottom: 14px;
+        }
+
+        .stat-label {
+          font-size: 10px;
+
+          color:
+            ${COLORS.textMuted};
+
+          font-weight: 800;
+
+          text-transform: uppercase;
+
+          letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+          margin-top: 5px;
+
+          font-size: 27px;
+
+          font-weight: 850;
+        }
+
+        .stat-description {
+          margin-top: 4px;
+
+          color:
+            ${COLORS.textSecondary};
+
+          font-size: 11px;
+        }
+
+        /* PROGRESS */
+
+        .progress-card {
+          background: white;
+
+          border:
+            1px solid
+            ${COLORS.border};
+
+          border-radius: 25px;
+
+          padding: 28px;
+
+          box-shadow:
+            0 8px 30px
+            rgba(66,48,130,0.05);
+        }
+
+        .progress-top {
+          display: flex;
+
+          align-items: center;
+
+          justify-content: space-between;
+
+          gap: 20px;
+
+          margin-bottom: 20px;
+        }
+
+        .little-badge {
+          display: inline-flex;
+
+          padding: 5px 9px;
+
+          border-radius: 20px;
+
+          background: #f4f0ff;
+
+          color:
+            ${COLORS.primary};
+
+          font-size: 9px;
+
+          font-weight: 850;
+
+          letter-spacing: 0.6px;
+        }
+
+        .progress-top h2 {
+          margin: 8px 0 3px;
+
+          font-size: 20px;
+
+          font-weight: 850;
+        }
+
+        .progress-top p {
+          margin: 0;
+
+          color:
+            ${COLORS.textSecondary};
+
+          font-size: 12px;
+        }
+
+        .big-mastery {
+          font-size: 35px;
+
+          font-weight: 900;
+
+          color:
+            ${COLORS.primary};
+        }
+
+        .large-progress {
+          height: 15px;
+
+          background: #f0edf8;
+
+          border-radius: 20px;
+
+          overflow: hidden;
+        }
+
+        .large-progress > div {
+          height: 100%;
+
+          border-radius: 20px;
+
+          background:
+            linear-gradient(
+              90deg,
+              #8b7cf7,
+              #c084fc,
+              #f0a5cf
+            );
+
+          transition:
+            width 0.6s ease;
+        }
+
+        .progress-labels {
+          display: flex;
+
+          justify-content: space-between;
+
+          margin-top: 8px;
+
+          font-size: 11px;
+
+          color:
+            ${COLORS.textMuted};
+        }
+
+        .motivation-box {
+          display: flex;
+
+          align-items: center;
+
+          gap: 13px;
+
+          margin-top: 25px;
+
+          padding: 16px;
+
+          border-radius: 19px;
+
+          background:
+            linear-gradient(
+              135deg,
+              #f8f5ff,
+              #fff6fa
+            );
+
+          border:
+            1px solid
+            #eee8fa;
+        }
+
+        .motivation-character {
+          width: 47px;
+          height: 47px;
+
+          flex-shrink: 0;
+
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          border-radius: 15px;
+
+          background: white;
+
+          font-size: 27px;
+
+          box-shadow:
+            0 4px 12px
+            rgba(0,0,0,0.05);
+        }
+
+        .motivation-box strong {
+          font-size: 13px;
+        }
+
+        .motivation-box p {
+          margin: 3px 0 0;
+
+          color:
+            ${COLORS.textSecondary};
+
+          font-size: 11px;
+        }
+
+        .mini-stars {
+          margin-left: auto;
+
+          font-size: 17px;
+
+          white-space: nowrap;
+        }
+
+        /* RESPONSIVE */
+
+        @media (max-width: 1100px) {
+
+          .stats-grid {
+            grid-template-columns:
+              repeat(2, 1fr);
+          }
+
+          .profile-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .side-column {
+            display: grid;
+
+            grid-template-columns:
+              1fr 1fr;
+          }
+
+        }
+
+        @media (max-width: 800px) {
+
+          .main {
+            margin-left: 0;
+          }
+
+          .hero {
+            padding: 30px 20px;
+          }
+
+          .hero-inner {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+
+          .mastery-box {
+            width: 100%;
+          }
+
+          .content {
+            padding:
+              22px 16px 40px;
+          }
+
+          .form-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .side-column {
+            grid-template-columns: 1fr;
+          }
+
+          .tabs {
+            width: 100%;
+          }
+
+          .tab {
+            flex: 1;
+            padding:
+              10px 8px;
+          }
+
+          .floating-decoration {
+            display: none;
+          }
+
+        }
+
+        @media (max-width: 560px) {
+
+          .profile-left {
+            align-items: flex-start;
+          }
+
+          .avatar-ring {
+            width: 78px;
+            height: 78px;
+
+            border-radius: 25px;
+
+            font-size: 25px;
+          }
+
+          .hero-info h1 {
+            font-size: 24px;
+          }
+
+          .stats-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .cute-card,
+          .progress-card {
+            padding: 20px;
+          }
+
+          .form-actions {
+            flex-direction: column-reverse;
+          }
+
+          .reset-button,
+          .save-button {
+            width: 100%;
+          }
+
+          .progress-top {
+            align-items: flex-start;
+          }
+
+          .big-mastery {
+            font-size: 27px;
+          }
+
+          .motivation-box {
+            align-items: flex-start;
+          }
+
+          .mini-stars {
+            display: none;
+          }
+
+        }
+
         input:focus,
         select:focus {
-          outline: none;
-          border-color: #6C63FF !important;
-          box-shadow: 0 0 0 3px rgba(108,99,255,0.10);
+          outline: none !important;
+
+          border-color:
+            ${COLORS.primary} !important;
+
+          box-shadow:
+            0 0 0 4px
+            rgba(124,111,246,0.1) !important;
         }
 
         button {
           font-family: inherit;
         }
 
-        @media (max-width: 1000px) {
-          main {
-            padding-left: 24px !important;
-            padding-right: 24px !important;
-          }
-        }
-
-        @media (max-width: 800px) {
-          main {
-            padding-left: 16px !important;
-            padding-right: 16px !important;
-          }
-
-          section > div {
-            flex-direction: column !important;
-            align-items: flex-start !important;
-          }
-
-          section > div > div:last-child {
-            width: 100% !important;
-          }
-        }
       `}</style>
     </div>
   );
 }
 
 /* ───────────────────────────────────────────── */
-/* Reusable Form Field */
+/* FORM FIELD */
 /* ───────────────────────────────────────────── */
 
 function FormField({
@@ -1226,8 +2222,8 @@ function FormField({
         style={{
           display: 'block',
           marginBottom: 7,
-          fontSize: 13,
-          fontWeight: 700,
+          fontSize: 12,
+          fontWeight: 800,
           color: COLORS.textPrimary,
         }}
       >
@@ -1240,24 +2236,35 @@ function FormField({
 }
 
 /* ───────────────────────────────────────────── */
-/* Input Style */
+/* INPUT STYLE */
 /* ───────────────────────────────────────────── */
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
   height: 44,
   padding: '0 13px',
-  border: `1px solid ${COLORS.border}`,
-  borderRadius: 9,
+
+  border:
+    `1px solid ${COLORS.border}`,
+
+  borderRadius: 12,
+
   background: '#FFFFFF',
+
   color: COLORS.textPrimary,
-  fontSize: 14,
+
+  fontSize: 13,
+
   fontFamily: 'inherit',
+
   transition: 'all 0.2s',
+
+  boxShadow:
+    '0 2px 6px rgba(50,40,100,0.02)',
 };
 
 /* ───────────────────────────────────────────── */
-/* Info Card */
+/* INFO CARD */
 /* ───────────────────────────────────────────── */
 
 function InfoCard({
@@ -1270,42 +2277,47 @@ function InfoCard({
   children: React.ReactNode;
 }) {
   return (
-    <div
-      style={{
-        background: 'white',
-        border: `1px solid ${COLORS.border}`,
-        borderRadius: 16,
-        padding: 20,
-        boxShadow:
-          '0 2px 8px rgba(15,23,42,0.04)',
-      }}
-    >
-      <h3
-        style={{
-          margin: '0 0 18px',
-          fontSize: 15,
-          fontWeight: 800,
-          color: COLORS.textPrimary,
-        }}
-      >
-        {icon} {title}
+    <div className="info-card">
+
+      <h3 className="info-card-title">
+        <span>{icon}</span>
+        {title}
       </h3>
 
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 14,
-        }}
-      >
+      <div>
         {children}
       </div>
+
+      <style jsx>{`
+        .info-card {
+          background: white;
+          border:
+            1px solid
+            ${COLORS.border};
+          border-radius: 22px;
+          padding: 20px;
+          box-shadow:
+            0 7px 25px
+            rgba(66,48,130,0.045);
+        }
+
+        .info-card-title {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+
+          margin: 0 0 18px;
+
+          font-size: 15px;
+          font-weight: 850;
+        }
+      `}</style>
     </div>
   );
 }
 
 /* ───────────────────────────────────────────── */
-/* Info Row */
+/* INFO ROW */
 /* ───────────────────────────────────────────── */
 
 function InfoRow({
@@ -1318,42 +2330,65 @@ function InfoRow({
   valueColor?: string;
 }) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 3,
-        paddingBottom: 12,
-        borderBottom: `1px solid ${COLORS.border}`,
-      }}
-    >
-      <span
-        style={{
-          fontSize: 11,
-          color: COLORS.textMuted,
-          fontWeight: 600,
-          textTransform: 'uppercase',
-          letterSpacing: 0.4,
-        }}
-      >
+    <div className="info-row">
+
+      <span className="info-label">
         {label}
       </span>
 
       <span
+        className="info-value"
         style={{
-          fontSize: 13,
-          color: valueColor || COLORS.textPrimary,
-          fontWeight: 600,
+          color:
+            valueColor ||
+            COLORS.textPrimary,
         }}
       >
         {value}
       </span>
+
+      <style jsx>{`
+        .info-row {
+          padding-bottom: 12px;
+          margin-bottom: 12px;
+
+          border-bottom:
+            1px dashed
+            ${COLORS.border};
+        }
+
+        .info-row:last-child {
+          border-bottom: none;
+          margin-bottom: 0;
+        }
+
+        .info-label {
+          display: block;
+          margin-bottom: 4px;
+
+          font-size: 10px;
+
+          color:
+            ${COLORS.textMuted};
+
+          font-weight: 800;
+
+          text-transform: uppercase;
+
+          letter-spacing: 0.5px;
+        }
+
+        .info-value {
+          font-size: 13px;
+          font-weight: 700;
+        }
+      `}</style>
     </div>
   );
 }
 
 /* ───────────────────────────────────────────── */
-/* Stat Card */
+/* STAT CARD */
 /* ───────────────────────────────────────────── */
 
 function StatCard({
@@ -1362,72 +2397,120 @@ function StatCard({
   value,
   description,
   color,
+  sticker,
 }: {
   icon: string;
   label: string;
   value: string;
   description: string;
   color: string;
+  sticker: string;
 }) {
   return (
-    <div
-      style={{
-        background: 'white',
-        border: `1px solid ${COLORS.border}`,
-        borderRadius: 16,
-        padding: 20,
-        boxShadow:
-          '0 2px 8px rgba(15,23,42,0.04)',
-      }}
-    >
+    <div className="stat-card">
+
+      <div className="stat-sticker">
+        {sticker}
+      </div>
+
       <div
+        className="stat-icon"
         style={{
-          width: 42,
-          height: 42,
-          borderRadius: 11,
-          background: `${color}15`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: 20,
-          marginBottom: 14,
+          background: `${color}14`,
         }}
       >
         {icon}
       </div>
 
-      <div
-        style={{
-          fontSize: 11,
-          fontWeight: 700,
-          color: COLORS.textMuted,
-          textTransform: 'uppercase',
-          letterSpacing: 0.4,
-        }}
-      >
+      <div className="stat-label">
         {label}
       </div>
 
       <div
+        className="stat-value"
         style={{
-          marginTop: 5,
-          fontSize: 27,
-          fontWeight: 800,
           color,
         }}
       >
         {value}
       </div>
 
-      <div
-        style={{
-          marginTop: 4,
-          fontSize: 12,
-          color: COLORS.textSecondary,
-        }}
-      >
+      <div className="stat-description">
         {description}
       </div>
+
+      <style jsx>{`
+        .stat-card {
+          position: relative;
+          overflow: hidden;
+
+          background: white;
+
+          border:
+            1px solid
+            ${COLORS.border};
+
+          border-radius: 22px;
+
+          padding: 20px;
+
+          box-shadow:
+            0 7px 25px
+            rgba(66,48,130,0.045);
+        }
+
+        .stat-sticker {
+          position: absolute;
+          top: 13px;
+          right: 14px;
+          font-size: 18px;
+        }
+
+        .stat-icon {
+          width: 43px;
+          height: 43px;
+
+          border-radius: 14px;
+
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          font-size: 20px;
+
+          margin-bottom: 14px;
+        }
+
+        .stat-label {
+          font-size: 10px;
+
+          color:
+            ${COLORS.textMuted};
+
+          font-weight: 800;
+
+          text-transform: uppercase;
+
+          letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+          margin-top: 5px;
+
+          font-size: 27px;
+
+          font-weight: 850;
+        }
+
+        .stat-description {
+          margin-top: 4px;
+
+          color:
+            ${COLORS.textSecondary};
+
+          font-size: 11px;
+        }
+      `}</style>
     </div>
   );
 }
