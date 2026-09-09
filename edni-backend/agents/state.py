@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional, Any
+from typing import Optional, Any, List
 
 from irt.blooms_gap_engine import KnowledgeProfile
 
@@ -61,7 +61,9 @@ class StudyPlan:
 
     # NEW — adaptive planner progress
     current_week: int = 1
-    completed_weeks: list[int] = field(default_factory=list)
+
+    previous_weeks: List[Dict[str, Any]] = field(default_factory=list)
+    
 
 
 # ══════════════════════════════════════════════════════════════════════════════
