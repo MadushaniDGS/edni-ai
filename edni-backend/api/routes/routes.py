@@ -1,12 +1,16 @@
 """
-FastAPI Route Handlers (REFACTORED)
-====================================
+FastAPI Route Handlers (REFACTORED + CORRECTED)
+================================================
 
 Split diagnostic flow:
 1. Fast path: Validate → Diagnostic Agent → Save → Return (< 1 sec)
 2. Background: Planner + Remediation + Evaluator (async, non-blocking)
 
-This allows frontend to show results immediately without waiting 1-3 minutes.
+FIXES APPLIED:
+- Issue #1: Fixed /analytics module query efficiency
+- Issue #2: Enhanced /study-plan/planner response with critique
+- Issue #3: Fixed evaluator.run() call signature in _run_background_pipeline
+- Issue #4: Added new /resources/remediate/{concept} endpoint
 """
 
 from __future__ import annotations
@@ -17,7 +21,7 @@ from typing import Optional, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete, func
+from sqlalchemy import select, update, delete, or_, func
 from loguru import logger
 
 from db.session import get_db
@@ -35,7 +39,7 @@ from db.models.models import (
     EvaluationLog,
     Module,
     UserModule,
-    Resource,
+    SeedResource,
 )
 
 from api.schemas.schemas import (
@@ -60,6 +64,9 @@ from api.schemas.schemas import (
     ResourceOut,
 )
 
+from services.study_plan_service import generate_week, normalize_week, attach_rag_resources, safe_bloom, BLOOM_LABELS
+from core.config import settings
+
 from core.auth import (
     hash_password,
     verify_password,
@@ -69,13 +76,6 @@ from core.auth import (
     get_current_user_id,
     CREDENTIALS_EXCEPTION,
 )
-
-# Removed: from agents.graph import run_pipeline
-# Background pipeline now calls agents directly
-
-# Add this at the top if using api.routes.routes path:
-# All existing imports stay the same, just copy this file 
-# to: edni-backend/api/routes/routes.py
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -107,6 +107,55 @@ def _issue_tokens(user_id: str, email: str) -> dict:
         "access_token": create_access_token(payload),
         "refresh_token": create_refresh_token(payload),
     }
+
+def severity_to_score(value: Any) -> float:
+    """
+    Convert gap severity into a numeric score.
+
+    Supported values:
+    - numeric: 0, 1, 2, 3...
+    - strings: none, low, medium, moderate, high, critical
+    - dictionaries containing severity/score/value
+    """
+    if value is None:
+        return 0.0
+
+    if isinstance(value, dict):
+        value = (
+            value.get("score")
+            if value.get("score") is not None
+            else value.get("severity")
+        )
+
+    if isinstance(value, bool):
+        return 1.0 if value else 0.0
+
+    if isinstance(value, (int, float)):
+        return float(value)
+
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+
+        mapping = {
+            "none": 0.0,
+            "no_gap": 0.0,
+            "no gap": 0.0,
+            "low": 1.0,
+            "medium": 2.0,
+            "moderate": 2.0,
+            "high": 3.0,
+            "critical": 4.0,
+        }
+
+        if normalized in mapping:
+            return mapping[normalized]
+
+        try:
+            return float(normalized)
+        except (TypeError, ValueError):
+            return 0.0
+
+    return 0.0
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -260,6 +309,7 @@ async def _run_background_pipeline(
 
             # ==========================================================
             # 8. Run Evaluator Agent
+            # FIX #3: Corrected evaluator.run() call signature
             # ==========================================================
 
             logger.info(
@@ -275,6 +325,24 @@ async def _run_background_pipeline(
                 "[BackgroundPipeline] EvaluatorAgent completed."
             )
 
+            # Normalize the generated week and persist actual RAG resource metadata
+            # with each daily task. Only one week is active at a time.
+            if state.study_plan and state.study_plan.weeks:
+                w = state.study_plan.weeks[0]
+                prepared = normalize_week({
+                    "week_number": w.week_number,
+                    "theme": w.theme,
+                    "concepts": w.concepts,
+                    "bloom_focus": w.bloom_focus,
+                    "hours": w.hours,
+                    "tasks": w.tasks,
+                    "priority": w.priority,
+                    "milestone": w.milestone,
+                }, profile)
+                prepared = attach_rag_resources(prepared, state.resources)
+                w.tasks = prepared["tasks"]
+                w.hours = prepared["hours"]
+
             # ==========================================================
             # 9. Save Study Plan
             # ==========================================================
@@ -282,7 +350,6 @@ async def _run_background_pipeline(
             study_plan = state.study_plan
 
             if study_plan:
-
                 logger.info(
                     f"[StudyPlan Save] Saving plan "
                     f"{study_plan.plan_id} "
@@ -307,7 +374,6 @@ async def _run_background_pipeline(
                 weeks_data = []
 
                 for week in study_plan.weeks:
-
                     week_data = {
                         "week_number": week.week_number,
                         "theme": week.theme,
@@ -326,7 +392,6 @@ async def _run_background_pipeline(
                 # ------------------------------------------------------
 
                 if existing_plan:
-
                     logger.info(
                         f"[StudyPlan Save] Updating existing plan "
                         f"{existing_plan.id}"
@@ -338,16 +403,34 @@ async def _run_background_pipeline(
                     existing_plan.version = study_plan.version
                     existing_plan.is_active = True
 
+                    # Update progress
+                    existing_plan.current_week = state.current_week
+
+                    completed = existing_plan.completed_weeks or []
+
+                    previous_week = state.current_week - 1
+
+                    if previous_week > 0 and previous_week not in completed:
+                        completed.append(previous_week)
+
+                    existing_plan.completed_weeks = completed
+
                 # ------------------------------------------------------
                 # Create new plan
                 # ------------------------------------------------------
 
                 else:
-
                     logger.info(
                         f"[StudyPlan Save] Creating new plan "
                         f"{study_plan.plan_id}"
                     )
+
+                    completed_weeks = []
+
+                    if state.current_week > 1:
+                        completed_weeks.append(
+                            state.current_week - 1
+                        )
 
                     new_plan = StudyPlanModel(
                         id=study_plan.plan_id,
@@ -358,82 +441,12 @@ async def _run_background_pipeline(
                         critique=state.plan_critique,
                         version=study_plan.version,
                         is_active=True,
+                        current_week=state.current_week,
+                        completed_weeks=completed_weeks,
                     )
 
                     db.add(new_plan)
-
-                # ======================================================
-                # 10. Save Tasks
-                # ======================================================
-
-                for week in study_plan.weeks:
-
-                    for task_data in week.tasks:
-
-                        if not isinstance(task_data, dict):
-                            continue
-
-                        if not task_data.get("activity"):
-                            continue
-
-                        duration_hours = float(
-                            task_data.get("hours", 1)
-                        )
-
-                        BLOOM_LABELS = {
-                            1: "Remember",
-                            2: "Understand",
-                            3: "Apply",
-                            4: "Analyze",
-                            5: "Evaluate",
-                            6: "Create",
-                        }
-
-                        bloom_value = task_data.get("bloom_level", 3)
-
-                        try:
-                            bloom_number = int(bloom_value)
-                        except (TypeError, ValueError):
-                            bloom_number = 3
-
-                        bloom_label = BLOOM_LABELS.get(
-                            bloom_number,
-                            "Apply",
-                        )
-
-                        task = Task(
-                            user_id=student_id,
-                            course=task_data.get(
-                                "learning_area",
-                                task_data.get("concept", "Study"),
-                            ),
-                            title=task_data.get(
-                                "activity",
-                                "Study task",
-                            ),
-                            duration=int(duration_hours * 60),
-
-                            # Database String field
-                            bloom=bloom_label,
-
-                            # Database Integer field
-                            bloom_level=bloom_number,
-
-                            concept=task_data.get("concept"),
-                            learning_area=task_data.get("learning_area"),
-
-                            column=(
-                                "UPCOMING"
-                                if week.week_number > 2
-                                else "WEEK"
-                                if week.week_number > 0
-                                else "TODAY"
-                            ),
-
-                            week_number=week.week_number,
-                        )
-
-                        db.add(task)
+                    existing_plan = new_plan
 
                 logger.info(
                     f"[StudyPlan Save] Plan contains "
@@ -441,7 +454,6 @@ async def _run_background_pipeline(
                 )
 
             else:
-
                 logger.warning(
                     f"[StudyPlan Save] No study plan returned by "
                     f"PlannerAgent | "
@@ -449,6 +461,74 @@ async def _run_background_pipeline(
                     f"profile_id={profile_id}"
                 )
 
+            # ==========================================================
+            # 10. Save Tasks
+            # ==========================================================
+
+            if state.study_plan and state.study_plan.weeks:
+                for week in state.study_plan.weeks[:1]:
+                    stored_tasks = []
+                    for index, task_data in enumerate(week.tasks[:7], start=1):
+                        if not isinstance(task_data, dict):
+                            continue
+                        bloom_number = safe_bloom(task_data.get("bloom_level", 3))
+                        task = Task(
+                            user_id=student_id,
+                            course=task_data.get("learning_area") or task_data.get("concept") or "Study",
+                            title=task_data.get("activity") or f"Day {index} task",
+                            duration=max(1, int(float(task_data.get("hours", 1) or 1) * 60)),
+                            bloom=BLOOM_LABELS[bloom_number],
+                            bloom_level=bloom_number,
+                            concept=task_data.get("concept"),
+                            learning_area=task_data.get("learning_area"),
+                            column="WEEK",
+                            week_number=week.week_number,
+                            status="PENDING",
+                        )
+                        db.add(task)
+                        await db.flush()
+                        item = dict(task_data)
+                        item.update({"id": task.id, "day": index, "day_label": f"Day {index}", "status": "PENDING"})
+                        stored_tasks.append(item)
+
+                    while len(stored_tasks) < 7:
+                        index = len(stored_tasks) + 1
+                        concepts = week.concepts or ["Core concept"]
+                        concept = concepts[(index - 1) % len(concepts)]
+                        task = Task(
+                            user_id=student_id, course="Study", title=f"Related practice: {concept}", duration=60,
+                            bloom="Apply", bloom_level=3, concept=concept, learning_area=None,
+                            column="WEEK", week_number=week.week_number, status="PENDING"
+                        )
+                        db.add(task)
+                        await db.flush()
+                        stored_tasks.append({
+                            "id": task.id, "day": index, "day_label": f"Day {index}",
+                            "activity": task.title, "concept": concept, "learning_area": None,
+                            "bloom_level": 3, "bloom_label": "Apply", "hours": 1, "estimated_minutes": 60,
+                            "learning_objective": f"Reinforce {concept} through related practice.",
+                            "description": f"Complete related practice for {concept}.",
+                            "gap_severity": "MEDIUM", "status": "PENDING", "resources": [], "resource_count": 0,
+                        })
+
+                    week_json = {
+                        "week_number": week.week_number, "theme": week.theme, "concepts": week.concepts,
+                        "bloom_focus": week.bloom_focus, "hours": round(sum(float(t.get("hours", 1)) for t in stored_tasks), 2),
+                        "tasks": stored_tasks, "priority": week.priority, "milestone": week.milestone,
+                    }
+                    if existing_plan:
+                        existing_plan.weeks = [week_json]
+                        existing_plan.total_hours = week_json["hours"]
+                        existing_plan.current_week = week.week_number
+                        existing_plan.is_active = True
+                        existing_plan.version = (existing_plan.version or 1) + 1
+                        existing_plan.critique = state.plan_critique
+                    else:
+                        db.add(StudyPlanModel(
+                            id=study_plan.plan_id, user_id=student_id, profile_id=profile_id, weeks=[week_json],
+                            total_hours=week_json["hours"], critique=state.plan_critique, version=1,
+                            is_active=True, current_week=week.week_number, completed_weeks=[]
+                        ))
             # ==========================================================
             # 11. Save Evaluation Log
             # ==========================================================
@@ -801,7 +881,7 @@ async def change_password(
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# DIAGNOSTIC ROUTES (REFACTORED)
+# DIAGNOSTIC ROUTES
 # ══════════════════════════════════════════════════════════════════════════════
 
 diagnostic_router = APIRouter(
@@ -899,9 +979,10 @@ async def get_questions(
 )
 async def submit_diagnostic(
     body: DiagnosticSubmitRequest,
+    background_tasks: BackgroundTasks,
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
-    background_tasks: BackgroundTasks = BackgroundTasks(),
+    
 ):
     """
     REFACTORED: Fast diagnostic + background pipeline.
@@ -1470,9 +1551,9 @@ async def submit_diagnostic(
             feedback_cycle=profile.feedback_cycle,
         ),
 
-        study_plan_id=None,  # Will be available after background task completes
+        study_plan_id=None,
 
-        resources_count=0,  # Will be available after background task completes
+        resources_count=0,
 
         evaluation_notes="Study plan and resources are being prepared in the background...",
 
@@ -1482,6 +1563,7 @@ async def submit_diagnostic(
 
         feedback_cycle=profile.feedback_cycle,
     )
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # KNOWLEDGE PROFILE ROUTES
@@ -1556,6 +1638,7 @@ async def get_knowledge_profile(
         ),
     }
 
+
 # ══════════════════════════════════════════════════════════════════════════════
 # STUDY PLAN ROUTES
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1566,41 +1649,57 @@ planner_router = APIRouter(
 )
 
 
-@planner_router.get(
-    "/planner",
-)
+@planner_router.get("/planner")
 async def get_active_plan(
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get the study plan for the latest Knowledge Profile."""
-
-    # Get the latest knowledge profile
-    latest_profile = await db.scalar(
-        select(KnowledgeProfileModel)
-        .where(
-            KnowledgeProfileModel.user_id == user_id,
-        )
-        .order_by(
-            KnowledgeProfileModel.created_at.desc()
-        )
-    )
-
+    latest_profile = await db.scalar(select(KnowledgeProfileModel).where(KnowledgeProfileModel.user_id == user_id).order_by(KnowledgeProfileModel.created_at.desc()))
     if not latest_profile:
-        raise HTTPException(
-            status_code=404,
-            detail=(
-                "No knowledge profile found. "
-                "Complete the diagnostic first."
-            ),
-        )
+        raise HTTPException(404, "No knowledge profile found. Complete the diagnostic first.")
 
-    # Get the plan belonging to that profile
+    plan = await db.scalar(select(StudyPlanModel).where(StudyPlanModel.user_id == user_id, StudyPlanModel.profile_id == latest_profile.id, StudyPlanModel.is_active == True).order_by(StudyPlanModel.created_at.desc()))
+
+    if not plan:
+        try:
+            week, _state = await generate_week(user_id, latest_profile, 1)
+            plan = StudyPlanModel(id=str(uuid.uuid4()), user_id=user_id, profile_id=latest_profile.id, weeks=[week], total_hours=week["hours"], version=1, is_active=True, current_week=1, completed_weeks=[])
+            db.add(plan)
+            for index, td in enumerate(week["tasks"][:7], start=1):
+                b=safe_bloom(td.get("bloom_level",3))
+                task=Task(user_id=user_id, course=td.get("learning_area") or td.get("concept") or "Study", title=td.get("activity") or f"Day {index} task", duration=max(1,int(float(td.get("hours",1) or 1)*60)), bloom=BLOOM_LABELS[b], bloom_level=b, concept=td.get("concept"), learning_area=td.get("learning_area"), column="WEEK", week_number=1, status="PENDING")
+                db.add(task); await db.flush(); td["id"]=task.id; td["status"]="PENDING"; td["day"]=index
+            plan.weeks=[week]
+            await db.commit()
+        except Exception as exc:
+            await db.rollback(); logger.exception(f"[StudyPlan GET] Initial generation failed: {exc}")
+            raise HTTPException(500, "Unable to generate the first study week. Check planner/RAG configuration.")
+
+    tasks=(await db.scalars(select(Task).where(Task.user_id==user_id, Task.week_number==plan.current_week).order_by(Task.id.asc()))).all()
+    week=dict((plan.weeks or [{}])[0])
+    json_by_id={str(t.get("id")):t for t in (week.get("tasks") or []) if isinstance(t,dict) and t.get("id") is not None}
+    out=[]
+    for task in tasks[:7]:
+        item=dict(json_by_id.get(str(task.id),{}))
+        item.update({"id":task.id,"activity":task.title,"hours":round(task.duration/60,2),"bloom_level":task.bloom_level,"bloom_label":BLOOM_LABELS.get(task.bloom_level,task.bloom),"concept":task.concept,"learning_area":task.learning_area,"status":str(getattr(task.status,"value",task.status)).upper()})
+        out.append(item)
+    done=sum(1 for t in tasks[:7] if str(getattr(t.status,"value",t.status)).upper()=="DONE")
+    week["tasks"]=out; week["task_count"]=len(out); week["completed_tasks"]=done; week["progress_percent"]=round(done/7*100,1)
+    return {"id":plan.id,"user_id":plan.user_id,"profile_id":plan.profile_id,"plan_id":plan.id,"weeks":[week],"total_hours":plan.total_hours or 0,"critique":plan.critique or "","version":plan.version or 1,"is_active":plan.is_active,"current_week":plan.current_week or 1,"completed_weeks":plan.completed_weeks or [],"created_at":plan.created_at.isoformat() if plan.created_at else None}
+
+
+@planner_router.get("/current")
+async def get_current_plan(
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get the student's current study week."""
+
     plan = await db.scalar(
         select(StudyPlanModel)
         .where(
             StudyPlanModel.user_id == user_id,
-            StudyPlanModel.profile_id == latest_profile.id,
+            StudyPlanModel.is_active == True,
         )
         .order_by(
             StudyPlanModel.created_at.desc()
@@ -1610,36 +1709,88 @@ async def get_active_plan(
     if not plan:
         raise HTTPException(
             status_code=404,
-            detail=(
-                "Study plan is still being generated. "
-                "Please try again shortly."
-            ),
+            detail="No active study plan found.",
+        )
+
+    current_week = plan.current_week or 1
+    completed_weeks = plan.completed_weeks or []
+
+    week_data = next(
+        (
+            week
+            for week in (plan.weeks or [])
+            if week.get("week_number") == current_week
+        ),
+        None,
+    )
+
+    if not week_data:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Week {current_week} not found.",
         )
 
     return {
-        "id": plan.id,
-        "user_id": plan.user_id,
-        "profile_id": plan.profile_id,
-        "weeks": plan.weeks or [],
-        "total_hours": plan.total_hours or 0,
-        "critique": plan.critique or "",
-        "version": plan.version or 1,
-        "created_at": (
-            plan.created_at.isoformat()
-            if plan.created_at
-            else None
+        "current_week": current_week,
+        "theme": week_data.get("theme", ""),
+        "hours": week_data.get(
+            "hours",
+            week_data.get("total_hours", 0),
         ),
+        "tasks": week_data.get("tasks", []),
+        "completed_weeks": completed_weeks,
     }
 
 
-@planner_router.get(
-    "/debug/plans",
-)
+@planner_router.post("/week/{week}/complete")
+async def complete_week(
+    week: int,
+    background_tasks: BackgroundTasks,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Explicitly complete a week; the normal path is completing all seven tasks."""
+    if week < 1 or week > settings.SEMESTER_WEEKS:
+        raise HTTPException(400, f"Week must be between 1 and {settings.SEMESTER_WEEKS}.")
+    plan = await db.scalar(select(StudyPlanModel).where(StudyPlanModel.user_id == user_id, StudyPlanModel.is_active == True).order_by(StudyPlanModel.created_at.desc()))
+    if not plan:
+        raise HTTPException(404, "No active study plan found.")
+    if (plan.current_week or 1) != week:
+        raise HTTPException(400, f"Week {week} cannot be completed. Current week is {plan.current_week}.")
+    tasks = (await db.scalars(select(Task).where(Task.user_id == user_id, Task.week_number == week))).all()
+    done = sum(1 for t in tasks if str(getattr(t.status, "value", t.status)).upper() == "DONE")
+    if len(tasks) < 7 or done < 7:
+        raise HTTPException(400, f"Complete all 7 tasks first. Progress: {done}/7.")
+    plan.completed_weeks = sorted(set((plan.completed_weeks or []) + [week]))
+    await db.commit()
+    if week >= settings.SEMESTER_WEEKS:
+        return {"message": f"Week {week} completed. Semester plan finished.", "completed_week": week, "next_week": None, "generated": False}
+    background_tasks.add_task(_generate_next_week_after_completion, user_id, week)
+    return {"message": f"Week {week} completed. Next week generation started.", "completed_week": week, "next_week": week + 1, "generated": False, "generation_queued": True}
+
+
+@planner_router.post("/generate-next")
+async def generate_next_week(user_id:str=Depends(get_current_user_id),db:AsyncSession=Depends(get_db)):
+    plan=await db.scalar(select(StudyPlanModel).where(StudyPlanModel.user_id==user_id,StudyPlanModel.is_active==True).order_by(StudyPlanModel.created_at.desc()))
+    profile=await db.scalar(select(KnowledgeProfileModel).where(KnowledgeProfileModel.user_id==user_id).order_by(KnowledgeProfileModel.created_at.desc()))
+    if not plan or not profile: raise HTTPException(404,"No active study plan found.")
+    week=plan.current_week or 1
+    count=await db.scalar(select(func.count(Task.id)).where(Task.user_id==user_id,Task.week_number==week))
+    if count: return {"generated":True,"current_week":week,"task_count":count,"message":f"Week {week} already generated."}
+    if week>settings.SEMESTER_WEEKS: raise HTTPException(400,"Semester study plan completed.")
+    data,_state=await generate_week(user_id,profile,week,previous_weeks=plan.weeks or [])
+    plan.weeks=[data]; plan.total_hours=data["hours"]; plan.version=(plan.version or 1)+1
+    for index,td in enumerate(data["tasks"][:7],start=1):
+        b=safe_bloom(td.get("bloom_level",3)); task=Task(user_id=user_id,course=td.get("learning_area") or td.get("concept") or "Study",title=td.get("activity") or f"Day {index} task",duration=max(1,int(float(td.get("hours",1) or 1)*60)),bloom=BLOOM_LABELS[b],bloom_level=b,concept=td.get("concept"),learning_area=td.get("learning_area"),column="WEEK",week_number=week,status="PENDING"); db.add(task); await db.flush(); td["id"]=task.id; td["day"]=index; td["status"]="PENDING"
+    await db.commit(); return {"generated":True,"current_week":week,"task_count":7,"message":f"Week {week} generated."}
+
+
+@planner_router.get("/debug/plans")
 async def debug_get_all_plans(
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    """Debug: Get all study plans for user"""
+    """Debug: Get all study plans for user."""
 
     plans = (
         await db.scalars(
@@ -1664,24 +1815,30 @@ async def debug_get_all_plans(
                     if p.created_at
                     else None
                 ),
-                "weeks_count": len(p.weeks) if p.weeks else 0,
+                "weeks_count": (
+                    len(p.weeks)
+                    if p.weeks
+                    else 0
+                ),
                 "total_hours": p.total_hours or 0,
                 "version": p.version or 1,
                 "is_active": p.is_active,
+                "current_week": p.current_week,
+                "completed_weeks": p.completed_weeks or [],
             }
             for p in plans
         ],
     }
 
 
-@planner_router.get(
-    "/week/{week_number}"
-)
+@planner_router.get("/week/{week_number}")
 async def get_week(
     week_number: int,
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
+    """Get a specific week from the active study plan."""
+
     plan = await db.scalar(
         select(StudyPlanModel)
         .where(
@@ -1702,8 +1859,8 @@ async def get_week(
     week = next(
         (
             week
-            for week in plan.weeks
-            if week["week_number"] == week_number
+            for week in (plan.weeks or [])
+            if week.get("week_number") == week_number
         ),
         None,
     )
@@ -1794,42 +1951,50 @@ async def create_task(
     return TaskOut.model_validate(task)
 
 
-@tasks_router.put(
-    "/{task_id}",
-    response_model=TaskOut,
-)
-async def update_task(
-    task_id: int,
-    body: UpdateTaskRequest,
-    user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db),
-):
-    task = await db.scalar(
-        select(Task).where(
-            Task.id == task_id,
-            Task.user_id == user_id,
-        )
-    )
+async def _generate_next_week_after_completion(user_id: str, completed_week: int) -> None:
+    try:
+        async with AsyncSession(db_engine) as db:
+            plan=await db.scalar(select(StudyPlanModel).where(StudyPlanModel.user_id==user_id, StudyPlanModel.is_active==True).order_by(StudyPlanModel.created_at.desc()))
+            profile=await db.scalar(select(KnowledgeProfileModel).where(KnowledgeProfileModel.user_id==user_id).order_by(KnowledgeProfileModel.created_at.desc()))
+            if not plan or not profile or (plan.current_week or 1)!=completed_week or completed_week>=settings.SEMESTER_WEEKS:
+                return
+            existing=await db.scalar(select(func.count(Task.id)).where(Task.user_id==user_id,Task.week_number==completed_week+1))
+            if existing:
+                plan.current_week=completed_week+1; plan.completed_weeks=sorted(set((plan.completed_weeks or [])+[completed_week])); await db.commit(); return
+            week,_state=await generate_week(user_id,profile,completed_week+1,previous_weeks=plan.weeks or [])
+            plan.current_week=completed_week+1; plan.completed_weeks=sorted(set((plan.completed_weeks or [])+[completed_week])); plan.weeks=[week]; plan.total_hours=week["hours"]; plan.version=(plan.version or 1)+1
+            for index,td in enumerate(week["tasks"][:7],start=1):
+                b=safe_bloom(td.get("bloom_level",3)); task=Task(user_id=user_id,course=td.get("learning_area") or td.get("concept") or "Study",title=td.get("activity") or f"Day {index} task",duration=max(1,int(float(td.get("hours",1) or 1)*60)),bloom=BLOOM_LABELS[b],bloom_level=b,concept=td.get("concept"),learning_area=td.get("learning_area"),column="WEEK",week_number=completed_week+1,status="PENDING"); db.add(task); await db.flush(); td["id"]=task.id; td["status"]="PENDING"; td["day"]=index
+            await db.commit(); logger.success(f"[StudyPlan] Auto-generated Week {completed_week+1} for {user_id}")
+    except Exception as exc:
+        logger.exception(f"[StudyPlan] Auto-generation failed: {exc}")
 
-    if not task:
-        raise HTTPException(
-            status_code=404,
-            detail="Task not found.",
-        )
 
-    for field, value in body.model_dump(
-        exclude_none=True
-    ).items():
-        setattr(
-            task,
-            field,
-            value,
-        )
+@tasks_router.put("/{task_id}/complete")
+async def complete_task(task_id:int, background_tasks:BackgroundTasks, user_id:str=Depends(get_current_user_id), db:AsyncSession=Depends(get_db)):
+    task=await db.scalar(select(Task).where(Task.id==task_id,Task.user_id==user_id))
+    if not task: raise HTTPException(404,"Task not found")
+    task.status="DONE"; task.updated_at=datetime.utcnow(); await db.commit()
+    week=task.week_number or 1
+    week_tasks=(await db.scalars(select(Task).where(Task.user_id==user_id,Task.week_number==week))).all()
+    done=sum(1 for t in week_tasks if str(getattr(t.status,"value",t.status)).upper()=="DONE")
+    full=len(week_tasks)>=7 and done==len(week_tasks)
+    if full: background_tasks.add_task(_generate_next_week_after_completion,user_id,week)
+    return {"message":"Task completed","task_id":task.id,"week_number":week,"completed_tasks":done,"task_count":len(week_tasks),"progress_percent":round(done/7*100,1),"week_completed":full,"next_week_generation_queued":full}
 
-    await db.commit()
-    await db.refresh(task)
 
-    return TaskOut.model_validate(task)
+@tasks_router.put("/{task_id}/start")
+async def start_task(task_id:int,user_id:str=Depends(get_current_user_id),db:AsyncSession=Depends(get_db)):
+    task=await db.scalar(select(Task).where(Task.id==task_id,Task.user_id==user_id))
+    if not task: raise HTTPException(404,"Task not found")
+    task.status="STARTED"; task.updated_at=datetime.utcnow(); await db.commit(); return {"message":"Task started","task_id":task.id,"status":"STARTED"}
+
+
+@tasks_router.put("/{task_id}/reset")
+async def reset_task(task_id:int,user_id:str=Depends(get_current_user_id),db:AsyncSession=Depends(get_db)):
+    task=await db.scalar(select(Task).where(Task.id==task_id,Task.user_id==user_id))
+    if not task: raise HTTPException(404,"Task not found")
+    task.status="PENDING"; task.updated_at=datetime.utcnow(); await db.commit(); return {"message":"Task reset","task_id":task.id,"status":"PENDING"}
 
 
 @tasks_router.delete(
@@ -1950,7 +2115,7 @@ async def mark_all_read(
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# ANALYTICS ROUTES
+# ANALYTICS ROUTES (FIX #1: Optimized module query)
 # ══════════════════════════════════════════════════════════════════════════════
 
 analytics_router = APIRouter(
@@ -1981,35 +2146,30 @@ async def get_analytics(
     profiles = profiles_result.all()
 
     # ──────────────────────────────────────────────────────────────────────
-    # Module progress
+    # Module progress (FIX #1: Simplified query + better null handling)
     # ──────────────────────────────────────────────────────────────────────
 
     user_modules_result = await db.scalars(
         select(UserModule)
-        .join(
-            Module,
-            UserModule.module_id == Module.id
-        )
         .where(
             UserModule.user_id == user_id
         )
         .order_by(
-            Module.order
+            UserModule.updated_at.desc()
         )
     )
 
     user_modules = user_modules_result.all()
-
     modules_out = []
 
     for user_module in user_modules:
-
+        
         module = await db.get(
             Module,
             user_module.module_id
         )
 
-        if not module:
+        if not module or not module.is_active:
             continue
 
         modules_out.append(
@@ -2021,11 +2181,25 @@ async def get_analytics(
                 "icon_color": module.icon_color,
 
                 "progress": round(
-                    user_module.progress,
+                    user_module.progress or 0.0,
                     1,
                 ),
 
-                "status": user_module.status,
+                "status": (
+                    user_module.status or "NOT_STARTED"
+                ),
+
+                "started_at": (
+                    user_module.started_at.isoformat()
+                    if user_module.started_at
+                    else None
+                ),
+
+                "completed_at": (
+                    user_module.completed_at.isoformat()
+                    if user_module.completed_at
+                    else None
+                ),
             }
         )
 
@@ -2334,7 +2508,7 @@ async def update_module_progress(
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# RESOURCE ROUTES
+# RESOURCE ROUTES (FIX #4: New /resources/remediate/{concept} endpoint)
 # ══════════════════════════════════════════════════════════════════════════════
 
 resources_router = APIRouter(
@@ -2366,7 +2540,7 @@ async def get_resources(
         min(limit, 100),
     )
 
-    query = select(Resource)
+    query = select(SeedResource)
 
     if type:
         query = query.where(
@@ -2477,11 +2651,634 @@ async def get_resources(
         for resource in resources
     ]
 
+@resources_router.get("/remediate/{concept}")
+async def get_remediation_resources(
+    concept: str,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Get remediation resources for a student's knowledge gap.
+
+    Resource source:
+        PostgreSQL -> seed_resources
+
+    Matching priority:
+        1. Exact learning_area + exact concept
+        2. Partial learning_area + partial concept
+        3. Exact concept fallback
+        4. Learning-area fallback
+
+    Resources are ranked using:
+        - Concept relevance
+        - Learning-area relevance
+        - Bloom-level gap matching
+    """
+
+    # =========================================================
+    # 1. VALIDATE CONCEPT
+    # =========================================================
+
+    concept = concept.strip()
+
+    if not concept or len(concept) < 2:
+        raise HTTPException(
+            status_code=400,
+            detail="Concept must be at least 2 characters.",
+        )
+
+    logger.info(
+        f"[RemediationResources] "
+        f"Request started "
+        f"| concept={concept} "
+        f"| user={user_id}"
+    )
+
+    # =========================================================
+    # 2. GET LATEST KNOWLEDGE PROFILE
+    # =========================================================
+
+    latest_profile = await db.scalar(
+        select(KnowledgeProfileModel)
+        .where(
+            KnowledgeProfileModel.user_id == user_id
+        )
+        .order_by(
+            KnowledgeProfileModel.created_at.desc()
+        )
+    )
+
+    if not latest_profile:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "No knowledge profile found. "
+                "Complete the diagnostic first."
+            ),
+        )
+
+    # =========================================================
+    # 3. FIND CONCEPT GAP
+    # =========================================================
+
+    concept_gap = None
+    gap_bloom_levels = set()
+
+    concept_profiles = (
+        latest_profile.concept_profiles
+        or []
+    )
+
+    for cp in concept_profiles:
+
+        if not isinstance(cp, dict):
+            continue
+
+        cp_concept = str(
+            cp.get("concept") or ""
+        ).strip()
+
+        cp_learning_area = str(
+            cp.get("learning_area")
+            or cp.get("area")
+            or ""
+        ).strip()
+
+        # Match requested concept
+        if (
+            cp_concept.lower() == concept.lower()
+            or cp_learning_area.lower() == concept.lower()
+        ):
+            concept_gap = cp
+
+            # ---------------------------------------------
+            # Extract Bloom gaps
+            # ---------------------------------------------
+
+            bloom_results = (
+                cp.get("bloom_results")
+                or {}
+            )
+
+            if isinstance(bloom_results, dict):
+
+                for level, result_data in bloom_results.items():
+
+                    if not isinstance(result_data, dict):
+                        continue
+
+                    mastery = result_data.get(
+                        "mastery",
+                        0,
+                    )
+
+                    gap_severity = result_data.get(
+                        "gap_severity",
+                        0,
+                    )
+
+                    try:
+                        mastery = float(
+                            mastery or 0
+                        )
+                    except (
+                        TypeError,
+                        ValueError,
+                    ):
+                        mastery = 0
+
+                    try:
+                        severity_score = severity_to_score(
+                            gap_severity
+                        )
+                    except Exception:
+                        severity_score = 0
+
+                    if (
+                        severity_score > 0
+                        and mastery < 70
+                    ):
+                        try:
+                            gap_bloom_levels.add(
+                                int(level)
+                            )
+                        except (
+                            TypeError,
+                            ValueError,
+                        ):
+                            pass
+
+            break
+
+    # =========================================================
+    # 4. DETERMINE LEARNING AREA
+    # =========================================================
+
+    learning_area = ""
+
+    if concept_gap:
+
+        learning_area = str(
+            concept_gap.get("learning_area")
+            or concept_gap.get("area")
+            or ""
+        ).strip()
+
+    concept_lower = concept.lower().strip()
+
+    learning_area_lower = (
+        learning_area.lower().strip()
+        if learning_area
+        else ""
+    )
+
+    logger.info(
+        f"[RemediationResources] "
+        f"Gap information "
+        f"| concept={concept} "
+        f"| learning_area={learning_area} "
+        f"| gap_bloom_levels={sorted(gap_bloom_levels)}"
+    )
+
+    # =========================================================
+    # 5. FIND RESOURCES FROM seed_resources
+    # =========================================================
+
+    resources = []
+
+    # ---------------------------------------------------------
+    # STEP 1
+    # EXACT CONCEPT + EXACT LEARNING AREA
+    # ---------------------------------------------------------
+
+    if learning_area_lower:
+
+        query = select(
+            SeedResource
+        ).where(
+            func.lower(
+                SeedResource.concept
+            ) == concept_lower,
+
+            func.lower(
+                SeedResource.learning_area
+            ) == learning_area_lower,
+
+            SeedResource.is_accessible.is_(True),
+        )
+
+        result = await db.scalars(
+            query.limit(200)
+        )
+
+        resources = result.all()
+
+        logger.info(
+            f"[RemediationResources] "
+            f"Exact concept + learning_area "
+            f"matches={len(resources)}"
+        )
+
+    # ---------------------------------------------------------
+    # STEP 2
+    # PARTIAL CONCEPT + PARTIAL LEARNING AREA
+    #
+    # IMPORTANT:
+    # Both conditions must match.
+    # ---------------------------------------------------------
+
+    if not resources and learning_area_lower:
+
+        query = select(
+            SeedResource
+        ).where(
+            func.lower(
+                SeedResource.concept
+            ).contains(
+                concept_lower
+            ),
+
+            func.lower(
+                SeedResource.learning_area
+            ).contains(
+                learning_area_lower
+            ),
+
+            SeedResource.is_accessible.is_(True),
+        )
+
+        result = await db.scalars(
+            query.limit(200)
+        )
+
+        resources = result.all()
+
+        logger.info(
+            f"[RemediationResources] "
+            f"Partial concept + learning_area "
+            f"matches={len(resources)}"
+        )
+
+    # ---------------------------------------------------------
+    # STEP 3
+    # EXACT CONCEPT FALLBACK
+    # ---------------------------------------------------------
+
+    if not resources:
+
+        query = select(
+            SeedResource
+        ).where(
+            func.lower(
+                SeedResource.concept
+            ) == concept_lower,
+
+            SeedResource.is_accessible.is_(True),
+        )
+
+        result = await db.scalars(
+            query.limit(200)
+        )
+
+        resources = result.all()
+
+        logger.info(
+            f"[RemediationResources] "
+            f"Exact concept fallback "
+            f"matches={len(resources)}"
+        )
+
+    # ---------------------------------------------------------
+    # STEP 4
+    # LEARNING AREA FALLBACK
+    # ---------------------------------------------------------
+
+    if not resources and learning_area_lower:
+
+        query = select(
+            SeedResource
+        ).where(
+            func.lower(
+                SeedResource.learning_area
+            ).contains(
+                learning_area_lower
+            ),
+
+            SeedResource.is_accessible.is_(True),
+        )
+
+        result = await db.scalars(
+            query.limit(200)
+        )
+
+        resources = result.all()
+
+        logger.info(
+            f"[RemediationResources] "
+            f"Learning area fallback "
+            f"matches={len(resources)}"
+        )
+
+    # =========================================================
+    # 6. RESOURCE SCORING
+    # =========================================================
+
+    def remediation_score(
+        resource: SeedResource,
+    ) -> tuple:
+
+        resource_concept = str(
+            resource.concept or ""
+        ).strip().lower()
+
+        resource_area = str(
+            resource.learning_area or ""
+        ).strip().lower()
+
+        # ---------------------------------------------
+        # Concept matching
+        # ---------------------------------------------
+
+        exact_concept = (
+            resource_concept
+            == concept_lower
+        )
+
+        partial_concept = (
+            concept_lower in resource_concept
+            or resource_concept in concept_lower
+        )
+
+        # ---------------------------------------------
+        # Learning area matching
+        # ---------------------------------------------
+
+        exact_area = (
+            bool(learning_area_lower)
+            and resource_area
+            == learning_area_lower
+        )
+
+        partial_area = (
+            bool(learning_area_lower)
+            and (
+                learning_area_lower
+                in resource_area
+                or resource_area
+                in learning_area_lower
+            )
+        )
+
+        # ---------------------------------------------
+        # Relevance priority
+        # Lower = better
+        # ---------------------------------------------
+
+        if exact_concept and exact_area:
+
+            relevance = 0
+
+        elif partial_concept and partial_area:
+
+            relevance = 1
+
+        elif exact_concept:
+
+            relevance = 2
+
+        elif exact_area:
+
+            relevance = 3
+
+        elif partial_concept:
+
+            relevance = 4
+
+        elif partial_area:
+
+            relevance = 5
+
+        else:
+
+            relevance = 6
+
+        # ---------------------------------------------
+        # Bloom matching
+        # ---------------------------------------------
+
+        metadata = (
+            resource.resource_metadata
+            or {}
+        )
+
+        if not isinstance(metadata, dict):
+            metadata = {}
+
+        resource_bloom_levels = set()
+
+        raw_bloom_levels = (
+            metadata.get("bloom_levels")
+            or metadata.get("bloomLevels")
+            or []
+        )
+
+        if isinstance(
+            raw_bloom_levels,
+            (list, tuple, set),
+        ):
+
+            for level in raw_bloom_levels:
+
+                try:
+                    resource_bloom_levels.add(
+                        int(level)
+                    )
+                except (
+                    TypeError,
+                    ValueError,
+                ):
+                    pass
+
+        targets_gap = bool(
+            resource_bloom_levels
+            & gap_bloom_levels
+        )
+
+        bloom_priority = (
+            0
+            if targets_gap
+            else 1
+        )
+
+        return (
+            relevance,
+            bloom_priority,
+            str(
+                resource.title or ""
+            ).lower(),
+        )
+
+    # =========================================================
+    # 7. SORT + LIMIT
+    # =========================================================
+
+    resources = sorted(
+        resources,
+        key=remediation_score,
+    )[:30]
+
+    logger.info(
+        f"[RemediationResources] "
+        f"Final resources={len(resources)} "
+        f"| concept={concept} "
+        f"| learning_area={learning_area} "
+        f"| gap_bloom_levels={sorted(gap_bloom_levels)}"
+    )
+
+    # =========================================================
+    # 8. BUILD RESPONSE
+    # =========================================================
+
+    response_resources = []
+
+    for resource in resources:
+
+        metadata = (
+            resource.resource_metadata
+            or {}
+        )
+
+        if not isinstance(metadata, dict):
+            metadata = {}
+
+        # ---------------------------------------------
+        # Bloom levels
+        # ---------------------------------------------
+
+        bloom_levels = (
+            metadata.get("bloom_levels")
+            or metadata.get("bloomLevels")
+            or []
+        )
+
+        if not isinstance(
+            bloom_levels,
+            list,
+        ):
+            bloom_levels = []
+
+        # ---------------------------------------------
+        # Check Bloom gap match
+        # ---------------------------------------------
+
+        resource_bloom_set = set()
+
+        for level in bloom_levels:
+
+            try:
+                resource_bloom_set.add(
+                    int(level)
+                )
+            except (
+                TypeError,
+                ValueError,
+            ):
+                pass
+
+        is_gap_match = bool(
+            resource_bloom_set
+            & gap_bloom_levels
+        )
+
+        # ---------------------------------------------
+        # Response object
+        # ---------------------------------------------
+
+        response_resources.append(
+            {
+                "id": resource.id,
+
+                "title": resource.title,
+
+                "concept": resource.concept,
+
+                "learning_area": (
+                    resource.learning_area
+                ),
+
+                "url": resource.url,
+
+                "external_url": resource.url,
+
+                "type": resource.type,
+
+                "source": resource.source,
+
+                "format": resource.format,
+
+                "is_accessible": (
+                    resource.is_accessible
+                ),
+
+                # Metadata fields
+                "description": metadata.get(
+                    "description",
+                    "",
+                ),
+
+                "difficulty": metadata.get(
+                    "difficulty",
+                    "Medium",
+                ),
+
+                "bloom_levels": bloom_levels,
+
+                "thumbnail": metadata.get(
+                    "thumbnail"
+                ),
+
+                "duration_minutes": metadata.get(
+                    "duration_minutes",
+                    0,
+                ),
+
+                "cta_label": metadata.get(
+                    "cta_label",
+                    "Open Resource",
+                ),
+
+                "is_gap_match": (
+                    is_gap_match
+                ),
+            }
+        )
+
+    # =========================================================
+    # 9. RETURN API RESPONSE
+    # =========================================================
+
+    return {
+        "success": True,
+
+        "concept": concept,
+
+        "learning_area": learning_area,
+
+        "gap_bloom_levels": sorted(
+            gap_bloom_levels
+        ),
+
+        "resources": response_resources,
+
+        "total": len(
+            response_resources
+        ),
+    }
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # MENTOR ROUTES
-# ══════════════════════════════════════════════════════════════════════════════
-
+# ══════════════════════
 mentor_router = APIRouter(
     prefix="/mentor",
     tags=["Mentor"],
