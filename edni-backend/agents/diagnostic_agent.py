@@ -4,13 +4,6 @@ Diagnostic Agent
 
 Agent 1 of 4 in the LangGraph pipeline.
 
-Responsibilities:
-- Parse raw student responses
-- Map each response to concept × Bloom level
-- Run 3PL IRT estimation per group
-- Identify knowledge gaps at the cognitive level
-- Build KnowledgeProfile
-- Attach the profile to AgentState
 """
 
 from __future__ import annotations

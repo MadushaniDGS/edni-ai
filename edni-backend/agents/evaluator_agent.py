@@ -1,21 +1,14 @@
 """
-Evaluator Agent
-===============
+Evaluator Agent (FIXED)
+=======================
 
 Agent 4 of 4 in the LangGraph pipeline.
 
-Responsibilities:
-- Compare current diagnostic results with the previous profile
-- Calculate overall mastery changes
-- Calculate Bloom-level changes
-- Calculate concept-level changes
-- Detect learning plateaus
-- Generate LLM-based progress feedback
-- Build a structured progress report
 """
 
 from __future__ import annotations
 
+from typing import Any
 from datetime import datetime
 
 from loguru import logger
@@ -23,25 +16,15 @@ from langchain_groq import ChatGroq
 from langchain_core.messages import SystemMessage, HumanMessage
 
 from agents.state import AgentState
-
 from irt.blooms_gap_engine import (
     KnowledgeProfile,
-    BloomLevel,
     BLOOM_LABELS,
 )
-
 from core.config import settings
 
 
 class EvaluatorAgent:
-    """
-    Evaluates student progress after the remediation stage.
-
-    The evaluator supports both:
-    - in-memory KnowledgeProfile
-    - database KnowledgeProfileModel
-    """
-
+    
     def __init__(self):
         self.llm = ChatGroq(
             api_key=settings.GROQ_API_KEY,
@@ -62,10 +45,25 @@ class EvaluatorAgent:
     async def run(
         self,
         state: AgentState,
-        previous_profile: KnowledgeProfile | None = None,
+        previous_profile: Any = None,
     ) -> AgentState:
         """
         Evaluate the current knowledge profile against the previous one.
+
+        Args:
+            state: AgentState with knowledge_profile set
+            previous_profile: Optional previous profile for comparison.
+                Accepts both KnowledgeProfile (in-memory) and 
+                KnowledgeProfileModel (database). Uses defensive attribute
+                access to handle both types.
+
+        Returns:
+            Updated AgentState with evaluation metrics and notes.
+
+        NOTE:
+        Week progression is intentionally NOT handled here.
+        The study-plan route controls current_week and generates
+        the next week.
         """
 
         if not state.knowledge_profile:
@@ -86,7 +84,11 @@ class EvaluatorAgent:
         student_id = getattr(
             current,
             "student_id",
-            getattr(current, "user_id", state.student_id),
+            getattr(
+                current,
+                "user_id",
+                state.student_id,
+            ),
         )
 
         logger.info(
@@ -95,7 +97,6 @@ class EvaluatorAgent:
         )
 
         try:
-
             # ====================================================
             # CURRENT MASTERY
             # ====================================================
@@ -105,7 +106,8 @@ class EvaluatorAgent:
                     current,
                     "overall_mastery",
                     0.0,
-                ) or 0.0
+                )
+                or 0.0
             )
 
             logger.info(
@@ -118,13 +120,13 @@ class EvaluatorAgent:
             # ====================================================
 
             if previous_profile:
-
                 previous_mastery = float(
                     getattr(
                         previous_profile,
                         "overall_mastery",
                         0.0,
-                    ) or 0.0
+                    )
+                    or 0.0
                 )
 
                 delta = current_mastery - previous_mastery
@@ -160,13 +162,9 @@ class EvaluatorAgent:
                 )
 
             else:
-
                 previous_mastery = 0.0
-
                 state.mastery_delta = 0.0
-
                 bloom_deltas = {}
-
                 concept_deltas = {}
 
                 logger.info(
@@ -189,8 +187,10 @@ class EvaluatorAgent:
             # MAX FEEDBACK CYCLES
             # ====================================================
 
-            if state.feedback_cycle >= settings.MAX_FEEDBACK_CYCLES:
-
+            if (
+                state.feedback_cycle
+                >= settings.MAX_FEEDBACK_CYCLES
+            ):
                 state.max_cycles_reached = True
 
                 state.evaluation_notes = (
@@ -211,7 +211,6 @@ class EvaluatorAgent:
             # ====================================================
 
             elif plateau:
-
                 state.feedback_cycle += 1
 
                 state.evaluation_notes = (
@@ -233,7 +232,6 @@ class EvaluatorAgent:
             # ====================================================
 
             else:
-
                 state.evaluation_notes = (
                     await self._generate_evaluation_notes(
                         current=current,
@@ -270,7 +268,6 @@ class EvaluatorAgent:
             )
 
         except Exception as e:
-
             logger.exception(
                 f"[EvaluatorAgent] Error: {e}"
             )
@@ -288,7 +285,7 @@ class EvaluatorAgent:
     def _detect_plateau(
         self,
         state: AgentState,
-        previous_profile: KnowledgeProfile | None,
+        previous_profile: Any,
     ) -> bool:
         """
         Detect whether student progress has plateaued.
@@ -306,7 +303,8 @@ class EvaluatorAgent:
                 state,
                 "mastery_delta",
                 0.0,
-            ) or 0.0
+            )
+            or 0.0
         )
 
         threshold = (
@@ -324,7 +322,6 @@ class EvaluatorAgent:
 
         # Improvement is too small
         if mastery_delta < threshold:
-
             logger.debug(
                 f"[EvaluatorAgent] Mastery gain "
                 f"{mastery_delta:.2f}% "
@@ -341,8 +338,8 @@ class EvaluatorAgent:
 
     def _compute_bloom_deltas(
         self,
-        current,
-        previous,
+        current: Any,
+        previous: Any,
     ) -> dict[int, float]:
         """
         Calculate mastery changes for each Bloom level.
@@ -357,39 +354,41 @@ class EvaluatorAgent:
         current_summary = getattr(
             current,
             "bloom_summary",
-            {}
+            {},
         ) or {}
 
         previous_summary = getattr(
             previous,
             "bloom_summary",
-            {}
+            {},
         ) or {}
 
         deltas = {}
 
+        # --------------------------------------------------------
         # Normalize previous keys
+        # --------------------------------------------------------
+
         normalized_previous = {}
 
         for key, value in previous_summary.items():
-
             try:
                 normalized_key = int(key)
             except (TypeError, ValueError):
                 normalized_key = key
 
             try:
-                normalized_previous[
-                    normalized_key
-                ] = float(value or 0.0)
-
+                normalized_previous[normalized_key] = float(
+                    value or 0.0
+                )
             except (TypeError, ValueError):
-                normalized_previous[
-                    normalized_key
-                ] = 0.0
+                normalized_previous[normalized_key] = 0.0
+
+        # --------------------------------------------------------
+        # Calculate current deltas
+        # --------------------------------------------------------
 
         for key, value in current_summary.items():
-
             try:
                 normalized_key = int(key)
             except (TypeError, ValueError):
@@ -399,7 +398,6 @@ class EvaluatorAgent:
                 current_mastery = float(
                     value or 0.0
                 )
-
             except (TypeError, ValueError):
                 current_mastery = 0.0
 
@@ -421,8 +419,8 @@ class EvaluatorAgent:
 
     def _compute_concept_deltas(
         self,
-        current,
-        previous,
+        current: Any,
+        previous: Any,
     ) -> dict[str, float]:
         """
         Calculate mastery changes for concepts.
@@ -442,18 +440,21 @@ class EvaluatorAgent:
             None,
         )
 
-        previous_concepts = getattr(
-            previous,
-            "concepts",
-            None,
-        ) if previous else None
+        previous_concepts = (
+            getattr(
+                previous,
+                "concepts",
+                None,
+            )
+            if previous
+            else None
+        )
 
         # --------------------------------------------------------
         # In-memory KnowledgeProfile
         # --------------------------------------------------------
 
         if current_concepts is not None:
-
             current_concepts = (
                 current_concepts or []
             )
@@ -465,7 +466,6 @@ class EvaluatorAgent:
             previous_map = {}
 
             for cp in previous_concepts:
-
                 concept = getattr(
                     cp,
                     "concept",
@@ -480,20 +480,15 @@ class EvaluatorAgent:
 
                 if concept:
                     try:
-                        previous_map[
-                            concept
-                        ] = float(
+                        previous_map[concept] = float(
                             mastery or 0.0
                         )
                     except (TypeError, ValueError):
-                        previous_map[
-                            concept
-                        ] = 0.0
+                        previous_map[concept] = 0.0
 
             deltas = {}
 
             for cp in current_concepts:
-
                 concept = getattr(
                     cp,
                     "concept",
@@ -509,7 +504,8 @@ class EvaluatorAgent:
                             cp,
                             "overall_mastery",
                             0.0,
-                        ) or 0.0
+                        )
+                        or 0.0
                     )
                 except (TypeError, ValueError):
                     mastery = 0.0
@@ -533,16 +529,18 @@ class EvaluatorAgent:
         current_profiles = getattr(
             current,
             "concept_profiles",
-            []
+            [],
         ) or []
 
         previous_profiles = (
             getattr(
                 previous,
                 "concept_profiles",
-                []
-            ) or []
-        ) if previous else []
+                [],
+            )
+            if previous
+            else []
+        ) or []
 
         # ========================================================
         # Previous concept map
@@ -557,9 +555,7 @@ class EvaluatorAgent:
                 if not isinstance(cp, dict):
                     continue
 
-                concept = cp.get(
-                    "concept"
-                )
+                concept = cp.get("concept")
 
                 if not concept:
                     continue
@@ -569,14 +565,13 @@ class EvaluatorAgent:
                         cp.get(
                             "overall_mastery",
                             0.0,
-                        ) or 0.0
+                        )
+                        or 0.0
                     )
                 except (TypeError, ValueError):
                     mastery = 0.0
 
-                previous_map[
-                    concept
-                ] = mastery
+                previous_map[concept] = mastery
 
         elif isinstance(previous_profiles, dict):
 
@@ -590,14 +585,13 @@ class EvaluatorAgent:
                         cp.get(
                             "overall_mastery",
                             0.0,
-                        ) or 0.0
+                        )
+                        or 0.0
                     )
                 except (TypeError, ValueError):
                     mastery = 0.0
 
-                previous_map[
-                    concept
-                ] = mastery
+                previous_map[concept] = mastery
 
         # ========================================================
         # Current concepts
@@ -612,9 +606,7 @@ class EvaluatorAgent:
                 if not isinstance(cp, dict):
                     continue
 
-                concept = cp.get(
-                    "concept"
-                )
+                concept = cp.get("concept")
 
                 if not concept:
                     continue
@@ -624,7 +616,8 @@ class EvaluatorAgent:
                         cp.get(
                             "overall_mastery",
                             0.0,
-                        ) or 0.0
+                        )
+                        or 0.0
                     )
                 except (TypeError, ValueError):
                     mastery = 0.0
@@ -651,7 +644,8 @@ class EvaluatorAgent:
                         cp.get(
                             "overall_mastery",
                             0.0,
-                        ) or 0.0
+                        )
+                        or 0.0
                     )
                 except (TypeError, ValueError):
                     mastery = 0.0
@@ -674,8 +668,8 @@ class EvaluatorAgent:
 
     async def _generate_evaluation_notes(
         self,
-        current,
-        previous,
+        current: Any,
+        previous: Any,
         bloom_deltas: dict,
         concept_deltas: dict,
     ) -> str:
@@ -688,7 +682,8 @@ class EvaluatorAgent:
                 current,
                 "overall_mastery",
                 0.0,
-            ) or 0.0
+            )
+            or 0.0
         )
 
         previous_mastery = (
@@ -697,7 +692,8 @@ class EvaluatorAgent:
                     previous,
                     "overall_mastery",
                     0.0,
-                ) or 0.0
+                )
+                or 0.0
             )
             if previous
             else 0.0
@@ -711,7 +707,7 @@ class EvaluatorAgent:
         critical_gaps = getattr(
             current,
             "critical_gaps",
-            []
+            [],
         ) or []
 
         # --------------------------------------------------------
@@ -724,17 +720,20 @@ class EvaluatorAgent:
             reverse=True,
         )[:3]
 
-        declining = [
-            (concept, change)
-            for concept, change
-            in concept_deltas.items()
-            if change < 0
-        ][:5]
+        declining = sorted(
+            [
+                (concept, change)
+                for concept, change
+                in concept_deltas.items()
+                if change < 0
+            ],
+            key=lambda x: x[1],
+        )[:5]
 
         bloom_summary = getattr(
             current,
             "bloom_summary",
-            {}
+            {},
         ) or {}
 
         prompt = f"""
@@ -770,6 +769,7 @@ Declining concepts:
 Write a brief 3-4 sentence progress assessment.
 
 Requirements:
+
 - Be encouraging but honest.
 - Identify what is improving.
 - Mention what still needs attention.
@@ -780,7 +780,6 @@ Requirements:
 """
 
         try:
-
             logger.info(
                 "[EvaluatorAgent] Generating LLM "
                 "progress feedback..."
@@ -804,11 +803,10 @@ Requirements:
             content = getattr(
                 response,
                 "content",
-                ""
+                "",
             )
 
             if isinstance(content, list):
-
                 content = "".join(
                     str(item)
                     for item in content
@@ -819,7 +817,6 @@ Requirements:
             ).strip()
 
             if content:
-
                 logger.info(
                     "[EvaluatorAgent] LLM feedback "
                     "generated successfully."
@@ -833,7 +830,6 @@ Requirements:
             )
 
         except Exception as e:
-
             logger.warning(
                 f"[EvaluatorAgent] LLM feedback "
                 f"generation failed: {e}"
@@ -844,7 +840,6 @@ Requirements:
         # --------------------------------------------------------
 
         if delta > 5:
-
             return (
                 f"Mastery has improved by "
                 f"{delta:.1f}% since the previous assessment. "
@@ -853,7 +848,6 @@ Requirements:
             )
 
         if delta > 0:
-
             return (
                 f"Mastery has improved by "
                 f"{delta:.1f}% since the previous assessment. "
@@ -862,7 +856,6 @@ Requirements:
             )
 
         if delta < 0:
-
             return (
                 f"Mastery has decreased by "
                 f"{abs(delta):.1f}% since the previous assessment. "
@@ -883,8 +876,8 @@ Requirements:
 
     def _build_progress_report(
         self,
-        current,
-        previous,
+        current: Any,
+        previous: Any,
         state: AgentState,
     ) -> str:
         """
@@ -910,7 +903,8 @@ Requirements:
                 current,
                 "overall_mastery",
                 0.0,
-            ) or 0.0
+            )
+            or 0.0
         )
 
         mastery_delta = float(
@@ -918,7 +912,8 @@ Requirements:
                 state,
                 "mastery_delta",
                 0.0,
-            ) or 0.0
+            )
+            or 0.0
         )
 
         lines = [
@@ -938,20 +933,23 @@ Requirements:
         current_bloom_summary = getattr(
             current,
             "bloom_summary",
-            {}
+            {},
         ) or {}
 
         previous_bloom_summary = (
             getattr(
                 previous,
                 "bloom_summary",
-                {}
+                {},
             ) or {}
             if previous
             else {}
         )
 
+        # --------------------------------------------------------
         # Normalize previous keys
+        # --------------------------------------------------------
+
         normalized_previous = {}
 
         for key, value in previous_bloom_summary.items():
@@ -962,15 +960,16 @@ Requirements:
                 normalized_key = key
 
             try:
-                normalized_previous[
-                    normalized_key
-                ] = float(value or 0.0)
+                normalized_previous[normalized_key] = float(
+                    value or 0.0
+                )
             except (TypeError, ValueError):
-                normalized_previous[
-                    normalized_key
-                ] = 0.0
+                normalized_previous[normalized_key] = 0.0
 
+        # --------------------------------------------------------
         # Sort Bloom levels safely
+        # --------------------------------------------------------
+
         bloom_items = []
 
         for key, value in current_bloom_summary.items():
@@ -1001,6 +1000,10 @@ Requirements:
         except (TypeError, ValueError):
             pass
 
+        # --------------------------------------------------------
+        # Add Bloom information
+        # --------------------------------------------------------
+
         for level, mastery in bloom_items:
 
             label = BLOOM_LABELS.get(
@@ -1028,7 +1031,7 @@ Requirements:
         critical_gaps = getattr(
             current,
             "critical_gaps",
-            []
+            [],
         ) or []
 
         lines += [
