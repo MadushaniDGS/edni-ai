@@ -150,6 +150,12 @@ class DiagnosticResult(BaseModel):
 # ─── Study Plan ───────────────────────────────────────────────────────────────
 
 class StudyTaskOut(BaseModel):
+    id: Optional[int] = None
+    day: Optional[int] = None
+    day_label: Optional[str] = None
+    status: Optional[str] = None
+    resources: list[dict] = Field(default_factory=list)
+    description: Optional[str] = None
     concept:           Optional[str]
     learning_area:     Optional[str]
     bloom_level:       Optional[str]
@@ -242,6 +248,10 @@ class TaskOut(BaseModel):
     status:         str
     column:         str
     week_number:    Optional[int]
+    day:            Optional[int] = None
+    resources:      list[dict] = Field(default_factory=list)
+    description:    Optional[str] = None
+    learning_objective: Optional[str] = None
     created_at:     datetime
 
     class Config:

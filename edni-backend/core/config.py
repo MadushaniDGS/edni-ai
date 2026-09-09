@@ -52,7 +52,7 @@ class Settings(BaseSettings):
 
     # ── Study Plan ────────────────────────────────────────────────────
     SEMESTER_WEEKS:     int = 16
-    MAX_HOURS_PER_WEEK: int = 20
+    MAX_HOURS_PER_WEEK: int = 15
 
     # ── CORS ──────────────────────────────────────────────────────────
     ALLOWED_ORIGINS: list[str] = ["http://localhost:3000"]

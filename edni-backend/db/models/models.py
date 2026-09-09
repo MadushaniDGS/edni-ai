@@ -150,28 +150,69 @@ class ConceptGap(Base):
 class StudyPlanModel(Base):
     __tablename__ = "study_plans"
 
-    id:           Mapped[str]      = mapped_column(String, primary_key=True)
-    user_id:      Mapped[str]      = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    profile_id:   Mapped[str]      = mapped_column(ForeignKey("knowledge_profiles.id", ondelete="SET NULL"), nullable=True)
-    weeks:        Mapped[list]     = mapped_column(JSON, default=list)    # full StudyWeek list
-    total_hours:  Mapped[float]    = mapped_column(Float, default=0.0)
-    critique:     Mapped[str|None] = mapped_column(Text, nullable=True)   # Reflexion critique
-    version:      Mapped[int]      = mapped_column(Integer, default=1)
-    is_active:    Mapped[bool]     = mapped_column(Boolean, default=True)
-    created_at:   Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at:   Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-current_week = Column(
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True
+    )
+
+    profile_id: Mapped[str | None] = mapped_column(
+        ForeignKey("knowledge_profiles.id", ondelete="SET NULL"),
+        nullable=True
+    )
+
+    weeks: Mapped[list] = mapped_column(
+        JSON,
+        default=list
+    )
+
+    total_hours: Mapped[float] = mapped_column(
+        Float,
+        default=0.0
+    )
+
+    critique: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True
+    )
+
+    version: Mapped[int] = mapped_column(
+        Integer,
+        default=1
+    )
+
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow
+    )
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow
+    )
+
+    current_week: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
         default=1
     )
 
-    completed_weeks = Column(
+    completed_weeks: Mapped[list] = mapped_column(
         JSONB,
         nullable=False,
         default=list
     )
-    user: Mapped["User"] = relationship(back_populates="study_plans")
+
+    user: Mapped["User"] = relationship(
+        back_populates="study_plans"
+    )
 
 
 # ─── Tasks ────────────────────────────────────────────────────────────────────
@@ -243,26 +284,109 @@ class DiagnosticQuestion(Base):
     is_active:     Mapped[bool]  = mapped_column(Boolean, default=True)
 
 
-# ─── OER Resources ────────────────────────────────────────────────────────────
+# ─── Seed OER Resources ───────────────────────────────────────────────────────
 
-class Resource(Base):
-    __tablename__ = "resources"
+class SeedResource(Base):
+    """
+    Educational resources seeded into PostgreSQL.
 
-    id:                Mapped[int]   = mapped_column(Integer, primary_key=True, autoincrement=True)
-    type:              Mapped[str]   = mapped_column(String(50))      # Video|Article|Book|Exercise
-    difficulty:        Mapped[str]   = mapped_column(String(20))      # Easy|Medium|Hard
-    title:             Mapped[str]   = mapped_column(String(500))
-    description:       Mapped[str]   = mapped_column(Text)
-    content:           Mapped[str]   = mapped_column(Text, default="")  # raw text for embedding
-    concept:           Mapped[str]   = mapped_column(String(200), index=True)
-    learning_area:     Mapped[str]   = mapped_column(String(200), index=True)
-    bloom_levels:      Mapped[list]  = mapped_column(JSON, default=list)  # [1,2,3]
-    external_url:      Mapped[str|None] = mapped_column(String(1000), nullable=True)
-    thumbnail:         Mapped[str]   = mapped_column(String(200), default="default")
-    cta_label:         Mapped[str]   = mapped_column(String(50), default="Open Resource")
-    duration_minutes:  Mapped[int]   = mapped_column(Integer, default=30)
-    pinecone_indexed:  Mapped[bool]  = mapped_column(Boolean, default=False)
-    created_at:        Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    Table:
+        seed_resources
+
+    Used by:
+        - Remediation Agent
+        - Study Plan Agent
+        - Resource Library
+        - Dashboard
+        - FastAPI resource endpoints
+
+    IMPORTANT:
+        The actual resource data is stored in the
+        seed_resources table.
+    """
+
+    __tablename__ = "seed_resources"
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+    )
+
+    learning_area: Mapped[str] = mapped_column(
+        String(255),
+        index=True,
+        nullable=False,
+    )
+
+    concept: Mapped[str] = mapped_column(
+        String(255),
+        index=True,
+        nullable=False,
+    )
+
+    title: Mapped[str] = mapped_column(
+        String(500),
+        nullable=False,
+    )
+
+    url: Mapped[str] = mapped_column(
+        String(2048),
+        index=True,
+        nullable=False,
+    )
+
+    type: Mapped[str] = mapped_column(
+        String(100),
+        index=True,
+        nullable=False,
+    )
+
+    source: Mapped[str] = mapped_column(
+        String(255),
+        index=True,
+        nullable=False,
+    )
+
+    format: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+    )
+
+    is_accessible: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        nullable=False,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        nullable=False,
+    )
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+    )
+
+    resource_metadata: Mapped[dict | None] = mapped_column(
+        "metadata",
+        JSON,
+        nullable=True,
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<SeedResource("
+            f"id={self.id}, "
+            f"title={self.title!r}, "
+            f"concept={self.concept!r}, "
+            f"learning_area={self.learning_area!r}"
+            f")>"
+        )
 
 
 # ─── Evaluation Log ───────────────────────────────────────────────────────────
