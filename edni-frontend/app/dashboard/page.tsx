@@ -1,8 +1,23 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+
 import { useRouter } from "next/navigation";
+
 import axios from "axios";
+
+import {
+  BarChart,
+  Bar,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
 
 import TopBar from "@/components/TopBar";
 import Sidebar from "@/components/Sidebar";
@@ -29,21 +44,10 @@ interface DashboardData {
   critical_gaps?: string[];
 
   total_study_time?: number;
-
   tasks_today?: number;
-
   tasks_completed?: number;
-
   feedback_cycle?: number;
 
-  /*
-    Optional backend fields.
-
-    If your backend returns these, they will automatically
-    appear in the dashboard.
-
-    If they do not exist, we DON'T create fake values.
-  */
   study_streak?: number;
   study_days?: number;
 }
@@ -231,7 +235,7 @@ function LearningAreaSelector({
 }
 
 /* =========================================================
-   SMALL COMPONENTS
+   PROGRESS RING
 ========================================================= */
 
 function ProgressRing({
@@ -247,17 +251,17 @@ function ProgressRing({
   );
 
   return (
-    <div style={styles.ring}>
+    <div style={styles.ringLarge}>
       <div
         style={{
-          ...styles.ringProgress,
+          ...styles.ringLargeProgress,
           background: `conic-gradient(
             ${color} ${safeValue * 3.6}deg,
             #EEF2F7 ${safeValue * 3.6}deg
           )`,
         }}
       >
-        <div style={styles.ringInner}>
+        <div style={styles.ringLargeInner}>
           <strong>{Math.round(safeValue)}</strong>
           <span>%</span>
         </div>
@@ -265,6 +269,10 @@ function ProgressRing({
     </div>
   );
 }
+
+/* =========================================================
+   DIFFICULTY
+========================================================= */
 
 function DifficultyBadge({
   difficulty,
@@ -298,11 +306,122 @@ function DifficultyBadge({
 }
 
 /* =========================================================
+   MINI CALENDAR
+========================================================= */
+
+function MiniCalendar() {
+  const [date, setDate] = useState<Date | null>(null);
+
+  useEffect(() => {
+    setDate(new Date());
+  }, []);
+
+  if (!date) {
+    return (
+      <div style={styles.calendarCard}>
+        <div style={styles.calendarLoading}>
+          Loading calendar...
+        </div>
+      </div>
+    );
+  }
+
+  const year = date.getFullYear();
+  const month = date.getMonth();
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(
+    year,
+    month + 1,
+    0
+  ).getDate();
+
+  const monthName = date.toLocaleString("default", {
+    month: "long",
+  });
+
+  const days: (number | null)[] = [];
+
+  for (let i = 0; i < firstDay; i++) {
+    days.push(null);
+  }
+
+  for (let i = 1; i <= daysInMonth; i++) {
+    days.push(i);
+  }
+
+  return (
+    <div style={styles.calendarCard}>
+      <div style={styles.calendarHeader}>
+        <div>
+          <div style={styles.calendarEyebrow}>
+            TODAY
+          </div>
+
+          <div style={styles.calendarMonth}>
+            {monthName} {year}
+          </div>
+        </div>
+
+        <div style={styles.calendarToday}>
+          {date.getDate()}
+        </div>
+      </div>
+
+      <div style={styles.weekHeader}>
+        {["S", "M", "T", "W", "T", "F", "S"].map(
+          (day, index) => (
+            <span key={`${day}-${index}`}>
+              {day}
+            </span>
+          )
+        )}
+      </div>
+
+      <div style={styles.calendarGrid}>
+        {days.map((day, index) => {
+          const isToday =
+            day === date.getDate();
+
+          return (
+            <div
+              key={index}
+              style={{
+                ...styles.calendarDay,
+                ...(isToday
+                  ? styles.calendarDayToday
+                  : {}),
+              }}
+            >
+              {day}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
+   BLOOM NAMES
+========================================================= */
+
+const BLOOM_NAMES: Record<string, string> = {
+  "1": "Remember",
+  "2": "Understand",
+  "3": "Apply",
+  "4": "Analyze",
+  "5": "Evaluate",
+  "6": "Create",
+};
+
+/* =========================================================
    DASHBOARD
 ========================================================= */
 
 export default function DashboardPage() {
   const router = useRouter();
+
   const fetchedRef = useRef(false);
 
   const [loading, setLoading] = useState(true);
@@ -325,7 +444,9 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const storedArea =
-      localStorage.getItem("selected_learning_area");
+      localStorage.getItem(
+        "selected_learning_area"
+      );
 
     setSelectedArea(storedArea);
 
@@ -350,19 +471,25 @@ export default function DashboardPage() {
           Authorization: `Bearer ${token}`,
         };
 
-        const [analyticsResult, tasksResult] =
-          await Promise.allSettled([
-            axios.get(`${API_URL}/analytics`, {
-              headers,
-            }),
+        const [
+          analyticsResult,
+          tasksResult,
+        ] = await Promise.allSettled([
+          axios.get(`${API_URL}/analytics`, {
+            headers,
+          }),
 
-            axios.get(`${API_URL}/tasks/?column=TODAY`, {
+          axios.get(
+            `${API_URL}/tasks/?column=TODAY`,
+            {
               headers,
-            }),
-          ]);
+            }
+          ),
+        ]);
 
         if (
-          analyticsResult.status === "fulfilled"
+          analyticsResult.status ===
+          "fulfilled"
         ) {
           setDashboard(
             analyticsResult.value.data
@@ -372,7 +499,8 @@ export default function DashboardPage() {
         if (
           tasksResult.status === "fulfilled"
         ) {
-          const data = tasksResult.value.data;
+          const data =
+            tasksResult.value.data;
 
           setTasks(
             data.today ||
@@ -383,8 +511,10 @@ export default function DashboardPage() {
         }
 
         if (
-          analyticsResult.status === "rejected" &&
-          tasksResult.status === "rejected"
+          analyticsResult.status ===
+          "rejected" &&
+          tasksResult.status ===
+          "rejected"
         ) {
           setError(
             "Unable to load your learning data."
@@ -392,6 +522,7 @@ export default function DashboardPage() {
         }
       } catch (err) {
         console.error(err);
+
         setError(
           "Something went wrong while loading your dashboard."
         );
@@ -407,7 +538,8 @@ export default function DashboardPage() {
      DERIVED DATA
   ======================================================= */
 
-  const completedTasks = dashboard?.tasks_completed ?? 0;
+  const completedTasks =
+    dashboard?.tasks_completed ?? 0;
 
   const totalTasks =
     dashboard?.tasks_today ?? tasks.length;
@@ -417,7 +549,8 @@ export default function DashboardPage() {
       ? Math.min(
         100,
         Math.round(
-          (completedTasks / totalTasks) * 100
+          (completedTasks / totalTasks) *
+          100
         )
       )
       : 0;
@@ -434,13 +567,59 @@ export default function DashboardPage() {
 
   const topGaps = useMemo(() => {
     return (
-      dashboard?.critical_gaps?.slice(0, 3) ?? []
+      dashboard?.critical_gaps?.slice(0, 5) ??
+      []
     );
   }, [dashboard]);
 
-  const currentArea = LEARNING_AREAS.find(
-    (area) => area.id === selectedArea
-  );
+  const currentArea =
+    LEARNING_AREAS.find(
+      (area) => area.id === selectedArea
+    );
+
+  /* =======================================================
+     REAL MASTERY DATA
+  ======================================================= */
+
+  const masteryData = useMemo(() => {
+    return (
+      dashboard?.concept_progress
+        ?.filter(
+          (item) =>
+            typeof item.mastery === "number"
+        )
+        .sort(
+          (a, b) => b.mastery - a.mastery
+        )
+        .slice(0, 7)
+        .map((item) => ({
+          concept:
+            item.concept.length > 17
+              ? `${item.concept.slice(
+                0,
+                17
+              )}...`
+              : item.concept,
+          mastery: Math.round(item.mastery),
+        })) ?? []
+    );
+  }, [dashboard]);
+
+  /* =======================================================
+     REAL BLOOM DATA
+  ======================================================= */
+
+  const bloomData = useMemo(() => {
+    return Object.entries(
+      dashboard?.bloom_summary ?? {}
+    ).map(([level, value]) => ({
+      name:
+        BLOOM_NAMES[level] ??
+        `Level ${level}`,
+      value,
+      level,
+    }));
+  }, [dashboard]);
 
   /* =======================================================
      ACTIONS
@@ -457,7 +636,9 @@ export default function DashboardPage() {
     setShowAreaSelector(false);
 
     router.push(
-      `/diagnostic?area=${encodeURIComponent(areaId)}`
+      `/diagnostic?area=${encodeURIComponent(
+        areaId
+      )}`
     );
   }
 
@@ -510,7 +691,9 @@ export default function DashboardPage() {
         </p>
 
         <button
-          onClick={() => window.location.reload()}
+          onClick={() =>
+            window.location.reload()
+          }
           style={styles.retryButton}
         >
           Try again
@@ -526,13 +709,14 @@ export default function DashboardPage() {
   return (
     <div style={styles.page}>
       <Sidebar />
+
       <TopBar />
 
       <main style={styles.main}>
         <div style={styles.container}>
 
           {/* =================================================
-              WELCOME HEADER
+              HEADER
           ================================================= */}
 
           <section style={styles.welcomeSection}>
@@ -544,6 +728,7 @@ export default function DashboardPage() {
               <h1 style={styles.mainTitle}>
                 Keep going,
                 <br />
+
                 <span style={styles.gradientText}>
                   you're doing great.
                 </span>{" "}
@@ -551,8 +736,8 @@ export default function DashboardPage() {
               </h1>
 
               <p style={styles.mainSubtitle}>
-                Here's a little look at your learning
-                journey today.
+                Here's a little look at your
+                learning journey today.
               </p>
             </div>
 
@@ -574,624 +759,810 @@ export default function DashboardPage() {
           </section>
 
           {/* =================================================
-              TODAY HERO
+              TWO COLUMN DASHBOARD
           ================================================= */}
 
-          <section style={styles.todayHero}>
-            <div style={styles.todayLeft}>
-              <div style={styles.todayBadge}>
-                ☀️ TODAY
-              </div>
+          <div style={styles.dashboardMainGrid}>
 
-              <h2 style={styles.todayTitle}>
-                Your study day
-              </h2>
+            {/* =================================================
+                LEFT COLUMN
+            ================================================= */}
 
-              <p style={styles.todayText}>
-                {tasks.length > 0
-                  ? `You have ${tasks.length} task${tasks.length === 1 ? "" : "s"
-                  } waiting for you today.`
-                  : "Your study list is clear today. Nice work! 🎉"}
-              </p>
+            <div style={styles.leftColumn}>
 
-              <div style={styles.todayProgress}>
-                <div
-                  style={styles.todayProgressTrack}
-                >
-                  <div
-                    style={{
-                      ...styles.todayProgressFill,
-                      width: `${taskCompletion}%`,
-                    }}
-                  />
-                </div>
+              {/* OVERALL LEARNER SCORE */}
 
-                <div style={styles.todayProgressText}>
-                  <strong>
-                    {completedTasks}
-                  </strong>{" "}
-                  of{" "}
-                  <strong>
-                    {totalTasks}
-                  </strong>{" "}
-                  tasks completed
-                  <span>
-                    {taskCompletion}%
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div style={styles.todayIllustration}>
-              <div style={styles.cloudOne}>
-                ☁️
-              </div>
-
-              <div style={styles.studyEmoji}>
-                🧑‍💻
-              </div>
-
-              <div style={styles.sparkleOne}>
-                ✦
-              </div>
-
-              <div style={styles.sparkleTwo}>
-                ✧
-              </div>
-
-              <div style={styles.flower}>
-                🌸
-              </div>
-            </div>
-          </section>
-
-          {/* =================================================
-              QUICK STATS
-          ================================================= */}
-
-          <section style={styles.statsGrid}>
-
-            {/* MASTERY */}
-
-            <div style={styles.statCard}>
-              <div style={styles.statIconPurple}>
-                🎯
-              </div>
-
-              <div style={styles.statContent}>
-                <div style={styles.statLabel}>
-                  OVERALL MASTERY
-                </div>
-
-                <div
-                  style={{
-                    ...styles.statNumber,
-                    color: masteryColor,
-                  }}
-                >
-                  {Math.round(mastery)}
-                  <span>%</span>
-                </div>
-
-                <div style={styles.statHint}>
-                  Your current knowledge level
-                </div>
-              </div>
-
-              <ProgressRing
-                value={mastery}
-                color={masteryColor}
-              />
-            </div>
-
-            {/* STUDY TIME */}
-
-            <div style={styles.statCard}>
-              <div style={styles.statIconBlue}>
-                ⏱️
-              </div>
-
-              <div style={styles.statContent}>
-                <div style={styles.statLabel}>
-                  STUDY TIME
-                </div>
-
-                <div style={styles.statNumber}>
-                  {(
-                    dashboard.total_study_time ?? 0
-                  ).toFixed(1)}
-                  <span>h</span>
-                </div>
-
-                <div style={styles.statHint}>
-                  Total recorded learning time
-                </div>
-              </div>
-
-              <div style={styles.hourVisual}>
-                <div>🌙</div>
-                <div style={styles.hourDots}>
-                  • • • •
-                </div>
-              </div>
-            </div>
-
-            {/* STREAK */}
-
-            <div style={styles.statCard}>
-              <div style={styles.statIconOrange}>
-                🔥
-              </div>
-
-              <div style={styles.statContent}>
-                <div style={styles.statLabel}>
-                  STUDY STREAK
-                </div>
-
-                <div style={styles.statNumber}>
-                  {dashboard.study_streak ??
-                    dashboard.study_days ??
-                    "—"}
-                  <span>
-                    {dashboard.study_streak !==
-                      undefined ||
-                      dashboard.study_days !==
-                      undefined
-                      ? " days"
-                      : ""}
-                  </span>
-                </div>
-
-                <div style={styles.statHint}>
-                  Keep the learning flame alive
-                </div>
-              </div>
-
-              <div style={styles.fireSticker}>
-                🔥
-              </div>
-            </div>
-
-            {/* TASKS */}
-
-            <div style={styles.statCard}>
-              <div style={styles.statIconGreen}>
-                ✅
-              </div>
-
-              <div style={styles.statContent}>
-                <div style={styles.statLabel}>
-                  TODAY'S PROGRESS
-                </div>
-
-                <div style={styles.statNumber}>
-                  {completedTasks}
-                  <span>
-                    /{totalTasks}
-                  </span>
-                </div>
-
-                <div style={styles.statHint}>
-                  {taskCompletion}% completed
-                </div>
-              </div>
-
-              <div style={styles.checkSticker}>
-                ✓
-              </div>
-            </div>
-          </section>
-
-          {/* =================================================
-              QUICK ACCESS
-          ================================================= */}
-
-          <section style={styles.quickSection}>
-            <div style={styles.sectionHeading}>
-              <div>
-                <div style={styles.sectionEyebrow}>
-                  QUICK ACCESS ⚡
-                </div>
-
-                <h2 style={styles.sectionTitle}>
-                  Ready for a quick assessment?
-                </h2>
-
-                <p style={styles.sectionSubtitle}>
-                  Pick a learning area and jump straight
-                  into your diagnostic.
-                </p>
-              </div>
-
-              {currentArea && (
-                <div style={styles.currentAreaBadge}>
-                  {currentArea.emoji}{" "}
-                  {currentArea.shortLabel}
-                </div>
-              )}
-            </div>
-
-            <div style={styles.quickGrid}>
-              {LEARNING_AREAS.map((area) => (
-                <button
-                  key={area.id}
-                  onClick={() =>
-                    handleSelectArea(area.id)
-                  }
-                  style={{
-                    ...styles.quickCard,
-                    borderColor: `${area.color}25`,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform =
-                      "translateY(-5px)";
-                    e.currentTarget.style.boxShadow =
-                      `0 16px 35px ${area.color}18`;
-                    e.currentTarget.style.borderColor =
-                      `${area.color}70`;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform =
-                      "translateY(0)";
-                    e.currentTarget.style.boxShadow =
-                      "none";
-                    e.currentTarget.style.borderColor =
-                      `${area.color}25`;
-                  }}
-                >
-                  <div
-                    style={{
-                      ...styles.quickEmoji,
-                      backgroundColor: `${area.color}12`,
-                    }}
-                  >
-                    {area.emoji}
+              <section style={styles.scoreCard}>
+                <div style={styles.scoreContent}>
+                  <div style={styles.cardEyebrow}>
+                    LEARNER SCORE 🎯
                   </div>
 
-                  <div style={styles.quickText}>
-                    <strong
-                      style={{
-                        color: area.color,
-                      }}
-                    >
-                      {area.shortLabel}
+                  <h2 style={styles.scoreTitle}>
+                    Your overall mastery
+                  </h2>
+
+                  <p style={styles.scoreDescription}>
+                    Your current knowledge level
+                    based on your latest learning
+                    data.
+                  </p>
+
+                  <div style={styles.scoreMeta}>
+                    {currentArea ? (
+                      <span
+                        style={
+                          styles.areaPill
+                        }
+                      >
+                        {currentArea.emoji}{" "}
+                        {currentArea.shortLabel}
+                      </span>
+                    ) : (
+                      <span
+                        style={
+                          styles.areaPill
+                        }
+                      >
+                        All learning areas
+                      </span>
+                    )}
+
+                    {dashboard.feedback_cycle !==
+                      undefined && (
+                        <span
+                          style={
+                            styles.cyclePill
+                          }
+                        >
+                          Cycle{" "}
+                          {
+                            dashboard.feedback_cycle
+                          }
+                        </span>
+                      )}
+                  </div>
+                </div>
+
+                <ProgressRing
+                  value={mastery}
+                  color={masteryColor}
+                />
+              </section>
+
+              {/* =================================================
+                  LEARNER SNAPSHOT / RICH VISUAL
+              ================================================= */}
+
+              <section style={styles.snapshotCard}>
+                <div style={styles.cardHeader}>
+                  <div>
+                    <div style={styles.cardEyebrow}>
+                      LEARNER SNAPSHOT 🧠
+                    </div>
+
+                    <h2 style={styles.cardTitle}>
+                      Your learning picture
+                    </h2>
+                  </div>
+
+                  <span style={styles.liveBadge}>
+                    LIVE DATA
+                  </span>
+                </div>
+
+                <div style={styles.snapshotVisual}>
+
+                  <div style={styles.snapshotLineOne} />
+                  <div style={styles.snapshotLineTwo} />
+                  <div style={styles.snapshotLineThree} />
+                  <div style={styles.snapshotLineFour} />
+
+                  <div style={styles.snapshotNodeTop}>
+                    <span>📊</span>
+                    <strong>
+                      Mastery
+                    </strong>
+                    <small>
+                      {Math.round(mastery)}%
+                    </small>
+                  </div>
+
+                  <div style={styles.snapshotNodeLeft}>
+                    <span>🧠</span>
+                    <strong>
+                      Knowledge
+                    </strong>
+                    <small>
+                      {dashboard.concept_progress
+                        ?.length ?? 0}{" "}
+                      concepts
+                    </small>
+                  </div>
+
+                  <div style={styles.snapshotCenter}>
+                    <div style={styles.snapshotCenterIcon}>
+                      🎓
+                    </div>
+
+                    <strong>
+                      Learner
                     </strong>
 
                     <span>
-                      {area.label}
+                      Edni AI Profile
                     </span>
                   </div>
 
-                  <div
-                    style={{
-                      ...styles.quickArrow,
-                      color: area.color,
-                    }}
-                  >
-                    →
-                  </div>
-                </button>
-              ))}
-            </div>
-          </section>
-
-          {/* =================================================
-              MAIN CONTENT
-          ================================================= */}
-
-          <section style={styles.contentGrid}>
-
-            {/* TODAY TASKS */}
-
-            <div style={styles.largeCard}>
-              <div style={styles.cardHeader}>
-                <div>
-                  <div style={styles.cardEyebrow}>
-                    TODAY'S PLAN 📝
+                  <div style={styles.snapshotNodeRight}>
+                    <span>🎯</span>
+                    <strong>
+                      Focus
+                    </strong>
+                    <small>
+                      {topGaps.length} gaps
+                    </small>
                   </div>
 
-                  <h2 style={styles.cardTitle}>
-                    Little things to finish
-                  </h2>
+                  <div style={styles.snapshotNodeBottom}>
+                    <span>🌱</span>
+                    <strong>
+                      Practice
+                    </strong>
+                    <small>
+                      {tasks.length} today
+                    </small>
+                  </div>
+                </div>
+              </section>
+
+              {/* =================================================
+                  STUDENT MASTERY
+              ================================================= */}
+
+              <section style={styles.chartCard}>
+                <div style={styles.cardHeader}>
+                  <div>
+                    <div style={styles.cardEyebrow}>
+                      STUDENT MASTERY 📈
+                    </div>
+
+                    <h2 style={styles.cardTitle}>
+                      Concept mastery
+                    </h2>
+                  </div>
                 </div>
 
-                <div style={styles.cardCount}>
-                  {tasks.length}
-                </div>
-              </div>
+                {masteryData.length > 0 ? (
+                  <div style={styles.chartContainer}>
+                    <ResponsiveContainer
+                      width="100%"
+                      height={270}
+                    >
+                      <BarChart
+                        data={masteryData}
+                        margin={{
+                          top: 10,
+                          right: 10,
+                          left: -15,
+                          bottom: 45,
+                        }}
+                      >
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          vertical={false}
+                          stroke="#EEF0F5"
+                        />
 
-              {tasks.length > 0 ? (
-                <div style={styles.taskList}>
-                  {tasks
-                    .slice(0, 5)
-                    .map((task, index) => {
-                      const completed =
-                        task.status?.toLowerCase() ===
-                        "completed";
-
-                      return (
-                        <div
-                          key={
-                            task.id || index
-                          }
-                          style={{
-                            ...styles.taskItem,
-                            opacity: completed
-                              ? 0.62
-                              : 1,
+                        <XAxis
+                          dataKey="concept"
+                          tick={{
+                            fontSize: 10,
+                            fill: "#7E8798",
                           }}
-                        >
-                          <div
-                            style={{
-                              ...styles.taskCheck,
-                              backgroundColor:
-                                completed
-                                  ? "#10B981"
-                                  : "#FFFFFF",
-                              borderColor:
-                                completed
-                                  ? "#10B981"
-                                  : "#D7DCE5",
-                            }}
-                          >
-                            {completed
-                              ? "✓"
-                              : ""}
-                          </div>
+                          angle={-30}
+                          textAnchor="end"
+                          interval={0}
+                        />
 
+                        <YAxis
+                          domain={[0, 100]}
+                          tick={{
+                            fontSize: 10,
+                            fill: "#9AA2B1",
+                          }}
+                        />
+
+                        <Tooltip
+                          formatter={(value) => [
+                            `${value}%`,
+                            "Mastery",
+                          ]}
+                          contentStyle={{
+                            borderRadius: 10,
+                            border:
+                              "1px solid #E9EAF0",
+                            fontSize: 11,
+                          }}
+                        />
+
+                        <Bar
+                          dataKey="mastery"
+                          fill="#6366F1"
+                          radius={[
+                            6,
+                            6,
+                            0,
+                            0,
+                          ]}
+                          maxBarSize={42}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div style={styles.emptyChart}>
+                    <span>📊</span>
+                    <strong>
+                      No mastery data available
+                    </strong>
+                    <small>
+                      Complete an assessment to
+                      build your learner profile.
+                    </small>
+                  </div>
+                )}
+              </section>
+
+              {/* =================================================
+                  BLOOM DISTRIBUTION
+              ================================================= */}
+
+              <section style={styles.chartCard}>
+                <div style={styles.cardHeader}>
+                  <div>
+                    <div style={styles.cardEyebrow}>
+                      COGNITIVE PROFILE 🌈
+                    </div>
+
+                    <h2 style={styles.cardTitle}>
+                      Bloom distribution
+                    </h2>
+                  </div>
+                </div>
+
+                {bloomData.length > 0 ? (
+                  <div style={styles.bloomLayout}>
+                    <div style={styles.bloomChart}>
+                      <ResponsiveContainer
+                        width="100%"
+                        height={220}
+                      >
+                        <PieChart>
+                          <Pie
+                            data={bloomData}
+                            dataKey="value"
+                            nameKey="name"
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={55}
+                            outerRadius={82}
+                            paddingAngle={3}
+                          >
+                            {bloomData.map(
+                              (_, index) => (
+                                <Cell
+                                  key={index}
+                                  fill={
+                                    [
+                                      "#6366F1",
+                                      "#8B5CF6",
+                                      "#A855F7",
+                                      "#EC4899",
+                                      "#F59E0B",
+                                      "#10B981",
+                                    ][
+                                    index %
+                                    6
+                                    ]
+                                  }
+                                />
+                              )
+                            )}
+                          </Pie>
+
+                          <Tooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    <div style={styles.bloomList}>
+                      {bloomData.map(
+                        (item, index) => (
                           <div
+                            key={item.level}
                             style={
-                              styles.taskMain
+                              styles.bloomItem
+                            }
+                          >
+                            <span
+                              style={{
+                                ...styles.bloomDot,
+                                backgroundColor:
+                                  [
+                                    "#6366F1",
+                                    "#8B5CF6",
+                                    "#A855F7",
+                                    "#EC4899",
+                                    "#F59E0B",
+                                    "#10B981",
+                                  ][
+                                  index % 6
+                                  ],
+                              }}
+                            />
+
+                            <span
+                              style={
+                                styles.bloomName
+                              }
+                            >
+                              {item.name}
+                            </span>
+
+                            <strong
+                              style={
+                                styles.bloomValue
+                              }
+                            >
+                              {item.value}%
+                            </strong>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div style={styles.emptyChart}>
+                    <span>🌈</span>
+                    <strong>
+                      No Bloom data available
+                    </strong>
+                    <small>
+                      Bloom-level results will
+                      appear after assessment.
+                    </small>
+                  </div>
+                )}
+              </section>
+
+              {/* =================================================
+                  KNOWLEDGE GAPS
+              ================================================= */}
+
+              <section style={styles.chartCard}>
+                <div style={styles.cardHeader}>
+                  <div>
+                    <div style={styles.cardEyebrow}>
+                      KNOWLEDGE GAPS 🎯
+                    </div>
+
+                    <h2 style={styles.cardTitle}>
+                      Areas that need attention
+                    </h2>
+                  </div>
+
+                  <button
+                    onClick={() =>
+                      router.push(
+                        "/learning-resources"
+                      )
+                    }
+                    style={
+                      styles.resourcesButton
+                    }
+                  >
+                    Resources →
+                  </button>
+                </div>
+
+                {topGaps.length > 0 ? (
+                  <div style={styles.gapGrid}>
+                    {topGaps.map(
+                      (gap, index) => {
+                        const detail =
+                          dashboard.concept_progress?.find(
+                            (item) =>
+                              item.concept ===
+                              gap
+                          );
+
+                        return (
+                          <button
+                            key={index}
+                            onClick={() =>
+                              router.push(
+                                `/learning-resources?gap=${encodeURIComponent(
+                                  gap
+                                )}`
+                              )
+                            }
+                            style={
+                              styles.gapCard
                             }
                           >
                             <div
-                              style={{
-                                ...styles.taskTitle,
-                                textDecoration:
-                                  completed
-                                    ? "line-through"
-                                    : "none",
-                              }}
+                              style={
+                                styles.gapNumber
+                              }
                             >
-                              {task.title}
+                              {String(
+                                index + 1
+                              ).padStart(
+                                2,
+                                "0"
+                              )}
                             </div>
 
-                            {task.description && (
+                            <div
+                              style={
+                                styles.gapContent
+                              }
+                            >
+                              <strong>
+                                {gap}
+                              </strong>
+
+                              <span>
+                                {detail
+                                  ? `${Math.round(
+                                    detail.mastery
+                                  )}% mastery`
+                                  : "Needs attention"}
+                              </span>
+                            </div>
+
+                            <span
+                              style={
+                                styles.gapArrow
+                              }
+                            >
+                              →
+                            </span>
+                          </button>
+                        );
+                      }
+                    )}
+                  </div>
+                ) : (
+                  <div
+                    style={
+                      styles.noGaps
+                    }
+                  >
+                    <span>🌸</span>
+                    <strong>
+                      No critical gaps
+                    </strong>
+                    <small>
+                      Your current learner
+                      profile looks healthy.
+                    </small>
+                  </div>
+                )}
+              </section>
+
+              {/* =================================================
+                  NEW ASSESSMENT
+              ================================================= */}
+
+              <section style={styles.assessmentCta}>
+                <div>
+                  <div style={styles.ctaEyebrow}>
+                    CONTINUE LEARNING ✨
+                  </div>
+
+                  <h2 style={styles.ctaTitle}>
+                    Ready for your next
+                    learning step?
+                  </h2>
+
+                  <p style={styles.ctaText}>
+                    Take a quick diagnostic and
+                    let Edni identify what you
+                    should focus on next.
+                  </p>
+                </div>
+
+                <button
+                  onClick={openAssessment}
+                  style={styles.ctaButton}
+                >
+                  <span>＋</span>
+                  New Assessment
+                </button>
+              </section>
+            </div>
+
+            {/* =================================================
+                RIGHT COLUMN
+            ================================================= */}
+
+            <aside style={styles.rightColumn}>
+
+              {/* SMALL TRANSPARENT CALENDAR */}
+
+              <MiniCalendar />
+
+              {/* TODAY'S TASKS */}
+
+              <section
+                style={styles.tasksCard}
+              >
+                <div style={styles.cardHeader}>
+                  <div>
+                    <div style={styles.cardEyebrow}>
+                      TODAY 📝
+                    </div>
+
+                    <h2 style={styles.cardTitle}>
+                      Today's tasks
+                    </h2>
+                  </div>
+
+                  <div
+                    style={
+                      styles.taskCount
+                    }
+                  >
+                    {tasks.length}
+                  </div>
+                </div>
+
+                <div
+                  style={
+                    styles.taskProgressArea
+                  }
+                >
+                  <div
+                    style={
+                      styles.taskProgressTop
+                    }
+                  >
+                    <span>
+                      Today's progress
+                    </span>
+
+                    <strong>
+                      {taskCompletion}%
+                    </strong>
+                  </div>
+
+                  <div
+                    style={
+                      styles.taskProgressTrack
+                    }
+                  >
+                    <div
+                      style={{
+                        ...styles.taskProgressFill,
+                        width: `${taskCompletion}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {tasks.length > 0 ? (
+                  <div
+                    style={
+                      styles.taskList
+                    }
+                  >
+                    {tasks
+                      .slice(0, 7)
+                      .map(
+                        (
+                          task,
+                          index
+                        ) => {
+                          const completed =
+                            task.status?.toLowerCase() ===
+                            "completed";
+
+                          return (
+                            <div
+                              key={
+                                task.id ||
+                                index
+                              }
+                              style={{
+                                ...styles.taskItem,
+                                opacity:
+                                  completed
+                                    ? 0.58
+                                    : 1,
+                              }}
+                            >
+                              <div
+                                style={{
+                                  ...styles.taskCheck,
+                                  backgroundColor:
+                                    completed
+                                      ? "#10B981"
+                                      : "#FFFFFF",
+                                  borderColor:
+                                    completed
+                                      ? "#10B981"
+                                      : "#D7DCE5",
+                                }}
+                              >
+                                {completed
+                                  ? "✓"
+                                  : ""}
+                              </div>
+
                               <div
                                 style={
-                                  styles.taskDescription
+                                  styles.taskMain
                                 }
                               >
-                                {
-                                  task.description
-                                }
+                                <div
+                                  style={{
+                                    ...styles.taskTitle,
+                                    textDecoration:
+                                      completed
+                                        ? "line-through"
+                                        : "none",
+                                  }}
+                                >
+                                  {
+                                    task.title
+                                  }
+                                </div>
+
+                                {task.description && (
+                                  <div
+                                    style={
+                                      styles.taskDescription
+                                    }
+                                  >
+                                    {
+                                      task.description
+                                    }
+                                  </div>
+                                )}
                               </div>
-                            )}
-                          </div>
 
-                          <DifficultyBadge
-                            difficulty={
-                              task.difficulty
-                            }
-                          />
-                        </div>
-                      );
-                    })}
-                </div>
-              ) : (
-                <div style={styles.emptyTasks}>
-                  <div style={styles.emptySticker}>
-                    🌈
-                  </div>
-
-                  <strong>
-                    You're all caught up!
-                  </strong>
-
-                  <span>
-                    No tasks waiting for you today.
-                  </span>
-                </div>
-              )}
-
-              {tasks.length > 5 && (
-                <button
-                  onClick={() =>
-                    router.push(
-                      "/study-planner"
-                    )
-                  }
-                  style={styles.viewButton}
-                >
-                  View all tasks →
-                </button>
-              )}
-            </div>
-
-            {/* KNOWLEDGE GAPS */}
-
-            <div style={styles.largeCard}>
-              <div style={styles.cardHeader}>
-                <div>
-                  <div style={styles.cardEyebrow}>
-                    FOCUS AREAS 🎯
-                  </div>
-
-                  <h2 style={styles.cardTitle}>
-                    Things to practise
-                  </h2>
-                </div>
-
-                <button
-                  onClick={() =>
-                    router.push(
-                      "/learning-resources"
-                    )
-                  }
-                  style={styles.resourcesButton}
-                >
-                  Resources
-                </button>
-              </div>
-
-              {topGaps.length > 0 ? (
-                <div style={styles.gapList}>
-                  {topGaps.map(
-                    (gap, index) => (
-                      <button
-                        key={index}
-                        onClick={() =>
-                          router.push(
-                            `/learning-resources?gap=${encodeURIComponent(
-                              gap
-                            )}`
-                          )
+                              <DifficultyBadge
+                                difficulty={
+                                  task.difficulty
+                                }
+                              />
+                            </div>
+                          );
                         }
-                        style={
-                          styles.gapItem
-                        }
-                      >
-                        <div
-                          style={
-                            styles.gapEmoji
-                          }
-                        >
-                          {index === 0
-                            ? "🌱"
-                            : index === 1
-                              ? "📖"
-                              : "💡"}
-                        </div>
+                      )}
+                  </div>
+                ) : (
+                  <div
+                    style={
+                      styles.emptyTasks
+                    }
+                  >
+                    <div
+                      style={
+                        styles.emptySticker
+                      }
+                    >
+                      🌈
+                    </div>
 
-                        <div
-                          style={
-                            styles.gapMain
-                          }
-                        >
-                          <strong>
-                            {gap}
-                          </strong>
+                    <strong>
+                      You're all caught
+                      up!
+                    </strong>
 
-                          <span>
-                            A little more practice
-                            will help here
-                          </span>
-                        </div>
+                    <span>
+                      No tasks waiting for
+                      you today.
+                    </span>
+                  </div>
+                )}
 
-                        <span
-                          style={
-                            styles.gapArrow
-                          }
-                        >
-                          →
-                        </span>
-                      </button>
-                    )
-                  )}
+                {tasks.length > 7 && (
+                  <button
+                    onClick={() =>
+                      router.push(
+                        "/study-planner"
+                      )
+                    }
+                    style={
+                      styles.viewButton
+                    }
+                  >
+                    View all tasks →
+                  </button>
+                )}
+              </section>
+
+              {/* STUDY SUMMARY */}
+
+              <section
+                style={
+                  styles.sideSummaryCard
+                }
+              >
+                <div
+                  style={
+                    styles.cardEyebrow
+                  }
+                >
+                  LEARNING SUMMARY
                 </div>
-              ) : (
-                <div style={styles.emptyTasks}>
-                  <div style={styles.emptySticker}>
-                    🌸
+
+                <div
+                  style={
+                    styles.summaryRows
+                  }
+                >
+                  <div
+                    style={
+                      styles.summaryRow
+                    }
+                  >
+                    <span>
+                      Study time
+                    </span>
+
+                    <strong>
+                      {dashboard.total_study_time !==
+                        undefined
+                        ? `${dashboard.total_study_time.toFixed(
+                          1
+                        )}h`
+                        : "—"}
+                    </strong>
                   </div>
 
-                  <strong>
-                    No critical gaps
-                  </strong>
+                  <div
+                    style={
+                      styles.summaryRow
+                    }
+                  >
+                    <span>
+                      Study streak
+                    </span>
 
-                  <span>
-                    Your current profile looks
-                    healthy.
-                  </span>
+                    <strong>
+                      {dashboard.study_streak !==
+                        undefined
+                        ? `${dashboard.study_streak} days`
+                        : dashboard.study_days !==
+                          undefined
+                          ? `${dashboard.study_days} days`
+                          : "—"}
+                    </strong>
+                  </div>
+
+                  <div
+                    style={
+                      styles.summaryRow
+                    }
+                  >
+                    <span>
+                      Knowledge gaps
+                    </span>
+
+                    <strong>
+                      {dashboard.critical_gaps
+                        ?.length ??
+                        0}
+                    </strong>
+                  </div>
                 </div>
-              )}
-            </div>
-          </section>
-
-          {/* =================================================
-              STUDY JOURNEY
-          ================================================= */}
-
-          <section style={styles.journeyCard}>
-            <div style={styles.journeyLeft}>
-              <div style={styles.journeySticker}>
-                🐣
-              </div>
-
-              <div>
-                <div style={styles.cardEyebrow}>
-                  YOUR LEARNING JOURNEY
-                </div>
-
-                <h2 style={styles.journeyTitle}>
-                  Small progress becomes big progress.
-                </h2>
-
-                <p style={styles.journeyText}>
-                  Keep showing up, complete today's
-                  tasks, and build your study streak
-                  one day at a time.
-                </p>
-              </div>
-            </div>
-
-            <div style={styles.journeyPath}>
-              <div style={styles.pathLine} />
-
-              <div style={styles.pathPoint}>
-                <span>🌱</span>
-                <small>Start</small>
-              </div>
-
-              <div style={styles.pathPoint}>
-                <span>📚</span>
-                <small>Learn</small>
-              </div>
-
-              <div style={styles.pathPoint}>
-                <span>🧠</span>
-                <small>Practise</small>
-              </div>
-
-              <div style={styles.pathPoint}>
-                <span>🏆</span>
-                <small>Master</small>
-              </div>
-            </div>
-          </section>
-
-          {/* =================================================
-              FINAL CTA
-          ================================================= */}
-
-          <section style={styles.bottomCta}>
-            <div style={styles.ctaDecoration}>
-              ✦
-            </div>
-
-            <div>
-              <div style={styles.ctaEyebrow}>
-                KEEP GOING 💜
-              </div>
-
-              <h2 style={styles.ctaTitle}>
-                Ready for your next learning step?
-              </h2>
-
-              <p style={styles.ctaText}>
-                Take a quick assessment and let Edni
-                understand what you should focus on next.
-              </p>
-            </div>
-
-            <button
-              onClick={openAssessment}
-              style={styles.ctaButton}
-            >
-              <span>＋</span>
-              New Assessment
-            </button>
-          </section>
+              </section>
+            </aside>
+          </div>
         </div>
       </main>
 
@@ -1208,7 +1579,7 @@ export default function DashboardPage() {
       />
 
       {/* =====================================================
-          ANIMATIONS
+          ANIMATIONS / RESPONSIVE
       ===================================================== */}
 
       <style jsx>{`
@@ -1242,17 +1613,7 @@ export default function DashboardPage() {
           }
         }
 
-        @keyframes spin {
-          from {
-            transform: rotate(0deg);
-          }
-
-          to {
-            transform: rotate(360deg);
-          }
-        }
-
-        @media (max-width: 1100px) {
+        @media (max-width: 1180px) {
           .dashboard-main-grid {
             grid-template-columns: 1fr !important;
           }
@@ -1262,28 +1623,33 @@ export default function DashboardPage() {
           .dashboard-container {
             padding: 25px 18px !important;
           }
-        }
 
-        @media (max-width: 600px) {
           .dashboard-header {
             flex-direction: column !important;
             align-items: flex-start !important;
           }
 
-          .dashboard-stats {
+          .dashboard-main-grid {
             grid-template-columns: 1fr !important;
           }
+        }
 
-          .dashboard-quick {
-            grid-template-columns: 1fr !important;
-          }
-
-          .dashboard-content {
-            grid-template-columns: 1fr !important;
-          }
-
-          .dashboard-today {
+        @media (max-width: 600px) {
+          .dashboard-header {
             flex-direction: column !important;
+          }
+
+          .dashboard-main-grid {
+            grid-template-columns: 1fr !important;
+          }
+
+          .dashboard-score {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+          }
+
+          .dashboard-snapshot {
+            min-height: 390px !important;
           }
 
           .dashboard-cta {
@@ -1320,7 +1686,7 @@ const styles: Record<
   },
 
   container: {
-    maxWidth: "1450px",
+    maxWidth: "1500px",
     margin: "0 auto",
     padding: "34px 34px 70px",
   },
@@ -1338,16 +1704,16 @@ const styles: Record<
   },
 
   miniGreeting: {
-    fontSize: "10px",
+    fontSize: "11px",
     fontWeight: 800,
     letterSpacing: "0.14em",
     color: "#8B5CF6",
-    marginBottom: "8px",
+    marginBottom: "9px",
   },
 
   mainTitle: {
     margin: 0,
-    fontSize: "35px",
+    fontSize: "38px",
     lineHeight: 1.14,
     fontWeight: 800,
     letterSpacing: "-0.035em",
@@ -1362,8 +1728,8 @@ const styles: Record<
   },
 
   mainSubtitle: {
-    margin: "9px 0 0",
-    fontSize: "13px",
+    margin: "10px 0 0",
+    fontSize: "14px",
     color: "#7B8496",
   },
 
@@ -1371,7 +1737,7 @@ const styles: Record<
     display: "flex",
     alignItems: "center",
     gap: "11px",
-    padding: "12px 15px",
+    padding: "13px 16px",
     borderRadius: "15px",
     background: "#FFFFFF",
     border: "1px solid #ECECF5",
@@ -1380,8 +1746,8 @@ const styles: Record<
   },
 
   stickerEmoji: {
-    width: "42px",
-    height: "42px",
+    width: "43px",
+    height: "43px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -1391,172 +1757,512 @@ const styles: Record<
   },
 
   stickerTitle: {
-    fontSize: "12px",
+    fontSize: "13px",
     fontWeight: 750,
     color: "#3C4254",
   },
 
   stickerText: {
     marginTop: "3px",
-    fontSize: "10px",
+    fontSize: "11px",
     color: "#969EAF",
   },
 
   /* =======================================================
-     TODAY
+     TWO COLUMN LAYOUT
   ======================================================= */
 
-  todayHero: {
-    position: "relative",
-    overflow: "hidden",
+  dashboardMainGrid: {
+    display: "grid",
+    gridTemplateColumns:
+      "minmax(0, 1fr) 330px",
+    gap: "22px",
+    alignItems: "start",
+  },
+
+  leftColumn: {
     display: "flex",
+    flexDirection: "column",
+    gap: "18px",
+    minWidth: 0,
+  },
+
+  rightColumn: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "18px",
+    minWidth: 0,
+  },
+
+  /* =======================================================
+     COMMON CARD
+  ======================================================= */
+
+  cardHeader: {
+    display: "flex",
+    alignItems: "flex-start",
     justifyContent: "space-between",
-    alignItems: "center",
-    minHeight: "190px",
-    padding: "27px 31px",
-    marginBottom: "18px",
-    borderRadius: "20px",
-    background:
-      "linear-gradient(120deg, #F0EEFF 0%, #FAF7FF 50%, #FFF5FA 100%)",
-    border: "1px solid #E9E4FF",
+    gap: "15px",
+    marginBottom: "16px",
   },
 
-  todayLeft: {
-    position: "relative",
-    zIndex: 2,
-    maxWidth: "620px",
-  },
-
-  todayBadge: {
-    display: "inline-flex",
-    padding: "6px 10px",
-    borderRadius: "99px",
-    background: "#FFFFFF",
-    color: "#7C3AED",
-    fontSize: "9px",
+  cardEyebrow: {
+    fontSize: "10px",
     fontWeight: 800,
-    letterSpacing: "0.08em",
-    boxShadow:
-      "0 5px 15px rgba(124, 58, 237, 0.08)",
+    letterSpacing: "0.11em",
+    color: "#A0A7B7",
+    marginBottom: "6px",
   },
 
-  todayTitle: {
-    margin: "13px 0 5px",
-    fontSize: "23px",
+  cardTitle: {
+    margin: 0,
+    fontSize: "19px",
+    fontWeight: 800,
+    color: "#272C3C",
+  },
+
+  /* =======================================================
+     SCORE
+  ======================================================= */
+
+  scoreCard: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "25px",
+    minHeight: "190px",
+    padding: "24px 26px",
+    borderRadius: "18px",
+    background:
+      "linear-gradient(120deg, #F0EEFF 0%, #FAF8FF 55%, #FFF6FB 100%)",
+    border: "1px solid #E9E4FF",
+    overflow: "hidden",
+  },
+
+  scoreContent: {
+    minWidth: 0,
+  },
+
+  scoreTitle: {
+    margin: 0,
+    fontSize: "25px",
     fontWeight: 800,
     letterSpacing: "-0.025em",
     color: "#292C43",
   },
 
-  todayText: {
-    margin: 0,
-    fontSize: "12px",
-    color: "#777C91",
+  scoreDescription: {
+    maxWidth: "530px",
+    margin: "7px 0 14px",
+    fontSize: "13px",
+    lineHeight: 1.5,
+    color: "#7C8293",
   },
 
-  todayProgress: {
-    marginTop: "19px",
-    maxWidth: "430px",
-  },
-
-  todayProgressTrack: {
-    width: "100%",
-    height: "8px",
-    borderRadius: "99px",
-    background: "#E8E4F6",
-    overflow: "hidden",
-  },
-
-  todayProgressFill: {
-    height: "100%",
-    borderRadius: "99px",
-    background:
-      "linear-gradient(90deg, #6366F1, #A855F7)",
-    transition: "width 0.5s ease",
-  },
-
-  todayProgressText: {
+  scoreMeta: {
     display: "flex",
     alignItems: "center",
-    gap: "3px",
-    marginTop: "7px",
-    fontSize: "10px",
-    color: "#8A8FA3",
+    gap: "8px",
+    flexWrap: "wrap",
   },
 
-  todayIllustration: {
-    position: "relative",
-    width: "230px",
-    height: "150px",
+  areaPill: {
+    padding: "7px 10px",
+    borderRadius: "99px",
+    background: "#FFFFFF",
+    color: "#6366F1",
+    fontSize: "10px",
+    fontWeight: 750,
+    border: "1px solid #E6E0FF",
+  },
+
+  cyclePill: {
+    padding: "7px 10px",
+    borderRadius: "99px",
+    background: "#FFFFFF",
+    color: "#7B8496",
+    fontSize: "10px",
+    fontWeight: 700,
+    border: "1px solid #ECEEF3",
+  },
+
+  ringLarge: {
+    width: "125px",
+    height: "125px",
     flexShrink: 0,
   },
 
-  cloudOne: {
-    position: "absolute",
-    right: "22px",
-    top: "5px",
-    fontSize: "38px",
-    opacity: 0.65,
+  ringLargeProgress: {
+    width: "125px",
+    height: "125px",
+    borderRadius: "50%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
 
-  studyEmoji: {
-    position: "absolute",
-    right: "70px",
-    bottom: "4px",
-    fontSize: "78px",
-    animation: "float 3s ease-in-out infinite",
-  },
-
-  sparkleOne: {
-    position: "absolute",
-    right: "170px",
-    top: "35px",
-    color: "#8B5CF6",
-    fontSize: "23px",
-  },
-
-  sparkleTwo: {
-    position: "absolute",
-    right: "35px",
-    bottom: "48px",
-    color: "#EC4899",
-    fontSize: "17px",
-  },
-
-  flower: {
-    position: "absolute",
-    left: "15px",
-    bottom: "5px",
-    fontSize: "34px",
+  ringLargeInner: {
+    width: "99px",
+    height: "99px",
+    borderRadius: "50%",
+    background: "#FFFFFF",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#34394A",
+    gap: "2px",
+    boxShadow:
+      "0 5px 20px rgba(99, 102, 241, 0.07)",
   },
 
   /* =======================================================
-     STATS
+     SNAPSHOT
   ======================================================= */
 
-  statsGrid: {
-    display: "grid",
-    gridTemplateColumns:
-      "repeat(auto-fit, minmax(235px, 1fr))",
-    gap: "14px",
-    marginBottom: "25px",
-  },
-
-  statCard: {
-    position: "relative",
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    minHeight: "128px",
-    padding: "18px",
+  snapshotCard: {
+    padding: "21px",
     background: "#FFFFFF",
     border: "1px solid #EAECF2",
-    borderRadius: "16px",
+    borderRadius: "17px",
     boxShadow:
       "0 5px 18px rgba(15, 23, 42, 0.025)",
   },
 
-  statIconPurple: {
+  liveBadge: {
+    padding: "6px 9px",
+    borderRadius: "99px",
+    background: "#ECFDF5",
+    color: "#10B981",
+    fontSize: "9px",
+    fontWeight: 800,
+    letterSpacing: "0.06em",
+  },
+
+  snapshotVisual: {
+    position: "relative",
+    height: "275px",
+    marginTop: "4px",
+    overflow: "hidden",
+  },
+
+  snapshotCenter: {
+    position: "absolute",
+    left: "50%",
+    top: "50%",
+    transform: "translate(-50%, -50%)",
+    width: "150px",
+    height: "150px",
+    borderRadius: "50%",
+    background:
+      "linear-gradient(145deg, #F3F0FF, #FFF3F8)",
+    border: "1px solid #E5DEFF",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 3,
+    boxShadow:
+      "0 15px 40px rgba(99, 102, 241, 0.10)",
+  },
+
+  snapshotCenterIcon: {
+    fontSize: "34px",
+    marginBottom: "5px",
+  },
+
+
+
+  snapshotNodeTop: {
+    position: "absolute",
+    left: "50%",
+    top: "4px",
+    transform: "translateX(-50%)",
+    width: "135px",
+    padding: "10px",
+    borderRadius: "13px",
+    background: "#FFFFFF",
+    border: "1px solid #E9EAF1",
+    boxShadow:
+      "0 7px 20px rgba(15, 23, 42, 0.05)",
+    textAlign: "center",
+    zIndex: 4,
+  },
+
+  snapshotNodeLeft: {
+    position: "absolute",
+    left: "4%",
+    top: "50%",
+    transform: "translateY(-50%)",
+    width: "135px",
+    padding: "10px",
+    borderRadius: "13px",
+    background: "#FFFFFF",
+    border: "1px solid #E9EAF1",
+    boxShadow:
+      "0 7px 20px rgba(15, 23, 42, 0.05)",
+    textAlign: "center",
+    zIndex: 4,
+  },
+
+  snapshotNodeRight: {
+    position: "absolute",
+    right: "4%",
+    top: "50%",
+    transform: "translateY(-50%)",
+    width: "135px",
+    padding: "10px",
+    borderRadius: "13px",
+    background: "#FFFFFF",
+    border: "1px solid #E9EAF1",
+    boxShadow:
+      "0 7px 20px rgba(15, 23, 42, 0.05)",
+    textAlign: "center",
+    zIndex: 4,
+  },
+
+  snapshotNodeBottom: {
+    position: "absolute",
+    left: "50%",
+    bottom: "4px",
+    transform: "translateX(-50%)",
+    width: "135px",
+    padding: "10px",
+    borderRadius: "13px",
+    background: "#FFFFFF",
+    border: "1px solid #E9EAF1",
+    boxShadow:
+      "0 7px 20px rgba(15, 23, 42, 0.05)",
+    textAlign: "center",
+    zIndex: 4,
+  },
+
+  snapshotLineOne: {
+    position: "absolute",
+    width: "2px",
+    height: "55px",
+    background: "#DDD6FE",
+    left: "50%",
+    top: "66px",
+  },
+
+  snapshotLineTwo: {
+    position: "absolute",
+    width: "100px",
+    height: "2px",
+    background: "#DDD6FE",
+    left: "calc(50% - 150px)",
+    top: "50%",
+  },
+
+  snapshotLineThree: {
+    position: "absolute",
+    width: "100px",
+    height: "2px",
+    background: "#FBCFE8",
+    right: "calc(50% - 150px)",
+    top: "50%",
+  },
+
+  snapshotLineFour: {
+    position: "absolute",
+    width: "2px",
+    height: "55px",
+    background: "#FBCFE8",
+    left: "50%",
+    bottom: "66px",
+  },
+
+  /* =======================================================
+     CHARTS
+  ======================================================= */
+
+  chartCard: {
+    padding: "21px",
+    background: "#FFFFFF",
+    border: "1px solid #EAECF2",
+    borderRadius: "17px",
+    boxShadow:
+      "0 5px 18px rgba(15, 23, 42, 0.025)",
+  },
+
+  chartContainer: {
+    width: "100%",
+    height: "270px",
+  },
+
+  emptyChart: {
+    minHeight: "220px",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    textAlign: "center",
+    gap: "7px",
+    color: "#6B7280",
+  },
+
+  bloomLayout: {
+    display: "grid",
+    gridTemplateColumns:
+      "minmax(220px, 0.9fr) minmax(200px, 1fr)",
+    alignItems: "center",
+    gap: "20px",
+  },
+
+  bloomChart: {
+    minWidth: 0,
+  },
+
+  bloomList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+  },
+
+  bloomItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "9px 10px",
+    borderRadius: "9px",
+    background: "#FAFBFD",
+  },
+
+  bloomDot: {
+    width: "8px",
+    height: "8px",
+    borderRadius: "50%",
+    flexShrink: 0,
+  },
+
+  bloomName: {
+    flex: 1,
+    fontSize: "11px",
+    color: "#656D7D",
+  },
+
+  bloomValue: {
+    fontSize: "11px",
+    color: "#34394A",
+  },
+
+  /* =======================================================
+     KNOWLEDGE GAPS
+  ======================================================= */
+
+  gapGrid: {
+    display: "grid",
+    gridTemplateColumns:
+      "repeat(auto-fit, minmax(230px, 1fr))",
+    gap: "10px",
+  },
+
+  gapCard: {
+    display: "flex",
+    alignItems: "center",
+    gap: "11px",
+    padding: "13px",
+    borderRadius: "12px",
+    background: "#FFF9FA",
+    border: "1px solid #FCE7F3",
+    cursor: "pointer",
+    textAlign: "left",
+    transition: "all 0.18s ease",
+  },
+
+  gapNumber: {
+    width: "35px",
+    height: "35px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: "10px",
+    background: "#FFFFFF",
+    color: "#EC4899",
+    fontSize: "10px",
+    fontWeight: 800,
+  },
+
+  gapContent: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "3px",
+    flex: 1,
+    minWidth: 0,
+  },
+
+  gapArrow: {
+    fontSize: "17px",
+    color: "#EC4899",
+    fontWeight: 700,
+  },
+
+  resourcesButton: {
+    border: "none",
+    background: "#F5F3FF",
+    color: "#7C3AED",
+    borderRadius: "8px",
+    padding: "7px 10px",
+    fontSize: "10px",
+    fontWeight: 750,
+    cursor: "pointer",
+  },
+
+  noGaps: {
+    minHeight: "150px",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "6px",
+    textAlign: "center",
+    color: "#555C6C",
+  },
+
+  /* =======================================================
+     CALENDAR
+  ======================================================= */
+
+  calendarCard: {
+    padding: "18px",
+    borderRadius: "17px",
+    background:
+      "rgba(255,255,255,0.58)",
+    border: "1px solid rgba(226,229,238,0.85)",
+    backdropFilter: "blur(10px)",
+    boxShadow:
+      "0 7px 25px rgba(15, 23, 42, 0.035)",
+  },
+
+  calendarLoading: {
+    padding: "30px",
+    textAlign: "center",
+    fontSize: "11px",
+    color: "#9AA1AF",
+  },
+
+  calendarHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "14px",
+  },
+
+  calendarEyebrow: {
+    fontSize: "9px",
+    fontWeight: 800,
+    letterSpacing: "0.11em",
+    color: "#A0A7B7",
+    marginBottom: "4px",
+  },
+
+  calendarMonth: {
+    fontSize: "17px",
+    fontWeight: 800,
+    color: "#303648",
+  },
+
+  calendarToday: {
     width: "39px",
     height: "39px",
     display: "flex",
@@ -1564,243 +2270,48 @@ const styles: Record<
     justifyContent: "center",
     borderRadius: "11px",
     background: "#F1EEFF",
-    fontSize: "19px",
-    flexShrink: 0,
-  },
-
-  statIconBlue: {
-    width: "39px",
-    height: "39px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: "11px",
-    background: "#EFF6FF",
-    fontSize: "19px",
-    flexShrink: 0,
-  },
-
-  statIconOrange: {
-    width: "39px",
-    height: "39px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: "11px",
-    background: "#FFF7ED",
-    fontSize: "19px",
-    flexShrink: 0,
-  },
-
-  statIconGreen: {
-    width: "39px",
-    height: "39px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: "11px",
-    background: "#ECFDF5",
-    fontSize: "19px",
-    flexShrink: 0,
-  },
-
-  statContent: {
-    minWidth: 0,
-    flex: 1,
-  },
-
-  statLabel: {
-    fontSize: "9px",
+    color: "#6366F1",
+    fontSize: "14px",
     fontWeight: 800,
-    letterSpacing: "0.08em",
-    color: "#A1A8B7",
+  },
+
+  weekHeader: {
+    display: "grid",
+    gridTemplateColumns:
+      "repeat(7, 1fr)",
     marginBottom: "6px",
   },
 
-  statNumber: {
-    fontSize: "25px",
-    lineHeight: 1,
-    fontWeight: 800,
-    letterSpacing: "-0.03em",
-    color: "#202638",
+  calendarGrid: {
+    display: "grid",
+    gridTemplateColumns:
+      "repeat(7, 1fr)",
+    gap: "3px",
   },
 
-  statHint: {
-    marginTop: "6px",
-    fontSize: "9px",
-    color: "#9BA2B1",
-    whiteSpace: "nowrap",
-  },
-
-  ring: {
-    width: "52px",
-    height: "52px",
-    flexShrink: 0,
-  },
-
-  ringProgress: {
-    width: "52px",
-    height: "52px",
-    borderRadius: "50%",
+  calendarDay: {
+    height: "31px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-  },
-
-  ringInner: {
-    width: "41px",
-    height: "41px",
-    borderRadius: "50%",
-    background: "#FFFFFF",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "1px",
-    color: "#34394A",
-  },
-
-  hourVisual: {
-    width: "52px",
-    height: "52px",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: "50%",
-    background: "#F8FAFF",
-    fontSize: "20px",
-    flexShrink: 0,
-  },
-
-  hourDots: {
-    marginTop: "-2px",
-    fontSize: "7px",
-    color: "#93C5FD",
-    letterSpacing: "2px",
-  },
-
-  fireSticker: {
-    fontSize: "34px",
-    animation: "float 2.8s ease-in-out infinite",
-  },
-
-  checkSticker: {
-    width: "44px",
-    height: "44px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: "50%",
-    background: "#ECFDF5",
-    color: "#10B981",
-    fontSize: "22px",
-    fontWeight: 800,
-  },
-
-  /* =======================================================
-     QUICK ACCESS
-  ======================================================= */
-
-  quickSection: {
-    marginBottom: "20px",
-  },
-
-  sectionHeading: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    marginBottom: "13px",
-  },
-
-  sectionEyebrow: {
-    fontSize: "9px",
-    fontWeight: 800,
-    letterSpacing: "0.12em",
-    color: "#A0A7B7",
-    marginBottom: "5px",
-  },
-
-  sectionTitle: {
-    margin: 0,
-    fontSize: "18px",
-    fontWeight: 800,
-    color: "#252A3B",
-  },
-
-  sectionSubtitle: {
-    margin: "4px 0 0",
-    fontSize: "11px",
-    color: "#969DAC",
-  },
-
-  currentAreaBadge: {
-    padding: "7px 11px",
-    borderRadius: "99px",
-    background: "#F5F3FF",
-    color: "#7C3AED",
+    borderRadius: "8px",
     fontSize: "10px",
-    fontWeight: 750,
+    color: "#737B8D",
   },
 
-  quickGrid: {
-    display: "grid",
-    gridTemplateColumns:
-      "repeat(auto-fit, minmax(190px, 1fr))",
-    gap: "11px",
-  },
-
-  quickCard: {
-    position: "relative",
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    minHeight: "75px",
-    padding: "12px",
-    background: "#FFFFFF",
-    border: "1px solid",
-    borderRadius: "13px",
-    cursor: "pointer",
-    textAlign: "left",
-    transition: "all 0.2s ease",
-  },
-
-  quickEmoji: {
-    width: "40px",
-    height: "40px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: "11px",
-    fontSize: "20px",
-    flexShrink: 0,
-  },
-
-  quickText: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "2px",
-    minWidth: 0,
-  },
-
-  quickArrow: {
-    marginLeft: "auto",
-    fontSize: "17px",
-    fontWeight: 700,
+  calendarDayToday: {
+    background: "#6366F1",
+    color: "#FFFFFF",
+    fontWeight: 800,
+    boxShadow:
+      "0 5px 12px rgba(99, 102, 241, 0.22)",
   },
 
   /* =======================================================
-     CONTENT
+     TASKS
   ======================================================= */
 
-  contentGrid: {
-    display: "grid",
-    gridTemplateColumns:
-      "repeat(auto-fit, minmax(430px, 1fr))",
-    gap: "15px",
-    marginBottom: "18px",
-  },
-
-  largeCard: {
+  tasksCard: {
     padding: "20px",
     background: "#FFFFFF",
     border: "1px solid #EAECF2",
@@ -1809,31 +2320,9 @@ const styles: Record<
       "0 5px 18px rgba(15, 23, 42, 0.025)",
   },
 
-  cardHeader: {
-    display: "flex",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    marginBottom: "15px",
-  },
-
-  cardEyebrow: {
-    fontSize: "9px",
-    fontWeight: 800,
-    letterSpacing: "0.11em",
-    color: "#A0A7B7",
-    marginBottom: "5px",
-  },
-
-  cardTitle: {
-    margin: 0,
-    fontSize: "17px",
-    fontWeight: 800,
-    color: "#272C3C",
-  },
-
-  cardCount: {
-    minWidth: "28px",
-    height: "28px",
+  taskCount: {
+    minWidth: "30px",
+    height: "30px",
     padding: "0 8px",
     display: "flex",
     alignItems: "center",
@@ -1845,6 +2334,34 @@ const styles: Record<
     fontWeight: 800,
   },
 
+  taskProgressArea: {
+    marginBottom: "15px",
+  },
+
+  taskProgressTop: {
+    display: "flex",
+    justifyContent: "space-between",
+    marginBottom: "7px",
+    fontSize: "10px",
+    color: "#8B93A3",
+  },
+
+  taskProgressTrack: {
+    height: "7px",
+    width: "100%",
+    overflow: "hidden",
+    borderRadius: "99px",
+    background: "#EEF0F5",
+  },
+
+  taskProgressFill: {
+    height: "100%",
+    borderRadius: "99px",
+    background:
+      "linear-gradient(90deg, #6366F1, #A855F7)",
+    transition: "width 0.5s ease",
+  },
+
   taskList: {
     display: "flex",
     flexDirection: "column",
@@ -1854,7 +2371,7 @@ const styles: Record<
   taskItem: {
     display: "flex",
     alignItems: "center",
-    gap: "10px",
+    gap: "9px",
     padding: "10px",
     borderRadius: "11px",
     background: "#FAFBFD",
@@ -1870,7 +2387,7 @@ const styles: Record<
     alignItems: "center",
     justifyContent: "center",
     color: "#FFFFFF",
-    fontSize: "11px",
+    fontSize: "10px",
     fontWeight: 800,
     flexShrink: 0,
   },
@@ -1881,7 +2398,7 @@ const styles: Record<
   },
 
   taskTitle: {
-    fontSize: "11px",
+    fontSize: "12px",
     fontWeight: 700,
     color: "#404758",
     overflow: "hidden",
@@ -1891,7 +2408,7 @@ const styles: Record<
 
   taskDescription: {
     marginTop: "3px",
-    fontSize: "9px",
+    fontSize: "10px",
     color: "#9AA1AF",
     overflow: "hidden",
     textOverflow: "ellipsis",
@@ -1914,17 +2431,18 @@ const styles: Record<
     justifyContent: "center",
     textAlign: "center",
     color: "#555C6C",
+    gap: "4px",
   },
 
   emptySticker: {
     fontSize: "38px",
-    marginBottom: "9px",
+    marginBottom: "6px",
   },
 
   viewButton: {
     width: "100%",
     marginTop: "11px",
-    padding: "9px",
+    padding: "10px",
     border: "none",
     borderRadius: "8px",
     background: "#F5F3FF",
@@ -1932,203 +2450,87 @@ const styles: Record<
     fontSize: "10px",
     fontWeight: 750,
     cursor: "pointer",
-  },
-
-  resourcesButton: {
-    border: "none",
-    background: "#F5F3FF",
-    color: "#7C3AED",
-    borderRadius: "8px",
-    padding: "7px 10px",
-    fontSize: "9px",
-    fontWeight: 750,
-    cursor: "pointer",
-  },
-
-  gapList: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "9px",
-  },
-
-  gapItem: {
-    width: "100%",
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    padding: "11px",
-    borderRadius: "11px",
-    background: "#FFF9FA",
-    border: "1px solid #FCE7F3",
-    cursor: "pointer",
-    textAlign: "left",
-    transition: "all 0.18s ease",
-  },
-
-  gapEmoji: {
-    width: "36px",
-    height: "36px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: "10px",
-    background: "#FFFFFF",
-    fontSize: "18px",
-    flexShrink: 0,
-  },
-
-  gapMain: {
-    flex: 1,
-    display: "flex",
-    flexDirection: "column",
-    gap: "3px",
-    minWidth: 0,
-  },
-
-  gapArrow: {
-    color: "#EC4899",
-    fontSize: "16px",
-    fontWeight: 700,
   },
 
   /* =======================================================
-     JOURNEY
+     SIDE SUMMARY
   ======================================================= */
 
-  journeyCard: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: "30px",
-    padding: "21px 23px",
-    marginBottom: "18px",
+  sideSummaryCard: {
+    padding: "18px",
     borderRadius: "17px",
     background:
-      "linear-gradient(110deg, #FFFFFF, #FAF8FF)",
+      "linear-gradient(145deg, #FFFFFF, #FAF8FF)",
     border: "1px solid #EDE8FF",
   },
 
-  journeyLeft: {
-    display: "flex",
-    alignItems: "center",
-    gap: "13px",
-  },
-
-  journeySticker: {
-    width: "53px",
-    height: "53px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: "15px",
-    background: "#F4F1FF",
-    fontSize: "28px",
-  },
-
-  journeyTitle: {
-    margin: 0,
-    fontSize: "16px",
-    fontWeight: 800,
-    color: "#292D40",
-  },
-
-  journeyText: {
-    maxWidth: "600px",
-    margin: "5px 0 0",
-    fontSize: "10px",
-    lineHeight: 1.5,
-    color: "#9299A8",
-  },
-
-  journeyPath: {
-    position: "relative",
-    display: "flex",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    width: "390px",
-    flexShrink: 0,
-  },
-
-  pathLine: {
-    position: "absolute",
-    left: "18px",
-    right: "18px",
-    top: "17px",
-    height: "2px",
-    background:
-      "linear-gradient(90deg, #C4B5FD, #FBCFE8)",
-  },
-
-  pathPoint: {
-    position: "relative",
-    zIndex: 2,
+  summaryRows: {
     display: "flex",
     flexDirection: "column",
+    gap: "3px",
+  },
+
+  summaryRow: {
+    display: "flex",
+    justifyContent: "space-between",
     alignItems: "center",
-    gap: "5px",
+    padding: "11px 0",
+    borderBottom: "1px solid #F0F0F5",
+    fontSize: "11px",
+    color: "#858D9D",
   },
 
   /* =======================================================
      CTA
   ======================================================= */
 
-  bottomCta: {
+  assessmentCta: {
     position: "relative",
     overflow: "hidden",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
     gap: "25px",
-    padding: "23px 25px",
+    padding: "24px 26px",
     borderRadius: "17px",
     background:
       "linear-gradient(110deg, #F1EEFF, #FFF0F7)",
     border: "1px solid #E9E1FF",
   },
 
-  ctaDecoration: {
-    position: "absolute",
-    right: "180px",
-    top: "5px",
-    fontSize: "70px",
-    color: "#DDD6FE",
-    opacity: 0.45,
-  },
-
   ctaEyebrow: {
-    fontSize: "9px",
+    fontSize: "10px",
     fontWeight: 800,
     letterSpacing: "0.12em",
     color: "#8B5CF6",
-    marginBottom: "5px",
+    marginBottom: "6px",
   },
 
   ctaTitle: {
     margin: 0,
-    fontSize: "17px",
+    fontSize: "19px",
     fontWeight: 800,
     color: "#292D40",
   },
 
   ctaText: {
     maxWidth: "620px",
-    margin: "5px 0 0",
-    fontSize: "10px",
+    margin: "6px 0 0",
+    fontSize: "11px",
+    lineHeight: 1.5,
     color: "#8C92A2",
   },
 
   ctaButton: {
-    position: "relative",
-    zIndex: 2,
     display: "flex",
     alignItems: "center",
     gap: "8px",
-    padding: "11px 15px",
+    padding: "12px 16px",
     border: "none",
     borderRadius: "10px",
     background: "#6366F1",
     color: "#FFFFFF",
-    fontSize: "11px",
+    fontSize: "12px",
     fontWeight: 750,
     cursor: "pointer",
     whiteSpace: "nowrap",
@@ -2172,7 +2574,7 @@ const styles: Record<
   },
 
   modalEyebrow: {
-    fontSize: "9px",
+    fontSize: "10px",
     fontWeight: 800,
     letterSpacing: "0.12em",
     color: "#8B5CF6",
@@ -2181,20 +2583,20 @@ const styles: Record<
 
   modalTitle: {
     margin: 0,
-    fontSize: "24px",
+    fontSize: "25px",
     fontWeight: 800,
     color: "#252A3B",
   },
 
   modalSubtitle: {
     margin: "6px 0 0",
-    fontSize: "11px",
+    fontSize: "12px",
     color: "#8C93A3",
   },
 
   closeButton: {
-    width: "32px",
-    height: "32px",
+    width: "33px",
+    height: "33px",
     border: "none",
     borderRadius: "9px",
     background: "#F5F6FA",
@@ -2234,7 +2636,7 @@ const styles: Record<
   },
 
   areaShort: {
-    fontSize: "9px",
+    fontSize: "10px",
     fontWeight: 800,
     letterSpacing: "0.08em",
     marginBottom: "3px",
@@ -2242,7 +2644,7 @@ const styles: Record<
 
   areaLabel: {
     maxWidth: "170px",
-    fontSize: "12px",
+    fontSize: "13px",
     fontWeight: 750,
     lineHeight: 1.35,
     color: "#363B4B",
@@ -2251,7 +2653,7 @@ const styles: Record<
   areaDescription: {
     marginTop: "5px",
     maxWidth: "175px",
-    fontSize: "9px",
+    fontSize: "10px",
     lineHeight: 1.4,
     color: "#9AA1AF",
   },
@@ -2270,7 +2672,7 @@ const styles: Record<
     borderRadius: "9px",
     background: "#F8FAFC",
     color: "#858D9D",
-    fontSize: "9px",
+    fontSize: "10px",
     textAlign: "center",
   },
 
@@ -2294,14 +2696,14 @@ const styles: Record<
 
   loadingTitle: {
     marginTop: "15px",
-    fontSize: "14px",
+    fontSize: "15px",
     fontWeight: 750,
     color: "#454B5D",
   },
 
   loadingText: {
     marginTop: "5px",
-    fontSize: "10px",
+    fontSize: "11px",
     color: "#9AA1AF",
   },
 
@@ -2318,13 +2720,13 @@ const styles: Record<
 
   errorTitle: {
     margin: "12px 0 4px",
-    fontSize: "17px",
+    fontSize: "18px",
     color: "#353A4B",
   },
 
   errorText: {
     margin: 0,
-    fontSize: "11px",
+    fontSize: "12px",
     color: "#8C93A3",
   },
 
@@ -2332,10 +2734,10 @@ const styles: Record<
     marginTop: "15px",
     border: "none",
     borderRadius: "9px",
-    padding: "9px 14px",
+    padding: "10px 15px",
     background: "#6366F1",
     color: "#FFFFFF",
-    fontSize: "11px",
+    fontSize: "12px",
     fontWeight: 700,
     cursor: "pointer",
   },
