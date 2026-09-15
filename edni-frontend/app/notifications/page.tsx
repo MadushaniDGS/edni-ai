@@ -2,1367 +2,1651 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+
 import apiClient from "@/lib/apiClient";
 import Sidebar from "@/components/Sidebar";
 import TopBar from "@/components/TopBar";
 
 interface Notification {
-    id: number;
-    icon: string;
-    title: string;
-    desc: string;
-    time: string;
-    unread: boolean;
-    created_at: string;
+  id: number;
+  icon: string;
+  title: string;
+  desc: string;
+  time: string;
+  unread: boolean;
+  created_at: string;
 }
 
 type FilterType = "all" | "unread" | "read";
 
+const COLORS = {
+  purple: "#7C3AED",
+  purpleDark: "#5B21B6",
+  violet: "#8B5CF6",
+  indigo: "#6366F1",
+  blue: "#3B82F6",
+  blueDark: "#1D4ED8",
+  purpleLight: "#EDE9FE",
+  blueLight: "#DBEAFE",
+  background: "#F7F7FC",
+  text: "#1F2937",
+  muted: "#6B7280",
+  border: "#E5E7EB",
+  white: "#FFFFFF",
+};
+
+function getNotificationTheme(index: number, unread: boolean) {
+  const themes = [
+    {
+      gradient: "linear-gradient(135deg, #EDE9FE 0%, #DBEAFE 100%)",
+      accent: "#7C3AED",
+      soft: "#F5F3FF",
+    },
+    {
+      gradient: "linear-gradient(135deg, #DDD6FE 0%, #BFDBFE 100%)",
+      accent: "#6366F1",
+      soft: "#EEF2FF",
+    },
+    {
+      gradient: "linear-gradient(135deg, #F3E8FF 0%, #E0E7FF 100%)",
+      accent: "#8B5CF6",
+      soft: "#FAF5FF",
+    },
+    {
+      gradient: "linear-gradient(135deg, #E0E7FF 0%, #DBEAFE 100%)",
+      accent: "#4F46E5",
+      soft: "#EEF2FF",
+    },
+  ];
+
+  const theme = themes[index % themes.length];
+
+  if (!unread) {
+    return {
+      ...theme,
+      accent: "#94A3B8",
+      soft: "#F8FAFC",
+    };
+  }
+
+  return theme;
+}
+
 export default function NotificationsPage() {
-    const router = useRouter();
+  const router = useRouter();
 
-    const [notifications, setNotifications] = useState<Notification[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
-    const [error, setError] = useState("");
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<FilterType>("all");
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [markingId, setMarkingId] = useState<number | null>(null);
+  const [markingAll, setMarkingAll] = useState(false);
 
-    const [search, setSearch] = useState("");
-    const [filter, setFilter] = useState<FilterType>("all");
-    const [expandedId, setExpandedId] = useState<number | null>(null);
-    const [markingId, setMarkingId] = useState<number | null>(null);
-    const [markingAll, setMarkingAll] = useState(false);
+  // ============================================================
+  // FETCH NOTIFICATIONS
+  // ============================================================
 
-    // ============================================================
-    // FETCH NOTIFICATIONS
-    // ============================================================
-
-    const fetchNotifications = useCallback(async (isRefresh = false) => {
-        try {
-            if (isRefresh) {
-                setRefreshing(true);
-            } else {
-                setLoading(true);
-            }
-
-            setError("");
-
-            const response = await apiClient.get("/notifications");
-
-            if (Array.isArray(response.data)) {
-                setNotifications(response.data);
-            } else {
-                setNotifications([]);
-            }
-        } catch (err) {
-            console.error("Failed to load notifications:", err);
-            setError("Failed to load notifications.");
-        } finally {
-            setLoading(false);
-            setRefreshing(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        fetchNotifications();
-    }, [fetchNotifications]);
-
-    // ============================================================
-    // MARK SINGLE NOTIFICATION AS READ
-    // ============================================================
-
-    const markAsRead = async (id: number) => {
-        try {
-            setMarkingId(id);
-
-            await apiClient.put(`/notifications/${id}/read`);
-
-            // Update UI immediately
-            setNotifications((prev) =>
-                prev.map((notification) =>
-                    notification.id === id
-                        ? { ...notification, unread: false }
-                        : notification
-                )
-            );
-        } catch (err) {
-            console.error("Failed to mark notification as read:", err);
-        } finally {
-            setMarkingId(null);
-        }
-    };
-
-    // ============================================================
-    // MARK ALL AS READ
-    // ============================================================
-
-    const markAllAsRead = async () => {
-        try {
-            setMarkingAll(true);
-
-            await apiClient.put("/notifications/read-all");
-
-            // Update UI immediately
-            setNotifications((prev) =>
-                prev.map((notification) => ({
-                    ...notification,
-                    unread: false,
-                }))
-            );
-        } catch (err) {
-            console.error("Failed to mark all notifications as read:", err);
-        } finally {
-            setMarkingAll(false);
-        }
-    };
-
-    // ============================================================
-    // FILTER + SEARCH
-    // ============================================================
-
-    const filteredNotifications = useMemo(() => {
-        const query = search.trim().toLowerCase();
-
-        return notifications.filter((notification) => {
-            const matchesFilter =
-                filter === "all" ||
-                (filter === "unread" && notification.unread) ||
-                (filter === "read" && !notification.unread);
-
-            const matchesSearch =
-                !query ||
-                notification.title.toLowerCase().includes(query) ||
-                notification.desc.toLowerCase().includes(query);
-
-            return matchesFilter && matchesSearch;
-        });
-    }, [notifications, filter, search]);
-
-    const unreadCount = notifications.filter(
-        (notification) => notification.unread
-    ).length;
-
-    // ============================================================
-    // TIME FORMAT
-    // ============================================================
-
-    const formatTime = (notification: Notification) => {
-        if (!notification.created_at) {
-            return notification.time;
+  const fetchNotifications = useCallback(
+    async (isRefresh = false) => {
+      try {
+        if (isRefresh) {
+          setRefreshing(true);
+        } else {
+          setLoading(true);
         }
 
-        const created = new Date(notification.created_at).getTime();
+        setError("");
 
-        if (Number.isNaN(created)) {
-            return notification.time;
+        const response = await apiClient.get("/notifications");
+
+        if (Array.isArray(response.data)) {
+          setNotifications(response.data);
+        } else {
+          setNotifications([]);
         }
+      } catch (err) {
+        console.error("Failed to load notifications:", err);
+        setError("Failed to load notifications.");
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    []
+  );
 
-        const now = Date.now();
-        const diff = Math.max(0, now - created);
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
 
-        const seconds = Math.floor(diff / 1000);
-        const minutes = Math.floor(seconds / 60);
-        const hours = Math.floor(minutes / 60);
-        const days = Math.floor(hours / 24);
+  // ============================================================
+  // MARK SINGLE NOTIFICATION AS READ
+  // ============================================================
 
-        if (seconds < 60) {
-            return "Just now";
-        }
+  const markAsRead = async (id: number) => {
+    try {
+      setMarkingId(id);
 
-        if (minutes < 60) {
-            return `${minutes}m ago`;
-        }
+      await apiClient.put(`/notifications/${id}/read`);
 
-        if (hours < 24) {
-            return `${hours}h ago`;
-        }
+      setNotifications((prev) =>
+        prev.map((notification) =>
+          notification.id === id
+            ? { ...notification, unread: false }
+            : notification
+        )
+      );
+    } catch (err) {
+      console.error("Failed to mark notification as read:", err);
+    } finally {
+      setMarkingId(null);
+    }
+  };
 
-        if (days < 7) {
-            return `${days}d ago`;
-        }
+  // ============================================================
+  // MARK ALL AS READ
+  // ============================================================
 
-        return new Date(notification.created_at).toLocaleDateString();
-    };
+  const markAllAsRead = async () => {
+    try {
+      setMarkingAll(true);
 
-    // ============================================================
-    // NOTIFICATION CLICK
-    // ============================================================
+      await apiClient.put("/notifications/read-all");
 
-    const handleNotificationClick = async (notification: Notification) => {
-        setExpandedId(
-            expandedId === notification.id ? null : notification.id
-        );
+      setNotifications((prev) =>
+        prev.map((notification) => ({
+          ...notification,
+          unread: false,
+        }))
+      );
+    } catch (err) {
+      console.error("Failed to mark all notifications as read:", err);
+    } finally {
+      setMarkingAll(false);
+    }
+  };
 
-        if (notification.unread) {
-            await markAsRead(notification.id);
-        }
-    };
+  // ============================================================
+  // FILTER + SEARCH
+  // ============================================================
 
-    // ============================================================
-    // CLEAR SEARCH/FILTER
-    // ============================================================
+  const filteredNotifications = useMemo(() => {
+    const query = search.trim().toLowerCase();
 
-    const clearFilters = () => {
-        setSearch("");
-        setFilter("all");
-    };
+    return notifications.filter((notification) => {
+      const matchesFilter =
+        filter === "all" ||
+        (filter === "unread" && notification.unread) ||
+        (filter === "read" && !notification.unread);
 
-    return (
-        <div className="notifications-page">
-            <Sidebar />
+      const matchesSearch =
+        !query ||
+        notification.title.toLowerCase().includes(query) ||
+        notification.desc.toLowerCase().includes(query);
 
-            <main className="main-content">
-                <TopBar title="Notifications" />
+      return matchesFilter && matchesSearch;
+    });
+  }, [notifications, filter, search]);
 
-                <div className="content-container">
+  const unreadCount = notifications.filter(
+    (notification) => notification.unread
+  ).length;
 
-                    {/* =====================================================
-              HEADER
+  const readCount = notifications.length - unreadCount;
+
+  // ============================================================
+  // TIME FORMAT
+  // ============================================================
+
+  const formatTime = (notification: Notification) => {
+    if (!notification.created_at) {
+      return notification.time;
+    }
+
+    const created = new Date(notification.created_at).getTime();
+
+    if (Number.isNaN(created)) {
+      return notification.time;
+    }
+
+    const now = Date.now();
+    const diff = Math.max(0, now - created);
+
+    const seconds = Math.floor(diff / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (seconds < 60) {
+      return "Just now";
+    }
+
+    if (minutes < 60) {
+      return `${minutes}m ago`;
+    }
+
+    if (hours < 24) {
+      return `${hours}h ago`;
+    }
+
+    if (days < 7) {
+      return `${days}d ago`;
+    }
+
+    return new Date(notification.created_at).toLocaleDateString();
+  };
+
+  // ============================================================
+  // NOTIFICATION CLICK
+  // ============================================================
+
+  const handleNotificationClick = async (
+    notification: Notification
+  ) => {
+    setExpandedId(
+      expandedId === notification.id ? null : notification.id
+    );
+
+    if (notification.unread) {
+      await markAsRead(notification.id);
+    }
+  };
+
+  // ============================================================
+  // CLEAR SEARCH/FILTER
+  // ============================================================
+
+  const clearFilters = () => {
+    setSearch("");
+    setFilter("all");
+  };
+
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        background:
+          "linear-gradient(135deg, #F8F7FC 0%, #F7F9FF 50%, #F5F3FF 100%)",
+        overflowX: "hidden",
+      }}
+    >
+      <Sidebar />
+
+      {/* FIXED TOP BAR */}
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 64,
+          zIndex: 1000,
+          background: "rgba(255,255,255,0.94)",
+          backdropFilter: "blur(14px)",
+          WebkitBackdropFilter: "blur(14px)",
+          borderBottom: "1px solid rgba(124,58,237,0.10)",
+        }}
+      >
+        <TopBar title="Notifications" />
+      </div>
+
+      <main
+        style={{
+          marginLeft: 240,
+          paddingTop: 64,
+          minHeight: "100vh",
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 1220,
+            margin: "0 auto",
+            padding: "22px 28px 55px",
+          }}
+        >
+          {/* =====================================================
+              HERO HEADER
           ====================================================== */}
 
-                    <div className="page-header">
-                        <div className="header-left">
-                            <button
-                                className="back-button"
-                                onClick={() => router.back()}
-                                aria-label="Go back"
-                            >
-                                ←
-                            </button>
+          <section
+            style={{
+              position: "relative",
+              overflow: "hidden",
+              borderRadius: 24,
+              padding: "24px 26px",
+              marginBottom: 20,
+              background:
+                "linear-gradient(135deg, #8176f7 0%, #7669ef 45%, #9b75e9 100%)",
+              boxShadow:
+                "0 18px 42px rgba(91,33,182,0.18)",
+              color: "#FFFFFF",
+            }}
+          >
+            {/* Decorative circles */}
+            <div
+              style={{
+                position: "absolute",
+                width: 220,
+                height: 220,
+                borderRadius: "50%",
+                right: -70,
+                top: -110,
+                background: "rgba(255,255,255,0.10)",
+              }}
+            />
 
-                            <div>
-                                <div className="title-row">
-                                    <h1>Notifications</h1>
+            <div
+              style={{
+                position: "absolute",
+                width: 140,
+                height: 140,
+                borderRadius: "50%",
+                right: 110,
+                bottom: -90,
+                background: "rgba(255,255,255,0.08)",
+              }}
+            />
 
-                                    {unreadCount > 0 && (
-                                        <span className="unread-count">
-                                            {unreadCount} unread
-                                        </span>
-                                    )}
-                                </div>
+            <div
+              style={{
+                position: "absolute",
+                width: 75,
+                height: 75,
+                borderRadius: 22,
+                right: 40,
+                bottom: 18,
+                transform: "rotate(18deg)",
+                background: "rgba(255,255,255,0.07)",
+              }}
+            />
 
-                                <p>
-                                    Stay updated with your learning activity and
-                                    important alerts.
-                                </p>
-                            </div>
-                        </div>
+            <div
+              style={{
+                position: "relative",
+                zIndex: 2,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 20,
+                flexWrap: "wrap",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 13,
+                }}
+              >
+                <button
+                  onClick={() => router.back()}
+                  aria-label="Go back"
+                  style={{
+                    width: 42,
+                    height: 42,
+                    border: "1px solid rgba(255,255,255,0.20)",
+                    borderRadius: 13,
+                    background: "rgba(255,255,255,0.12)",
+                    color: "#FFFFFF",
+                    fontSize: 21,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backdropFilter: "blur(8px)",
+                  }}
+                >
+                  ←
+                </button>
 
-                        <div className="header-actions">
-                            <button
-                                className="refresh-button"
-                                onClick={() => fetchNotifications(true)}
-                                disabled={refreshing}
-                            >
-                                <span className={refreshing ? "refresh-icon spinning" : "refresh-icon"}>
-                                    ↻
-                                </span>
-                                {refreshing ? "Refreshing..." : "Refresh"}
-                            </button>
+                <div>
+                  <div
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 7,
+                      padding: "5px 9px",
+                      borderRadius: 999,
+                      background: "rgba(255,255,255,0.13)",
+                      border:
+                        "1px solid rgba(255,255,255,0.16)",
+                      fontSize: 10,
+                      fontWeight: 800,
+                      marginBottom: 8,
+                    }}
+                  >
+                    🔔 Stay Updated
+                  </div>
 
-                            {unreadCount > 0 && (
-                                <button
-                                    className="mark-all-button"
-                                    onClick={markAllAsRead}
-                                    disabled={markingAll}
-                                >
-                                    {markingAll ? "Marking..." : "✓ Mark all as read"}
-                                </button>
-                            )}
-                        </div>
-                    </div>
+                  <h1
+                    style={{
+                      margin: 0,
+                      fontSize: 27,
+                      lineHeight: 1.15,
+                      fontWeight: 800,
+                      letterSpacing: "-0.5px",
+                    }}
+                  >
+                    Notifications
+                  </h1>
 
-                    {/* =====================================================
+                  <p
+                    style={{
+                      margin: "7px 0 0",
+                      color: "rgba(255,255,255,0.86)",
+                      fontSize: 12.5,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    Stay updated with your learning activity and
+                    important alerts.
+                  </p>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  flexWrap: "wrap",
+                }}
+              >
+                <button
+                  onClick={() => fetchNotifications(true)}
+                  disabled={refreshing}
+                  style={{
+                    height: 40,
+                    padding: "0 14px",
+                    borderRadius: 11,
+                    border:
+                      "1px solid rgba(255,255,255,0.20)",
+                    background: "rgba(255,255,255,0.12)",
+                    color: "#FFFFFF",
+                    fontSize: 11.5,
+                    fontWeight: 700,
+                    cursor: refreshing
+                      ? "not-allowed"
+                      : "pointer",
+                    opacity: refreshing ? 0.65 : 1,
+                  }}
+                >
+                  <span
+                    style={{
+                      display: "inline-block",
+                      marginRight: 5,
+                      fontSize: 16,
+                    }}
+                  >
+                    ↻
+                  </span>
+                  {refreshing ? "Refreshing..." : "Refresh"}
+                </button>
+
+                {unreadCount > 0 && (
+                  <button
+                    onClick={markAllAsRead}
+                    disabled={markingAll}
+                    style={{
+                      height: 40,
+                      padding: "0 14px",
+                      border: "none",
+                      borderRadius: 11,
+                      background: "#FFFFFF",
+                      color: COLORS.purpleDark,
+                      fontSize: 11.5,
+                      fontWeight: 800,
+                      cursor: markingAll
+                        ? "not-allowed"
+                        : "pointer",
+                      opacity: markingAll ? 0.7 : 1,
+                      boxShadow:
+                        "0 7px 18px rgba(0,0,0,0.10)",
+                    }}
+                  >
+                    {markingAll
+                      ? "Marking..."
+                      : "✓ Mark all as read"}
+                  </button>
+                )}
+              </div>
+            </div>
+          </section>
+
+          {/* =====================================================
               SUMMARY CARDS
           ====================================================== */}
 
-                    {!loading && !error && notifications.length > 0 && (
-                        <div className="summary-grid">
+          {!loading && !error && notifications.length > 0 && (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns:
+                  "repeat(3, minmax(0, 1fr))",
+                gap: 13,
+                marginBottom: 17,
+              }}
+            >
+              {/* TOTAL */}
+              <div
+                style={{
+                  position: "relative",
+                  overflow: "hidden",
+                  background:
+                    "linear-gradient(135deg, #FFFFFF 0%, #F5F3FF 100%)",
+                  border: "1px solid #E9E7EF",
+                  borderRadius: 17,
+                  padding: "15px 16px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  boxShadow:
+                    "0 5px 18px rgba(17,24,39,0.04)",
+                }}
+              >
+                <div
+                  style={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: 13,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 19,
+                    background:
+                      "linear-gradient(135deg, #EDE9FE 0%, #DBEAFE 100%)",
+                  }}
+                >
+                  🔔
+                </div>
 
-                            <div className="summary-card">
-                                <div className="summary-icon total-icon">
-                                    🔔
-                                </div>
+                <div>
+                  <div
+                    style={{
+                      fontSize: 10.5,
+                      color: COLORS.muted,
+                      marginBottom: 2,
+                    }}
+                  >
+                    Total notifications
+                  </div>
 
-                                <div>
-                                    <span>Total notifications</span>
-                                    <strong>{notifications.length}</strong>
-                                </div>
-                            </div>
+                  <div
+                    style={{
+                      fontSize: 22,
+                      fontWeight: 800,
+                      color: COLORS.text,
+                    }}
+                  >
+                    {notifications.length}
+                  </div>
+                </div>
 
-                            <div className="summary-card">
-                                <div className="summary-icon unread-icon">
-                                    ●
-                                </div>
+                <div
+                  style={{
+                    position: "absolute",
+                    width: 75,
+                    height: 75,
+                    borderRadius: "50%",
+                    right: -30,
+                    top: -30,
+                    background:
+                      "rgba(124,58,237,0.05)",
+                  }}
+                />
+              </div>
 
-                                <div>
-                                    <span>Unread</span>
-                                    <strong>{unreadCount}</strong>
-                                </div>
-                            </div>
+              {/* UNREAD */}
+              <div
+                style={{
+                  position: "relative",
+                  overflow: "hidden",
+                  background:
+                    "linear-gradient(135deg, #FFFFFF 0%, #EFF6FF 100%)",
+                  border: "1px solid #E0E7FF",
+                  borderRadius: 17,
+                  padding: "15px 16px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  boxShadow:
+                    "0 5px 18px rgba(59,130,246,0.05)",
+                }}
+              >
+                <div
+                  style={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: 13,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 15,
+                    fontWeight: 800,
+                    color: COLORS.indigo,
+                    background:
+                      "linear-gradient(135deg, #E0E7FF 0%, #DBEAFE 100%)",
+                  }}
+                >
+                  ●
+                </div>
 
-                            <div className="summary-card">
-                                <div className="summary-icon read-icon">
-                                    ✓
-                                </div>
+                <div>
+                  <div
+                    style={{
+                      fontSize: 10.5,
+                      color: COLORS.muted,
+                      marginBottom: 2,
+                    }}
+                  >
+                    Unread
+                  </div>
 
-                                <div>
-                                    <span>Read</span>
-                                    <strong>
-                                        {notifications.length - unreadCount}
-                                    </strong>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                  <div
+                    style={{
+                      fontSize: 22,
+                      fontWeight: 800,
+                      color: COLORS.indigo,
+                    }}
+                  >
+                    {unreadCount}
+                  </div>
+                </div>
+              </div>
 
-                    {/* =====================================================
+              {/* READ */}
+              <div
+                style={{
+                  position: "relative",
+                  overflow: "hidden",
+                  background:
+                    "linear-gradient(135deg, #FFFFFF 0%, #F5F3FF 100%)",
+                  border: "1px solid #E9E7EF",
+                  borderRadius: 17,
+                  padding: "15px 16px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  boxShadow:
+                    "0 5px 18px rgba(17,24,39,0.04)",
+                }}
+              >
+                <div
+                  style={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: 13,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 18,
+                    color: "#059669",
+                    background:
+                      "linear-gradient(135deg, #D1FAE5 0%, #E0E7FF 100%)",
+                  }}
+                >
+                  ✓
+                </div>
+
+                <div>
+                  <div
+                    style={{
+                      fontSize: 10.5,
+                      color: COLORS.muted,
+                      marginBottom: 2,
+                    }}
+                  >
+                    Read
+                  </div>
+
+                  <div
+                    style={{
+                      fontSize: 22,
+                      fontWeight: 800,
+                      color: "#059669",
+                    }}
+                  >
+                    {readCount}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* =====================================================
               SEARCH + FILTER TOOLBAR
           ====================================================== */}
 
-                    {!loading && !error && notifications.length > 0 && (
-                        <div className="toolbar">
+          {!loading && !error && notifications.length > 0 && (
+            <div
+              style={{
+                background: "#FFFFFF",
+                border: "1px solid #E8E6EF",
+                borderRadius: 17,
+                padding: 12,
+                marginBottom: 16,
+                boxShadow:
+                  "0 5px 18px rgba(17,24,39,0.035)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  flexWrap: "wrap",
+                }}
+              >
+                {/* SEARCH */}
+                <div
+                  style={{
+                    position: "relative",
+                    flex: 1,
+                    minWidth: 220,
+                  }}
+                >
+                  <span
+                    style={{
+                      position: "absolute",
+                      left: 13,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      color: "#94A3B8",
+                      fontSize: 18,
+                      zIndex: 2,
+                    }}
+                  >
+                    ⌕
+                  </span>
 
-                            <div className="search-wrapper">
-                                <span className="search-icon">⌕</span>
+                  <input
+                    type="text"
+                    placeholder="Search notifications..."
+                    value={search}
+                    onChange={(e) =>
+                      setSearch(e.target.value)
+                    }
+                    style={{
+                      width: "100%",
+                      height: 40,
+                      boxSizing: "border-box",
+                      border:
+                        "1px solid #E5E7EB",
+                      borderRadius: 11,
+                      padding: "0 39px",
+                      outline: "none",
+                      fontSize: 12,
+                      color: COLORS.text,
+                      background: "#FAFAFC",
+                    }}
+                  />
 
-                                <input
-                                    type="text"
-                                    placeholder="Search notifications..."
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                />
+                  {search && (
+                    <button
+                      onClick={() => setSearch("")}
+                      aria-label="Clear search"
+                      style={{
+                        position: "absolute",
+                        right: 8,
+                        top: "50%",
+                        transform:
+                          "translateY(-50%)",
+                        width: 25,
+                        height: 25,
+                        border: "none",
+                        borderRadius: "50%",
+                        background: "#EDE9FE",
+                        color: COLORS.purple,
+                        cursor: "pointer",
+                        fontSize: 15,
+                        fontWeight: 700,
+                      }}
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
 
-                                {search && (
-                                    <button
-                                        className="clear-search"
-                                        onClick={() => setSearch("")}
-                                        aria-label="Clear search"
-                                    >
-                                        ×
-                                    </button>
-                                )}
-                            </div>
+                {/* FILTER TABS */}
+                <div
+                  style={{
+                    display: "flex",
+                    padding: 4,
+                    gap: 3,
+                    borderRadius: 11,
+                    background:
+                      "linear-gradient(135deg, #F5F3FF 0%, #EFF6FF 100%)",
+                  }}
+                >
+                  {[
+                    {
+                      key: "all" as FilterType,
+                      label: "All",
+                      count: notifications.length,
+                    },
+                    {
+                      key: "unread" as FilterType,
+                      label: "Unread",
+                      count: unreadCount,
+                    },
+                    {
+                      key: "read" as FilterType,
+                      label: "Read",
+                      count: readCount,
+                    },
+                  ].map((item) => {
+                    const active = filter === item.key;
 
-                            <div className="filter-tabs">
-                                <button
-                                    className={filter === "all" ? "active" : ""}
-                                    onClick={() => setFilter("all")}
-                                >
-                                    All
-                                    <span>{notifications.length}</span>
-                                </button>
+                    return (
+                      <button
+                        key={item.key}
+                        onClick={() =>
+                          setFilter(item.key)
+                        }
+                        style={{
+                          border: "none",
+                          borderRadius: 8,
+                          padding: "7px 10px",
+                          background: active
+                            ? "#FFFFFF"
+                            : "transparent",
+                          color: active
+                            ? COLORS.purple
+                            : COLORS.muted,
+                          fontSize: 11,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          boxShadow: active
+                            ? "0 2px 7px rgba(17,24,39,0.08)"
+                            : "none",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 5,
+                        }}
+                      >
+                        {item.label}
 
-                                <button
-                                    className={filter === "unread" ? "active" : ""}
-                                    onClick={() => setFilter("unread")}
-                                >
-                                    Unread
-                                    {unreadCount > 0 && (
-                                        <span>{unreadCount}</span>
-                                    )}
-                                </button>
+                        <span
+                          style={{
+                            minWidth: 18,
+                            height: 18,
+                            padding: "0 4px",
+                            borderRadius: 999,
+                            background: active
+                              ? COLORS.purpleLight
+                              : "#E5E7EB",
+                            color: active
+                              ? COLORS.purple
+                              : COLORS.muted,
+                            fontSize: 9,
+                            fontWeight: 800,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent:
+                              "center",
+                          }}
+                        >
+                          {item.count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
 
-                                <button
-                                    className={filter === "read" ? "active" : ""}
-                                    onClick={() => setFilter("read")}
-                                >
-                                    Read
-                                    <span>{notifications.length - unreadCount}</span>
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* =====================================================
+          {/* =====================================================
               LOADING
           ====================================================== */}
 
-                    {loading && (
-                        <div className="notification-list">
-                            {[1, 2, 3, 4].map((item) => (
-                                <div className="skeleton-card" key={item}>
-                                    <div className="skeleton-icon" />
+          {loading && (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 11,
+              }}
+            >
+              {[1, 2, 3, 4].map((item) => (
+                <div
+                  key={item}
+                  style={{
+                    height: 105,
+                    borderRadius: 17,
+                    background:
+                      "linear-gradient(90deg, #FFFFFF 0%, #F5F3FF 50%, #FFFFFF 100%)",
+                    border:
+                      "1px solid #E9E7EF",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 14,
+                    padding: 18,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 48,
+                      height: 48,
+                      minWidth: 48,
+                      borderRadius: 14,
+                      background: "#EDE9FE",
+                    }}
+                  />
 
-                                    <div className="skeleton-content">
-                                        <div className="skeleton-line title-line" />
-                                        <div className="skeleton-line text-line" />
-                                        <div className="skeleton-line small-line" />
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
+                  <div
+                    style={{
+                      flex: 1,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "30%",
+                        height: 12,
+                        borderRadius: 6,
+                        background: "#E5E7EB",
+                        marginBottom: 10,
+                      }}
+                    />
 
-                    {/* =====================================================
+                    <div
+                      style={{
+                        width: "72%",
+                        height: 9,
+                        borderRadius: 6,
+                        background: "#EEF2F7",
+                        marginBottom: 8,
+                      }}
+                    />
+
+                    <div
+                      style={{
+                        width: "22%",
+                        height: 8,
+                        borderRadius: 6,
+                        background: "#F1F5F9",
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* =====================================================
               ERROR
           ====================================================== */}
 
-                    {!loading && error && (
-                        <div className="state-card error-card">
-                            <div className="state-icon">⚠️</div>
+          {!loading && error && (
+            <div
+              style={{
+                minHeight: 300,
+                background: "#FFFFFF",
+                border: "1px solid #FECACA",
+                borderRadius: 20,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                textAlign: "center",
+                padding: 30,
+                boxShadow:
+                  "0 8px 25px rgba(127,29,29,0.04)",
+              }}
+            >
+              <div
+                style={{
+                  width: 65,
+                  height: 65,
+                  borderRadius: 19,
+                  background:
+                    "linear-gradient(135deg, #FEE2E2 0%, #FCE7F3 100%)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 28,
+                  marginBottom: 13,
+                }}
+              >
+                ⚠️
+              </div>
 
-                            <h3>Something went wrong</h3>
+              <h3
+                style={{
+                  margin: "0 0 6px",
+                  fontSize: 18,
+                  fontWeight: 800,
+                  color: COLORS.text,
+                }}
+              >
+                Something went wrong
+              </h3>
 
-                            <p>{error}</p>
+              <p
+                style={{
+                  margin: 0,
+                  maxWidth: 430,
+                  color: COLORS.muted,
+                  fontSize: 12.5,
+                  lineHeight: 1.6,
+                }}
+              >
+                {error}
+              </p>
 
-                            <button
-                                className="retry-button"
-                                onClick={() => fetchNotifications()}
-                            >
-                                Try again
-                            </button>
-                        </div>
-                    )}
+              <button
+                onClick={() => fetchNotifications()}
+                style={{
+                  marginTop: 17,
+                  border: "none",
+                  borderRadius: 10,
+                  padding: "9px 15px",
+                  background:
+                    "linear-gradient(135deg, #7C3AED 0%, #6366F1 100%)",
+                  color: "#FFFFFF",
+                  fontSize: 11.5,
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  boxShadow:
+                    "0 7px 16px rgba(124,58,237,0.18)",
+                }}
+              >
+                Try again
+              </button>
+            </div>
+          )}
 
-                    {/* =====================================================
+          {/* =====================================================
               EMPTY DATABASE
           ====================================================== */}
 
-                    {!loading &&
-                        !error &&
-                        notifications.length === 0 && (
-                            <div className="state-card">
-                                <div className="empty-bell">🔔</div>
+          {!loading &&
+            !error &&
+            notifications.length === 0 && (
+              <div
+                style={{
+                  minHeight: 330,
+                  background: "#FFFFFF",
+                  border: "1px solid #E9E7EF",
+                  borderRadius: 21,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  textAlign: "center",
+                  padding: 30,
+                  boxShadow:
+                    "0 8px 25px rgba(17,24,39,0.035)",
+                }}
+              >
+                <div
+                  style={{
+                    position: "relative",
+                    width: 74,
+                    height: 74,
+                    borderRadius: 22,
+                    background:
+                      "linear-gradient(135deg, #EDE9FE 0%, #DBEAFE 100%)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 32,
+                    marginBottom: 15,
+                  }}
+                >
+                  🔔
 
-                                <h3>No notifications yet</h3>
+                  <div
+                    style={{
+                      position: "absolute",
+                      width: 12,
+                      height: 12,
+                      borderRadius: "50%",
+                      background: "#8B5CF6",
+                      right: 2,
+                      top: 3,
+                      border: "3px solid #FFFFFF",
+                    }}
+                  />
+                </div>
 
-                                <p>
-                                    You&apos;re all caught up. New notifications will
-                                    appear here when they arrive.
-                                </p>
-                            </div>
-                        )}
+                <h3
+                  style={{
+                    margin: "0 0 7px",
+                    fontSize: 18,
+                    fontWeight: 800,
+                    color: COLORS.text,
+                  }}
+                >
+                  No notifications yet
+                </h3>
 
-                    {/* =====================================================
+                <p
+                  style={{
+                    maxWidth: 440,
+                    margin: 0,
+                    color: COLORS.muted,
+                    fontSize: 12.5,
+                    lineHeight: 1.6,
+                  }}
+                >
+                  You&apos;re all caught up. New notifications
+                  will appear here when they arrive.
+                </p>
+              </div>
+            )}
+
+          {/* =====================================================
               NO SEARCH/FILTER RESULTS
           ====================================================== */}
 
-                    {!loading &&
-                        !error &&
-                        notifications.length > 0 &&
-                        filteredNotifications.length === 0 && (
-                            <div className="state-card">
-                                <div className="empty-bell">⌕</div>
+          {!loading &&
+            !error &&
+            notifications.length > 0 &&
+            filteredNotifications.length === 0 && (
+              <div
+                style={{
+                  minHeight: 300,
+                  background: "#FFFFFF",
+                  border: "1px solid #E9E7EF",
+                  borderRadius: 20,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  textAlign: "center",
+                  padding: 30,
+                }}
+              >
+                <div
+                  style={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: 20,
+                    background:
+                      "linear-gradient(135deg, #EDE9FE 0%, #DBEAFE 100%)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 27,
+                    marginBottom: 14,
+                  }}
+                >
+                  ⌕
+                </div>
 
-                                <h3>No matching notifications</h3>
+                <h3
+                  style={{
+                    margin: "0 0 7px",
+                    fontSize: 18,
+                    fontWeight: 800,
+                    color: COLORS.text,
+                  }}
+                >
+                  No matching notifications
+                </h3>
 
-                                <p>
-                                    Try changing your search or notification filter.
-                                </p>
+                <p
+                  style={{
+                    margin: 0,
+                    color: COLORS.muted,
+                    fontSize: 12.5,
+                  }}
+                >
+                  Try changing your search or notification
+                  filter.
+                </p>
 
-                                <button
-                                    className="retry-button"
-                                    onClick={clearFilters}
-                                >
-                                    Clear filters
-                                </button>
-                            </div>
-                        )}
+                <button
+                  onClick={clearFilters}
+                  style={{
+                    marginTop: 17,
+                    border: "none",
+                    borderRadius: 10,
+                    padding: "9px 15px",
+                    background:
+                      "linear-gradient(135deg, #7C3AED 0%, #6366F1 100%)",
+                    color: "#FFFFFF",
+                    fontSize: 11.5,
+                    fontWeight: 800,
+                    cursor: "pointer",
+                  }}
+                >
+                  Clear filters
+                </button>
+              </div>
+            )}
 
-                    {/* =====================================================
+          {/* =====================================================
               NOTIFICATION LIST
           ====================================================== */}
 
-                    {!loading &&
-                        !error &&
-                        filteredNotifications.length > 0 && (
-                            <div className="notification-list">
+          {!loading &&
+            !error &&
+            filteredNotifications.length > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 11,
+                }}
+              >
+                {filteredNotifications.map(
+                  (notification, index) => {
+                    const expanded =
+                      expandedId === notification.id;
 
-                                {filteredNotifications.map((notification) => {
-                                    const expanded =
-                                        expandedId === notification.id;
+                    const theme = getNotificationTheme(
+                      index,
+                      notification.unread
+                    );
 
-                                    return (
-                                        <div
-                                            key={notification.id}
-                                            className={`notification-card ${notification.unread ? "unread" : "read"
-                                                } ${expanded ? "expanded" : ""}`}
-                                        >
-                                            <button
-                                                className="notification-main"
-                                                onClick={() =>
-                                                    handleNotificationClick(notification)
-                                                }
-                                            >
-                                                {/* Icon */}
-                                                <div className="notification-icon">
-                                                    {notification.icon || "🔔"}
-                                                </div>
+                    return (
+                      <div
+                        key={notification.id}
+                        style={{
+                          background: "#FFFFFF",
+                          border:
+                            "1px solid #E7E5EE",
+                          borderLeft: notification.unread
+                            ? `4px solid ${theme.accent}`
+                            : "1px solid #E7E5EE",
+                          borderRadius: 17,
+                          overflow: "hidden",
+                          boxShadow: expanded
+                            ? "0 12px 30px rgba(91,33,182,0.10)"
+                            : "0 5px 18px rgba(17,24,39,0.035)",
+                          transition:
+                            "transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease",
+                        }}
+                      >
+                        {/* MAIN NOTIFICATION */}
+                        <button
+                          onClick={() =>
+                            handleNotificationClick(
+                              notification
+                            )
+                          }
+                          style={{
+                            width: "100%",
+                            border: "none",
+                            background: "transparent",
+                            textAlign: "left",
+                            padding: "15px 16px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 13,
+                            cursor: "pointer",
+                          }}
+                        >
+                          {/* Dynamic icon box */}
+                          <div
+                            style={{
+                              position: "relative",
+                              width: 49,
+                              height: 49,
+                              minWidth: 49,
+                              borderRadius: 15,
+                              background: theme.gradient,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: 21,
+                              boxShadow:
+                                "0 5px 14px rgba(91,33,182,0.08)",
+                              border:
+                                "1px solid rgba(255,255,255,0.8)",
+                            }}
+                          >
+                            {notification.icon ||
+                              "🔔"}
 
-                                                {/* Content */}
-                                                <div className="notification-content">
-                                                    <div className="notification-title-row">
-                                                        <h3>{notification.title}</h3>
+                            {notification.unread && (
+                              <span
+                                style={{
+                                  position: "absolute",
+                                  width: 8,
+                                  height: 8,
+                                  borderRadius: "50%",
+                                  background:
+                                    "#3B82F6",
+                                  right: 2,
+                                  top: 2,
+                                  border:
+                                    "2px solid #FFFFFF",
+                                }}
+                              />
+                            )}
+                          </div>
 
-                                                        {notification.unread && (
-                                                            <span className="new-badge">
-                                                                NEW
-                                                            </span>
-                                                        )}
-                                                    </div>
+                          {/* CONTENT */}
+                          <div
+                            style={{
+                              flex: 1,
+                              minWidth: 0,
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                flexWrap: "wrap",
+                                marginBottom: 4,
+                              }}
+                            >
+                              <h3
+                                style={{
+                                  margin: 0,
+                                  fontSize: 14,
+                                  fontWeight: 800,
+                                  color: COLORS.text,
+                                  lineHeight: 1.3,
+                                }}
+                              >
+                                {notification.title}
+                              </h3>
 
-                                                    <p>{notification.desc}</p>
-
-                                                    <div className="notification-meta">
-                                                        <span>
-                                                            🕐 {formatTime(notification)}
-                                                        </span>
-
-                                                        {notification.unread && (
-                                                            <span className="unread-label">
-                                                                Unread
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-
-                                                {/* Right side */}
-                                                <div className="notification-right">
-                                                    {notification.unread && (
-                                                        <span className="unread-dot" />
-                                                    )}
-
-                                                    <span
-                                                        className={`expand-arrow ${expanded ? "open" : ""
-                                                            }`}
-                                                    >
-                                                        ›
-                                                    </span>
-                                                </div>
-                                            </button>
-
-                                            {/* =================================================
-                          EXPANDED AREA
-                      ================================================== */}
-
-                                            {expanded && (
-                                                <div className="expanded-content">
-                                                    <div className="expanded-divider" />
-
-                                                    <div className="expanded-details">
-                                                        <div>
-                                                            <span>Notification</span>
-                                                            <strong>
-                                                                {notification.title}
-                                                            </strong>
-                                                        </div>
-
-                                                        <div>
-                                                            <span>Received</span>
-                                                            <strong>
-                                                                {notification.created_at
-                                                                    ? new Date(
-                                                                        notification.created_at
-                                                                    ).toLocaleString()
-                                                                    : notification.time}
-                                                            </strong>
-                                                        </div>
-                                                    </div>
-
-                                                    {notification.unread && (
-                                                        <button
-                                                            className="mark-read-button"
-                                                            onClick={() =>
-                                                                markAsRead(notification.id)
-                                                            }
-                                                            disabled={
-                                                                markingId === notification.id
-                                                            }
-                                                        >
-                                                            {markingId === notification.id
-                                                                ? "Marking as read..."
-                                                                : "✓ Mark as read"}
-                                                        </button>
-                                                    )}
-
-                                                    {!notification.unread && (
-                                                        <div className="already-read">
-                                                            ✓ This notification has been read
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
+                              {notification.unread && (
+                                <span
+                                  style={{
+                                    padding: "3px 7px",
+                                    borderRadius: 999,
+                                    background:
+                                      "linear-gradient(135deg, #EDE9FE 0%, #DBEAFE 100%)",
+                                    color:
+                                      COLORS.purple,
+                                    fontSize: 8.5,
+                                    fontWeight: 800,
+                                    letterSpacing:
+                                      "0.5px",
+                                  }}
+                                >
+                                  NEW
+                                </span>
+                              )}
                             </div>
+
+                            <p
+                              style={{
+                                margin: 0,
+                                color: COLORS.muted,
+                                fontSize: 11.5,
+                                lineHeight: 1.5,
+                                display:
+                                  "-webkit-box",
+                                WebkitLineClamp: expanded
+                                  ? undefined
+                                  : 2,
+                                WebkitBoxOrient:
+                                  "vertical",
+                                overflow: expanded
+                                  ? "visible"
+                                  : "hidden",
+                              }}
+                            >
+                              {notification.desc}
+                            </p>
+
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                flexWrap: "wrap",
+                                gap: 10,
+                                marginTop: 7,
+                                fontSize: 9.5,
+                                color: "#94A3B8",
+                              }}
+                            >
+                              <span>
+                                🕐{" "}
+                                {formatTime(
+                                  notification
+                                )}
+                              </span>
+
+                              {notification.unread && (
+                                <span
+                                  style={{
+                                    color:
+                                      theme.accent,
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  ● Unread
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* RIGHT */}
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 9,
+                              flexShrink: 0,
+                            }}
+                          >
+                            {notification.unread && (
+                              <span
+                                style={{
+                                  width: 8,
+                                  height: 8,
+                                  borderRadius: "50%",
+                                  background:
+                                    "linear-gradient(135deg, #7C3AED 0%, #3B82F6 100%)",
+                                  boxShadow:
+                                    "0 0 0 4px #EDE9FE",
+                                }}
+                              />
+                            )}
+
+                            <span
+                              style={{
+                                fontSize: 25,
+                                color: "#94A3B8",
+                                display: "inline-block",
+                                transform: expanded
+                                  ? "rotate(90deg)"
+                                  : "rotate(0deg)",
+                                transition:
+                                  "transform 0.2s ease",
+                              }}
+                            >
+                              ›
+                            </span>
+                          </div>
+                        </button>
+
+                        {/* =================================================
+                            EXPANDED AREA
+                        ================================================== */}
+
+                        {expanded && (
+                          <div
+                            style={{
+                              padding:
+                                "0 16px 16px 78px",
+                            }}
+                          >
+                            <div
+                              style={{
+                                height: 1,
+                                background:
+                                  "#EEEAF5",
+                                marginBottom: 15,
+                              }}
+                            />
+
+                            <div
+                              style={{
+                                display: "grid",
+                                gridTemplateColumns:
+                                  "repeat(2, minmax(0, 1fr))",
+                                gap: 12,
+                                marginBottom: 14,
+                              }}
+                            >
+                              <div
+                                style={{
+                                  padding: 11,
+                                  borderRadius: 12,
+                                  background:
+                                    "linear-gradient(135deg, #FAF5FF 0%, #EFF6FF 100%)",
+                                  border:
+                                    "1px solid #E9E7EF",
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    display: "block",
+                                    fontSize: 9,
+                                    textTransform:
+                                      "uppercase",
+                                    letterSpacing:
+                                      "0.5px",
+                                    fontWeight: 800,
+                                    color:
+                                      "#94A3B8",
+                                    marginBottom: 4,
+                                  }}
+                                >
+                                  Notification
+                                </span>
+
+                                <strong
+                                  style={{
+                                    color:
+                                      COLORS.text,
+                                    fontSize: 11.5,
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  {notification.title}
+                                </strong>
+                              </div>
+
+                              <div
+                                style={{
+                                  padding: 11,
+                                  borderRadius: 12,
+                                  background:
+                                    "linear-gradient(135deg, #EFF6FF 0%, #F5F3FF 100%)",
+                                  border:
+                                    "1px solid #E9E7EF",
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    display: "block",
+                                    fontSize: 9,
+                                    textTransform:
+                                      "uppercase",
+                                    letterSpacing:
+                                      "0.5px",
+                                    fontWeight: 800,
+                                    color:
+                                      "#94A3B8",
+                                    marginBottom: 4,
+                                  }}
+                                >
+                                  Received
+                                </span>
+
+                                <strong
+                                  style={{
+                                    color:
+                                      COLORS.text,
+                                    fontSize: 11.5,
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  {notification.created_at
+                                    ? new Date(
+                                      notification.created_at
+                                    ).toLocaleString()
+                                    : notification.time}
+                                </strong>
+                              </div>
+                            </div>
+
+                            {notification.unread ? (
+                              <button
+                                onClick={() =>
+                                  markAsRead(
+                                    notification.id
+                                  )
+                                }
+                                disabled={
+                                  markingId ===
+                                  notification.id
+                                }
+                                style={{
+                                  border: "none",
+                                  borderRadius: 10,
+                                  padding:
+                                    "9px 13px",
+                                  background:
+                                    "linear-gradient(135deg, #3B82F6 0%, #6366F1 60%, #7C3AED 100%)",
+                                  color: "#FFFFFF",
+                                  fontSize: 11,
+                                  fontWeight: 800,
+                                  cursor:
+                                    markingId ===
+                                      notification.id
+                                      ? "not-allowed"
+                                      : "pointer",
+                                  opacity:
+                                    markingId ===
+                                      notification.id
+                                      ? 0.65
+                                      : 1,
+                                  boxShadow:
+                                    "0 7px 16px rgba(99,102,241,0.18)",
+                                }}
+                              >
+                                {markingId ===
+                                  notification.id
+                                  ? "Marking as read..."
+                                  : "✓ Mark as read"}
+                              </button>
+                            ) : (
+                              <div
+                                style={{
+                                  display:
+                                    "inline-flex",
+                                  alignItems:
+                                    "center",
+                                  gap: 5,
+                                  padding:
+                                    "7px 10px",
+                                  borderRadius: 9,
+                                  background:
+                                    "#ECFDF5",
+                                  color: "#047857",
+                                  fontSize: 10.5,
+                                  fontWeight: 700,
+                                }}
+                              >
+                                ✓ This notification
+                                has been read
+                              </div>
+                            )}
+                          </div>
                         )}
-
-                </div>
-            </main>
-
-            {/* ==========================================================
-          PAGE STYLES
-      =========================================================== */}
-
-            <style jsx>{`
-        .notifications-page {
-          min-height: 100vh;
-          background: #f8fafc;
-        }
-
-        .main-content {
-          margin-left: 240px;
-          min-height: 100vh;
-        }
-
-        .content-container {
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 32px 32px 60px;
-        }
-
-        /* HEADER */
-
-        .page-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 24px;
-          margin-bottom: 28px;
-        }
-
-        .header-left {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-        }
-
-        .back-button {
-          width: 42px;
-          height: 42px;
-          border: 1px solid #e2e8f0;
-          background: white;
-          border-radius: 12px;
-          font-size: 22px;
-          color: #334155;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-
-        .back-button:hover {
-          transform: translateX(-2px);
-          border-color: #6c63ff;
-          color: #6c63ff;
-        }
-
-        .title-row {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-
-        .title-row h1 {
-          margin: 0;
-          font-size: 30px;
-          font-weight: 750;
-          color: #0f172a;
-          letter-spacing: -0.5px;
-        }
-
-        .page-header p {
-          margin: 7px 0 0;
-          color: #64748b;
-          font-size: 14px;
-        }
-
-        .unread-count {
-          padding: 5px 10px;
-          border-radius: 20px;
-          background: #ede9fe;
-          color: #6c63ff;
-          font-size: 12px;
-          font-weight: 700;
-        }
-
-        .header-actions {
-          display: flex;
-          gap: 10px;
-          align-items: center;
-        }
-
-        .refresh-button,
-        .mark-all-button {
-          height: 42px;
-          padding: 0 15px;
-          border-radius: 11px;
-          font-size: 13px;
-          font-weight: 650;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-
-        .refresh-button {
-          border: 1px solid #e2e8f0;
-          background: white;
-          color: #334155;
-        }
-
-        .refresh-button:hover:not(:disabled) {
-          border-color: #cbd5e1;
-          background: #f8fafc;
-        }
-
-        .mark-all-button {
-          border: none;
-          background: #6c63ff;
-          color: white;
-          box-shadow: 0 4px 12px rgba(108, 99, 255, 0.2);
-        }
-
-        .mark-all-button:hover:not(:disabled) {
-          background: #5b54e8;
-          transform: translateY(-1px);
-        }
-
-        button:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-
-        .refresh-icon {
-          display: inline-block;
-          margin-right: 6px;
-          font-size: 17px;
-        }
-
-        .spinning {
-          animation: spin 0.8s linear infinite;
-        }
-
-        /* SUMMARY */
-
-        .summary-grid {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 16px;
-          margin-bottom: 20px;
-        }
-
-        .summary-card {
-          background: white;
-          border: 1px solid #e2e8f0;
-          border-radius: 16px;
-          padding: 18px;
-          display: flex;
-          align-items: center;
-          gap: 14px;
-          transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-
-        .summary-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 25px rgba(15, 23, 42, 0.06);
-        }
-
-        .summary-icon {
-          width: 44px;
-          height: 44px;
-          border-radius: 12px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 19px;
-        }
-
-        .total-icon {
-          background: #eef2ff;
-        }
-
-        .unread-icon {
-          background: #fff7ed;
-          color: #f97316;
-        }
-
-        .read-icon {
-          background: #ecfdf5;
-          color: #10b981;
-        }
-
-        .summary-card span {
-          display: block;
-          color: #64748b;
-          font-size: 12px;
-          margin-bottom: 4px;
-        }
-
-        .summary-card strong {
-          display: block;
-          color: #0f172a;
-          font-size: 22px;
-        }
-
-        /* TOOLBAR */
-
-        .toolbar {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 18px;
-          background: white;
-          border: 1px solid #e2e8f0;
-          border-radius: 16px;
-          padding: 14px;
-          margin-bottom: 18px;
-        }
-
-        .search-wrapper {
-          position: relative;
-          flex: 1;
-          max-width: 480px;
-        }
-
-        .search-wrapper input {
-          width: 100%;
-          height: 42px;
-          border: 1px solid #e2e8f0;
-          border-radius: 10px;
-          padding: 0 40px;
-          outline: none;
-          font-size: 13px;
-          color: #0f172a;
-          background: #f8fafc;
-          box-sizing: border-box;
-          transition: all 0.2s ease;
-        }
-
-        .search-wrapper input:focus {
-          border-color: #6c63ff;
-          background: white;
-          box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.08);
-        }
-
-        .search-icon {
-          position: absolute;
-          left: 14px;
-          top: 50%;
-          transform: translateY(-50%);
-          color: #94a3b8;
-          font-size: 20px;
-          z-index: 1;
-        }
-
-        .clear-search {
-          position: absolute;
-          right: 8px;
-          top: 50%;
-          transform: translateY(-50%);
-          width: 26px;
-          height: 26px;
-          border: none;
-          background: #e2e8f0;
-          border-radius: 50%;
-          color: #64748b;
-          cursor: pointer;
-          font-size: 16px;
-        }
-
-        .filter-tabs {
-          display: flex;
-          background: #f1f5f9;
-          padding: 4px;
-          border-radius: 11px;
-        }
-
-        .filter-tabs button {
-          border: none;
-          background: transparent;
-          color: #64748b;
-          padding: 8px 13px;
-          border-radius: 8px;
-          font-size: 12px;
-          font-weight: 650;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          transition: all 0.2s ease;
-        }
-
-        .filter-tabs button:hover {
-          color: #334155;
-        }
-
-        .filter-tabs button.active {
-          background: white;
-          color: #6c63ff;
-          box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
-        }
-
-        .filter-tabs button span {
-          min-width: 18px;
-          height: 18px;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          background: #e2e8f0;
-          color: #64748b;
-          border-radius: 10px;
-          font-size: 10px;
-        }
-
-        .filter-tabs button.active span {
-          background: #ede9fe;
-          color: #6c63ff;
-        }
-
-        /* NOTIFICATION LIST */
-
-        .notification-list {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .notification-card {
-          background: white;
-          border: 1px solid #e2e8f0;
-          border-radius: 16px;
-          overflow: hidden;
-          transition:
-            transform 0.2s ease,
-            box-shadow 0.2s ease,
-            border-color 0.2s ease;
-        }
-
-        .notification-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 10px 28px rgba(15, 23, 42, 0.07);
-        }
-
-        .notification-card.unread {
-          border-left: 4px solid #6c63ff;
-          background: #ffffff;
-        }
-
-        .notification-card.read {
-          opacity: 0.88;
-        }
-
-        .notification-card.expanded {
-          border-color: #c4b5fd;
-          box-shadow: 0 8px 25px rgba(108, 99, 255, 0.08);
-        }
-
-        .notification-main {
-          width: 100%;
-          border: none;
-          background: transparent;
-          text-align: left;
-          padding: 20px;
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          cursor: pointer;
-        }
-
-        .notification-icon {
-          width: 50px;
-          height: 50px;
-          flex-shrink: 0;
-          border-radius: 14px;
-          background: #f1f5f9;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 22px;
-        }
-
-        .unread .notification-icon {
-          background: #f0edff;
-        }
-
-        .notification-content {
-          flex: 1;
-          min-width: 0;
-        }
-
-        .notification-title-row {
-          display: flex;
-          align-items: center;
-          gap: 9px;
-          margin-bottom: 5px;
-        }
-
-        .notification-title-row h3 {
-          margin: 0;
-          color: #0f172a;
-          font-size: 15px;
-          font-weight: 700;
-        }
-
-        .new-badge {
-          padding: 3px 7px;
-          border-radius: 5px;
-          background: #ede9fe;
-          color: #6c63ff;
-          font-size: 9px;
-          font-weight: 800;
-          letter-spacing: 0.4px;
-        }
-
-        .notification-content > p {
-          margin: 0;
-          color: #64748b;
-          font-size: 13px;
-          line-height: 1.5;
-        }
-
-        .notification-meta {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          margin-top: 8px;
-          font-size: 11px;
-          color: #94a3b8;
-        }
-
-        .unread-label {
-          color: #6c63ff;
-          font-weight: 650;
-        }
-
-        .notification-right {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          flex-shrink: 0;
-        }
-
-        .unread-dot {
-          width: 9px;
-          height: 9px;
-          border-radius: 50%;
-          background: #6c63ff;
-          box-shadow: 0 0 0 4px #ede9fe;
-        }
-
-        .expand-arrow {
-          font-size: 25px;
-          color: #94a3b8;
-          transition: transform 0.2s ease;
-        }
-
-        .expand-arrow.open {
-          transform: rotate(90deg);
-        }
-
-        /* EXPANDED */
-
-        .expanded-content {
-          padding: 0 20px 20px 86px;
-          animation: expandIn 0.2s ease;
-        }
-
-        .expanded-divider {
-          height: 1px;
-          background: #e2e8f0;
-          margin-bottom: 18px;
-        }
-
-        .expanded-details {
-          display: flex;
-          gap: 40px;
-          margin-bottom: 16px;
-        }
-
-        .expanded-details div {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-
-        .expanded-details span {
-          color: #94a3b8;
-          font-size: 10px;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          font-weight: 700;
-        }
-
-        .expanded-details strong {
-          color: #334155;
-          font-size: 12px;
-          font-weight: 600;
-        }
-
-        .mark-read-button {
-          border: none;
-          background: #6c63ff;
-          color: white;
-          padding: 9px 14px;
-          border-radius: 9px;
-          font-size: 12px;
-          font-weight: 650;
-          cursor: pointer;
-          transition: background 0.2s ease;
-        }
-
-        .mark-read-button:hover:not(:disabled) {
-          background: #5b54e8;
-        }
-
-        .already-read {
-          color: #10b981;
-          font-size: 12px;
-          font-weight: 600;
-        }
-
-        /* STATES */
-
-        .state-card {
-          background: white;
-          border: 1px solid #e2e8f0;
-          border-radius: 18px;
-          min-height: 300px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          text-align: center;
-          padding: 35px;
-        }
-
-        .state-icon,
-        .empty-bell {
-          width: 64px;
-          height: 64px;
-          border-radius: 18px;
-          background: #f1f5f9;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 28px;
-          margin-bottom: 16px;
-        }
-
-        .state-card h3 {
-          margin: 0 0 7px;
-          color: #0f172a;
-          font-size: 18px;
-        }
-
-        .state-card p {
-          max-width: 430px;
-          margin: 0;
-          color: #64748b;
-          font-size: 13px;
-          line-height: 1.6;
-        }
-
-        .error-card .state-icon {
-          background: #fef2f2;
-        }
-
-        .retry-button {
-          margin-top: 18px;
-          border: none;
-          background: #6c63ff;
-          color: white;
-          padding: 10px 17px;
-          border-radius: 9px;
-          font-size: 12px;
-          font-weight: 650;
-          cursor: pointer;
-        }
-
-        /* SKELETON */
-
-        .skeleton-card {
-          height: 100px;
-          background: white;
-          border: 1px solid #e2e8f0;
-          border-radius: 16px;
-          padding: 20px;
-          display: flex;
-          gap: 16px;
-          box-sizing: border-box;
-          overflow: hidden;
-          position: relative;
-        }
-
-        .skeleton-card::after {
-          content: "";
-          position: absolute;
-          inset: 0;
-          transform: translateX(-100%);
-          background: linear-gradient(
-            90deg,
-            transparent,
-            rgba(255, 255, 255, 0.7),
-            transparent
-          );
-          animation: shimmer 1.4s infinite;
-        }
-
-        .skeleton-icon {
-          width: 50px;
-          height: 50px;
-          border-radius: 14px;
-          background: #e2e8f0;
-          flex-shrink: 0;
-        }
-
-        .skeleton-content {
-          flex: 1;
-          padding-top: 3px;
-        }
-
-        .skeleton-line {
-          background: #e2e8f0;
-          border-radius: 5px;
-          height: 10px;
-          margin-bottom: 10px;
-        }
-
-        .title-line {
-          width: 35%;
-          height: 13px;
-        }
-
-        .text-line {
-          width: 70%;
-        }
-
-        .small-line {
-          width: 20%;
-        }
-
-        /* ANIMATIONS */
-
-        @keyframes spin {
-          from {
-            transform: rotate(0deg);
-          }
-
-          to {
-            transform: rotate(360deg);
-          }
-        }
-
-        @keyframes shimmer {
-          100% {
-            transform: translateX(100%);
-          }
-        }
-
-        @keyframes expandIn {
-          from {
-            opacity: 0;
-            transform: translateY(-5px);
-          }
-
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        /* RESPONSIVE */
-
-        @media (max-width: 900px) {
-          .main-content {
-            margin-left: 0;
-          }
-
-          .content-container {
-            padding: 24px 20px 50px;
-          }
-
-          .page-header {
-            align-items: flex-start;
-            flex-direction: column;
-          }
-
-          .header-actions {
-            width: 100%;
-          }
-
-          .header-actions button {
-            flex: 1;
-          }
-
-          .summary-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .toolbar {
-            flex-direction: column;
-            align-items: stretch;
-          }
-
-          .search-wrapper {
-            max-width: none;
-          }
-
-          .filter-tabs {
-            width: 100%;
-          }
-
-          .filter-tabs button {
-            flex: 1;
-            justify-content: center;
-          }
-        }
-
-        @media (max-width: 600px) {
-          .content-container {
-            padding: 20px 14px 40px;
-          }
-
-          .title-row h1 {
-            font-size: 24px;
-          }
-
-          .header-left {
-            align-items: flex-start;
-          }
-
-          .back-button {
-            flex-shrink: 0;
-          }
-
-          .header-actions {
-            flex-direction: column;
-          }
-
-          .header-actions button {
-            width: 100%;
-          }
-
-          .notification-main {
-            padding: 15px;
-            gap: 11px;
-          }
-
-          .notification-icon {
-            width: 42px;
-            height: 42px;
-            font-size: 18px;
-          }
-
-          .notification-title-row h3 {
-            font-size: 13px;
-          }
-
-          .notification-content > p {
-            font-size: 12px;
-          }
-
-          .notification-right {
-            gap: 7px;
-          }
-
-          .expanded-content {
-            padding: 0 15px 15px 68px;
-          }
-
-          .expanded-details {
-            flex-direction: column;
-            gap: 12px;
-          }
-        }
-      `}</style>
+                      </div>
+                    );
+                  }
+                )}
+              </div>
+            )}
         </div>
-    );
+      </main>
+    </div>
+  );
 }
