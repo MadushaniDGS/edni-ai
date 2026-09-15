@@ -710,9 +710,9 @@ export default function DashboardPage() {
     <div style={styles.page}>
       <Sidebar />
 
-      <TopBar />
 
-      <main style={styles.main}>
+
+      <main style={styles.main}><TopBar />
         <div style={styles.container}>
 
           {/* =================================================
@@ -1680,8 +1680,7 @@ const styles: Record<
   },
 
   main: {
-    marginLeft: "240px",
-    paddingTop: "64px",
+    marginLeft: "260px",
     minHeight: "100vh",
   },
 
