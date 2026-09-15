@@ -16,7 +16,7 @@ FIXES APPLIED:
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from typing import Optional, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
@@ -1686,6 +1686,42 @@ async def get_active_plan(
     done=sum(1 for t in tasks[:7] if str(getattr(t.status,"value",t.status)).upper()=="DONE")
     week["tasks"]=out; week["task_count"]=len(out); week["completed_tasks"]=done; week["progress_percent"]=round(done/7*100,1)
     return {"id":plan.id,"user_id":plan.user_id,"profile_id":plan.profile_id,"plan_id":plan.id,"weeks":[week],"total_hours":plan.total_hours or 0,"critique":plan.critique or "","version":plan.version or 1,"is_active":plan.is_active,"current_week":plan.current_week or 1,"completed_weeks":plan.completed_weeks or [],"created_at":plan.created_at.isoformat() if plan.created_at else None}
+@planner_router.get("/{plan_id}")
+async def get_study_plan_by_id(
+    plan_id: str,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    plan = await db.scalar(
+        select(StudyPlanModel).where(
+            StudyPlanModel.id == plan_id,
+            StudyPlanModel.user_id == user_id,
+        )
+    )
+
+    if not plan:
+        raise HTTPException(
+            status_code=404,
+            detail="Study plan not found.",
+        )
+
+    return {
+        "id": plan.id,
+        "user_id": plan.user_id,
+        "profile_id": plan.profile_id,
+        "weeks": plan.weeks or [],
+        "total_hours": plan.total_hours or 0,
+        "critique": plan.critique or "",
+        "version": plan.version or 1,
+        "is_active": plan.is_active,
+        "current_week": plan.current_week or 1,
+        "completed_weeks": plan.completed_weeks or [],
+        "created_at": (
+            plan.created_at.isoformat()
+            if plan.created_at
+            else None
+        ),
+    }
 
 
 @planner_router.get("/current")
@@ -1895,9 +1931,18 @@ async def get_tasks(
     )
 
     if column:
-        query = query.where(
-            Task.column == column.upper()
-        )
+        requested_column = column.upper()
+
+        # Planner-generated tasks are stored as WEEK.
+        # For TODAY, select the task scheduled for today's date.
+        if requested_column == "TODAY":
+            query = query.where(
+                Task.scheduled_date == date.today()
+            )
+        else:
+            query = query.where(
+                Task.column == requested_column
+            )
 
     results = await db.scalars(
         query.order_by(
@@ -1911,19 +1956,17 @@ async def get_tasks(
         "today": [
             TaskOut.model_validate(task)
             for task in tasks
-            if task.column == "TODAY"
+            if task.scheduled_date == date.today()
         ],
-
         "week": [
             TaskOut.model_validate(task)
             for task in tasks
-            if task.column == "WEEK"
+            if str(getattr(task.column, "value", task.column)).upper() == "WEEK"
         ],
-
         "upcoming": [
             TaskOut.model_validate(task)
             for task in tasks
-            if task.column == "UPCOMING"
+            if str(getattr(task.column, "value", task.column)).upper() == "UPCOMING"
         ],
     }
 
@@ -1951,23 +1994,211 @@ async def create_task(
     return TaskOut.model_validate(task)
 
 
-async def _generate_next_week_after_completion(user_id: str, completed_week: int) -> None:
+async def _generate_next_week_after_completion(
+    user_id: str,
+    completed_week: int,
+) -> None:
     try:
         async with AsyncSession(db_engine) as db:
-            plan=await db.scalar(select(StudyPlanModel).where(StudyPlanModel.user_id==user_id, StudyPlanModel.is_active==True).order_by(StudyPlanModel.created_at.desc()))
-            profile=await db.scalar(select(KnowledgeProfileModel).where(KnowledgeProfileModel.user_id==user_id).order_by(KnowledgeProfileModel.created_at.desc()))
-            if not plan or not profile or (plan.current_week or 1)!=completed_week or completed_week>=settings.SEMESTER_WEEKS:
+
+            # ---------------------------------------------------------
+            # Get active study plan
+            # ---------------------------------------------------------
+            plan = await db.scalar(
+                select(StudyPlanModel)
+                .where(
+                    StudyPlanModel.user_id == user_id,
+                    StudyPlanModel.is_active == True,
+                )
+                .order_by(
+                    StudyPlanModel.created_at.desc()
+                )
+            )
+
+            # ---------------------------------------------------------
+            # Get latest knowledge profile
+            # ---------------------------------------------------------
+            profile = await db.scalar(
+                select(KnowledgeProfileModel)
+                .where(
+                    KnowledgeProfileModel.user_id == user_id
+                )
+                .order_by(
+                    KnowledgeProfileModel.created_at.desc()
+                )
+            )
+
+            # ---------------------------------------------------------
+            # Safety checks
+            # ---------------------------------------------------------
+            if not plan or not profile:
                 return
-            existing=await db.scalar(select(func.count(Task.id)).where(Task.user_id==user_id,Task.week_number==completed_week+1))
+
+            if (plan.current_week or 1) != completed_week:
+                return
+
+            if completed_week >= settings.SEMESTER_WEEKS:
+                return
+
+            # ---------------------------------------------------------
+            # Check whether next week's tasks already exist
+            # ---------------------------------------------------------
+            existing = await db.scalar(
+                select(func.count(Task.id))
+                .where(
+                    Task.user_id == user_id,
+                    Task.week_number == completed_week + 1,
+                )
+            )
+
             if existing:
-                plan.current_week=completed_week+1; plan.completed_weeks=sorted(set((plan.completed_weeks or [])+[completed_week])); await db.commit(); return
-            week,_state=await generate_week(user_id,profile,completed_week+1,previous_weeks=plan.weeks or [])
-            plan.current_week=completed_week+1; plan.completed_weeks=sorted(set((plan.completed_weeks or [])+[completed_week])); plan.weeks=[week]; plan.total_hours=week["hours"]; plan.version=(plan.version or 1)+1
-            for index,td in enumerate(week["tasks"][:7],start=1):
-                b=safe_bloom(td.get("bloom_level",3)); task=Task(user_id=user_id,course=td.get("learning_area") or td.get("concept") or "Study",title=td.get("activity") or f"Day {index} task",duration=max(1,int(float(td.get("hours",1) or 1)*60)),bloom=BLOOM_LABELS[b],bloom_level=b,concept=td.get("concept"),learning_area=td.get("learning_area"),column="WEEK",week_number=completed_week+1,status="PENDING"); db.add(task); await db.flush(); td["id"]=task.id; td["status"]="PENDING"; td["day"]=index
-            await db.commit(); logger.success(f"[StudyPlan] Auto-generated Week {completed_week+1} for {user_id}")
+                plan.current_week = completed_week + 1
+
+                plan.completed_weeks = sorted(
+                    set(
+                        (plan.completed_weeks or [])
+                        + [completed_week]
+                    )
+                )
+
+                await db.commit()
+                return
+
+            # ---------------------------------------------------------
+            # Generate the next 7-day study week
+            # ---------------------------------------------------------
+            week, _state = await generate_week(
+                user_id,
+                profile,
+                completed_week + 1,
+                previous_weeks=plan.weeks or [],
+            )
+
+            # ---------------------------------------------------------
+            # Update study plan
+            # ---------------------------------------------------------
+            plan.current_week = completed_week + 1
+
+            plan.completed_weeks = sorted(
+                set(
+                    (plan.completed_weeks or [])
+                    + [completed_week]
+                )
+            )
+
+            plan.weeks = [week]
+
+            plan.total_hours = week["hours"]
+
+            plan.version = (plan.version or 1) + 1
+
+            # ---------------------------------------------------------
+            # Week start date
+            #
+            # The day this new week is generated becomes Day 1.
+            # ---------------------------------------------------------
+            week_start_date = date.today()
+
+            # ---------------------------------------------------------
+            # Create the 7 daily tasks
+            # ---------------------------------------------------------
+            for index, td in enumerate(
+                week["tasks"][:7],
+                start=1,
+            ):
+
+                bloom_value = td.get(
+                    "bloom_level",
+                    3,
+                )
+
+                b = safe_bloom(bloom_value)
+
+                # Day 1 = generation date
+                # Day 2 = generation date + 1
+                # ...
+                # Day 7 = generation date + 6
+                scheduled_date = (
+                    week_start_date
+                    + timedelta(days=index - 1)
+                )
+
+                task = Task(
+                    user_id=user_id,
+
+                    course=(
+                        td.get("learning_area")
+                        or td.get("concept")
+                        or "Study"
+                    ),
+
+                    title=(
+                        td.get("activity")
+                        or f"Day {index} task"
+                    ),
+
+                    duration=max(
+                        1,
+                        int(
+                            float(
+                                td.get("hours", 1)
+                                or 1
+                            ) * 60
+                        ),
+                    ),
+
+                    bloom=BLOOM_LABELS[b],
+
+                    bloom_level=b,
+
+                    concept=td.get("concept"),
+
+                    learning_area=td.get(
+                        "learning_area"
+                    ),
+
+                    column="WEEK",
+
+                    week_number=(
+                        completed_week + 1
+                    ),
+
+                    day=index,
+
+                    scheduled_date=scheduled_date,
+
+                    status="PENDING",
+                )
+
+                db.add(task)
+
+                await db.flush()
+
+                # -----------------------------------------------------
+                # Update the JSON representation of the week
+                # -----------------------------------------------------
+                td["id"] = task.id
+                td["status"] = "PENDING"
+                td["day"] = index
+                td["scheduled_date"] = (
+                    scheduled_date.isoformat()
+                )
+
+            # ---------------------------------------------------------
+            # Save everything
+            # ---------------------------------------------------------
+            await db.commit()
+
+            logger.success(
+                f"[StudyPlan] Auto-generated "
+                f"Week {completed_week + 1} "
+                f"for {user_id}"
+            )
+
     except Exception as exc:
-        logger.exception(f"[StudyPlan] Auto-generation failed: {exc}")
+        logger.exception(
+            f"[StudyPlan] Auto-generation failed: {exc}"
+        )
 
 
 @tasks_router.put("/{task_id}/complete")
