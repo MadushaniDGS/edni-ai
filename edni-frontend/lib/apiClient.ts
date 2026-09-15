@@ -22,35 +22,58 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Shared refresh promise so concurrent 401s don't each trigger their own refresh call
+let refreshPromise: Promise<string> | null = null;
+
+async function refreshAccessToken(): Promise<string> {
+  const refreshToken = localStorage.getItem("edni_refresh");
+  if (!refreshToken) {
+    throw new Error("No refresh token");
+  }
+
+  const res = await axios.post(`${BASE_URL}/auth/refresh`, {
+    refresh_token: refreshToken,
+  });
+
+  const newAccessToken = res.data.access_token;
+  localStorage.setItem("edni_access", newAccessToken);
+
+  // Persist the rotated refresh token too - backend issues a new one each call
+  if (res.data.refresh_token) {
+    localStorage.setItem("edni_refresh", res.data.refresh_token);
+  }
+
+  return newAccessToken;
+}
+
+function logout() {
+  localStorage.removeItem("edni_access");
+  localStorage.removeItem("edni_refresh");
+  localStorage.removeItem("edni_user");
+  window.location.href = "/login";
+}
+
 // Response interceptor - handle 401
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      // Token expired - try refresh
-      const refreshToken = localStorage.getItem("edni_refresh");
-      if (refreshToken) {
-        try {
-          const res = await axios.post(`${BASE_URL}/auth/refresh`, {
-            refresh_token: refreshToken,
+    const original = error.config as (typeof error.config & { _retry?: boolean });
+
+    if (error.response?.status === 401 && original && !original._retry) {
+      original._retry = true;
+
+      try {
+        // Reuse an in-flight refresh instead of starting a new one
+        if (!refreshPromise) {
+          refreshPromise = refreshAccessToken().finally(() => {
+            refreshPromise = null;
           });
-
-          const newAccessToken = res.data.access_token;
-          localStorage.setItem("edni_access", newAccessToken);
-
-          // Retry original request
-          return apiClient(error.config!);
-        } catch {
-          // Refresh failed - logout user
-          localStorage.removeItem("edni_access");
-          localStorage.removeItem("edni_refresh");
-          localStorage.removeItem("edni_user");
-          window.location.href = "/login";
-          return Promise.reject(error);
         }
-      } else {
-        // No refresh token - logout
-        window.location.href = "/login";
+
+        await refreshPromise;
+        return apiClient(original);
+      } catch {
+        logout();
         return Promise.reject(error);
       }
     }
