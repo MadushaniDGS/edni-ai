@@ -3,9 +3,9 @@ SQLAlchemy ORM Models — PostgreSQL
 """
 
 from __future__ import annotations
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from sqlalchemy import (
-    String, Integer, Float, Boolean, DateTime,
+    String, Integer, Float, Boolean, Date, DateTime,
     ForeignKey, Text, JSON, Enum as SAEnum,
 )
 from sqlalchemy import Column, Integer
@@ -234,7 +234,9 @@ class Task(Base):
     learning_area:  Mapped[str|None]        = mapped_column(String(200), nullable=True)
     status:         Mapped[TaskStatus]      = mapped_column(SAEnum(TaskStatus), default=TaskStatus.PENDING)
     column:         Mapped[TaskColumn]      = mapped_column(SAEnum(TaskColumn), default=TaskColumn.TODAY)
-    week_number:    Mapped[int|None]        = mapped_column(Integer, nullable=True)  # which plan week
+    week_number:    Mapped[int|None]        = mapped_column(Integer, nullable=True)  
+    day:            Mapped[int|None]        = mapped_column(Integer, nullable=True)
+    scheduled_date: Mapped[date|None]       = mapped_column(Date, nullable=True, index=True)
     created_at:     Mapped[datetime]        = mapped_column(DateTime, default=datetime.utcnow)
     updated_at:     Mapped[datetime]        = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

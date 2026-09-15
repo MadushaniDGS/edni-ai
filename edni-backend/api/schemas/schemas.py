@@ -5,7 +5,7 @@ Pydantic schemas for all API request/response models.
 from __future__ import annotations
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional
-from datetime import datetime
+from datetime import date, datetime, timedelta
 
 
 # ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -222,6 +222,8 @@ class CreateTaskRequest(BaseModel):
     learning_area: Optional[str] = None
     column:        str = "TODAY"
     week_number:   Optional[int] = None
+    day: Optional[int] = None
+    scheduled_date: Optional[date] = None
 
 class UpdateTaskRequest(BaseModel):
     title:         Optional[str]  = None
@@ -249,6 +251,7 @@ class TaskOut(BaseModel):
     column:         str
     week_number:    Optional[int]
     day:            Optional[int] = None
+    scheduled_date: Optional[date] = None
     resources:      list[dict] = Field(default_factory=list)
     description:    Optional[str] = None
     learning_objective: Optional[str] = None
