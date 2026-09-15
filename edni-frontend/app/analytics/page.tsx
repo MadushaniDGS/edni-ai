@@ -250,10 +250,6 @@ export default function AnalyticsPage() {
   /*
    * ============================================================
    * CRITICAL GAPS
-   *
-   * IMPORTANT:
-   * No gap?.name here.
-   * Backend objects contain concept/mastery/severity/area.
    * ============================================================
    */
 
@@ -287,11 +283,20 @@ export default function AnalyticsPage() {
         <Sidebar />
 
         <main style={styles.main}>
-          <Topbar />
+          <Topbar title="Progress Analytics" />
 
           <div style={styles.loadingContainer}>
-            <div style={styles.loadingIcon}>
-              <Brain size={30} />
+            <div style={styles.loadingGraphic}>
+              <div style={styles.loadingGlowOne}></div>
+              <div style={styles.loadingGlowTwo}></div>
+
+              <div style={styles.loadingIcon}>
+                <Brain size={29} />
+              </div>
+            </div>
+
+            <div style={styles.loadingBadge}>
+              ✨ PERSONALIZED ANALYTICS
             </div>
 
             <h2 style={styles.loadingTitle}>
@@ -307,6 +312,18 @@ export default function AnalyticsPage() {
             </div>
           </div>
         </main>
+
+        <style jsx>{`
+          @keyframes loadingMove {
+            0% {
+              transform: translateX(-120%);
+            }
+
+            100% {
+              transform: translateX(300%);
+            }
+          }
+        `}</style>
       </div>
     );
   }
@@ -323,11 +340,17 @@ export default function AnalyticsPage() {
         <Sidebar />
 
         <main style={styles.main}>
-          <Topbar />
+          <Topbar title="Progress Analytics" />
 
           <div style={styles.errorContainer}>
+            <div style={styles.errorGlow}></div>
+
             <div style={styles.errorIcon}>
               <TriangleAlert size={30} />
+            </div>
+
+            <div style={styles.errorBadge}>
+              ANALYTICS UNAVAILABLE
             </div>
 
             <h2 style={styles.errorTitle}>
@@ -396,7 +419,7 @@ export default function AnalyticsPage() {
       <Sidebar />
 
       <main style={styles.main}>
-        <Topbar />
+        <Topbar title="Progress Analytics" />
 
         <div style={styles.content}>
 
@@ -407,7 +430,7 @@ export default function AnalyticsPage() {
           <div style={styles.pageHeader}>
             <div>
               <div style={styles.eyebrow}>
-                <Activity size={15} />
+                <Activity size={14} />
                 LEARNING ANALYTICS
               </div>
 
@@ -423,7 +446,7 @@ export default function AnalyticsPage() {
 
             <div style={styles.currentCycleBadge}>
               <div style={styles.currentCycleIcon}>
-                <Sparkles size={17} />
+                <Sparkles size={16} />
               </div>
 
               <div>
@@ -446,7 +469,16 @@ export default function AnalyticsPage() {
 
             {/* MASTERY */}
 
-            <div style={styles.masteryCard}>
+            <div
+              style={{
+                ...styles.masteryCard,
+                background:
+                  "linear-gradient(135deg, #FFFFFF 0%, #FAF5FF 58%, #EFF6FF 100%)",
+              }}
+            >
+              <div style={styles.decorativeCircleLarge}></div>
+              <div style={styles.decorativeCircleSmall}></div>
+
               <div style={styles.cardTop}>
                 <div>
                   <span style={styles.cardEyebrow}>
@@ -464,7 +496,7 @@ export default function AnalyticsPage() {
                 </div>
 
                 <div style={styles.iconBoxPurple}>
-                  <Brain size={21} />
+                  <Brain size={20} />
                 </div>
               </div>
 
@@ -482,7 +514,9 @@ export default function AnalyticsPage() {
                     barSize={15}
                   >
                     <RadialBar
-                      background
+                      background={{
+                        fill: "#EDE9FE",
+                      }}
                       dataKey="value"
                       cornerRadius={20}
                     />
@@ -490,7 +524,7 @@ export default function AnalyticsPage() {
                 </ResponsiveContainer>
 
                 <div style={styles.masteryCenter}>
-                  <Award size={20} />
+                  <Award size={18} />
 
                   <strong>
                     {overallMastery.toFixed(0)}%
@@ -499,14 +533,39 @@ export default function AnalyticsPage() {
                   <span>Mastery</span>
                 </div>
               </div>
+
+              <div style={styles.masteryFooter}>
+                <span>Current performance</span>
+                <span style={styles.masteryFooterPill}>
+                  {overallMastery >= 75
+                    ? "Strong"
+                    : overallMastery >= 50
+                      ? "Growing"
+                      : "Developing"}
+                </span>
+              </div>
             </div>
 
             {/* THETA */}
 
-            <div style={styles.metricCard}>
+            <div
+              style={{
+                ...styles.metricCard,
+                background:
+                  "linear-gradient(135deg, #FFFFFF 0%, #F8FAFF 100%)",
+              }}
+            >
+              <div
+                style={{
+                  ...styles.metricTopDecor,
+                  background:
+                    "linear-gradient(135deg, #DBEAFE 0%, #EDE9FE 100%)",
+                }}
+              />
+
               <div style={styles.metricHeader}>
                 <div style={styles.iconBoxBlue}>
-                  <Target size={21} />
+                  <Target size={20} />
                 </div>
 
                 <span style={styles.cardEyebrow}>
@@ -527,7 +586,7 @@ export default function AnalyticsPage() {
                 <span>Ability estimate</span>
 
                 <div style={styles.thetaPill}>
-                  <TrendingUp size={14} />
+                  <TrendingUp size={13} />
                   Active
                 </div>
               </div>
@@ -535,10 +594,24 @@ export default function AnalyticsPage() {
 
             {/* CYCLE */}
 
-            <div style={styles.metricCard}>
+            <div
+              style={{
+                ...styles.metricCard,
+                background:
+                  "linear-gradient(135deg, #FFFFFF 0%, #F7F5FF 100%)",
+              }}
+            >
+              <div
+                style={{
+                  ...styles.metricTopDecor,
+                  background:
+                    "linear-gradient(135deg, #EDE9FE 0%, #DDD6FE 100%)",
+                }}
+              />
+
               <div style={styles.metricHeader}>
                 <div style={styles.iconBoxGreen}>
-                  <Activity size={21} />
+                  <Activity size={20} />
                 </div>
 
                 <span style={styles.cardEyebrow}>
@@ -559,7 +632,7 @@ export default function AnalyticsPage() {
                 <span>Cycles completed</span>
 
                 <div style={styles.cyclePill}>
-                  <CalendarDays size={14} />
+                  <CalendarDays size={13} />
                   Ongoing
                 </div>
               </div>
@@ -567,13 +640,27 @@ export default function AnalyticsPage() {
 
             {/* GROWTH */}
 
-            <div style={styles.metricCard}>
+            <div
+              style={{
+                ...styles.metricCard,
+                background:
+                  "linear-gradient(135deg, #FFFFFF 0%, #F0FDF4 100%)",
+              }}
+            >
+              <div
+                style={{
+                  ...styles.metricTopDecor,
+                  background:
+                    "linear-gradient(135deg, #D1FAE5 0%, #DBEAFE 100%)",
+                }}
+              />
+
               <div style={styles.metricHeader}>
                 <div style={styles.iconBoxOrange}>
                   {totalCycleChange >= 0 ? (
-                    <TrendingUp size={21} />
+                    <TrendingUp size={20} />
                   ) : (
-                    <TrendingDown size={21} />
+                    <TrendingDown size={20} />
                   )}
                 </div>
 
@@ -617,10 +704,17 @@ export default function AnalyticsPage() {
           {/* ================================================= */}
 
           <section style={styles.journeyCard}>
+            <div
+              style={styles.journeyBackgroundOne}
+            />
+            <div
+              style={styles.journeyBackgroundTwo}
+            />
+
             <div style={styles.journeyHeader}>
               <div>
                 <div style={styles.sectionKicker}>
-                  <Activity size={15} />
+                  <Activity size={14} />
                   LEARNING JOURNEY
                 </div>
 
@@ -643,9 +737,9 @@ export default function AnalyticsPage() {
                 }}
               >
                 {totalCycleChange >= 0 ? (
-                  <TrendingUp size={17} />
+                  <TrendingUp size={16} />
                 ) : (
-                  <TrendingDown size={17} />
+                  <TrendingDown size={16} />
                 )}
 
                 <div>
@@ -661,7 +755,7 @@ export default function AnalyticsPage() {
 
             {cycleHistory.length === 0 ? (
               <div style={styles.emptyJourney}>
-                <Activity size={30} />
+                <Activity size={28} />
 
                 <strong>
                   No diagnostic cycles yet
@@ -723,7 +817,7 @@ export default function AnalyticsPage() {
                               }}
                             >
                               {isLatest ? (
-                                <Sparkles size={13} />
+                                <Sparkles size={12} />
                               ) : (
                                 <span>
                                   {index + 1}
@@ -788,7 +882,7 @@ export default function AnalyticsPage() {
                                   }
                                 >
                                   <CalendarDays
-                                    size={13}
+                                    size={12}
                                   />
 
                                   {formatDate(
@@ -813,11 +907,11 @@ export default function AnalyticsPage() {
                                   <>
                                     {change >= 0 ? (
                                       <TrendingUp
-                                        size={14}
+                                        size={13}
                                       />
                                     ) : (
                                       <TrendingDown
-                                        size={14}
+                                        size={13}
                                       />
                                     )}
 
@@ -987,7 +1081,7 @@ export default function AnalyticsPage() {
                           tickLine={false}
                           tick={{
                             fill: "#64748B",
-                            fontSize: 12,
+                            fontSize: 11,
                           }}
                         />
 
@@ -997,7 +1091,7 @@ export default function AnalyticsPage() {
                           tickLine={false}
                           tick={{
                             fill: "#94A3B8",
-                            fontSize: 11,
+                            fontSize: 10,
                           }}
                         />
 
@@ -1005,9 +1099,9 @@ export default function AnalyticsPage() {
                           contentStyle={{
                             borderRadius: 12,
                             border:
-                              "1px solid #E2E8F0",
+                              "1px solid #DDD6FE",
                             boxShadow:
-                              "0 10px 30px rgba(15,23,42,0.08)",
+                              "0 12px 30px rgba(76,29,149,0.10)",
                           }}
                           formatter={(value: any) => [
                             `${Number(
@@ -1033,6 +1127,9 @@ export default function AnalyticsPage() {
                           }}
                           activeDot={{
                             r: 7,
+                            fill: "#3B82F6",
+                            stroke: "#FFFFFF",
+                            strokeWidth: 3,
                           }}
                         />
                       </LineChart>
@@ -1057,7 +1154,7 @@ export default function AnalyticsPage() {
                   <div
                     style={styles.sectionKicker}
                   >
-                    <Brain size={15} />
+                    <Brain size={14} />
                     BLOOM'S TAXONOMY
                   </div>
 
@@ -1104,7 +1201,7 @@ export default function AnalyticsPage() {
                       tickLine={false}
                       tick={{
                         fill: "#64748B",
-                        fontSize: 12,
+                        fontSize: 11,
                       }}
                     />
 
@@ -1114,7 +1211,7 @@ export default function AnalyticsPage() {
                       tickLine={false}
                       tick={{
                         fill: "#94A3B8",
-                        fontSize: 11,
+                        fontSize: 10,
                       }}
                     />
 
@@ -1122,7 +1219,7 @@ export default function AnalyticsPage() {
                       contentStyle={{
                         borderRadius: 12,
                         border:
-                          "1px solid #E2E8F0",
+                          "1px solid #DDD6FE",
                       }}
                       formatter={(value: any) => [
                         `${Number(
@@ -1135,7 +1232,7 @@ export default function AnalyticsPage() {
                     <Bar
                       dataKey="mastery"
                       fill="#8B5CF6"
-                      radius={[7, 7, 0, 0]}
+                      radius={[8, 8, 0, 0]}
                       barSize={34}
                     />
                   </BarChart>
@@ -1164,7 +1261,16 @@ export default function AnalyticsPage() {
                       </span>
                     </div>
 
-                    <strong>
+                    <strong
+                      style={{
+                        color:
+                          item.mastery >= 75
+                            ? "#059669"
+                            : item.mastery >= 50
+                              ? "#7C3AED"
+                              : "#EA580C",
+                      }}
+                    >
                       {item.mastery.toFixed(0)}%
                     </strong>
                   </div>
@@ -1180,7 +1286,7 @@ export default function AnalyticsPage() {
                   <div
                     style={styles.sectionKicker}
                   >
-                    <BookOpen size={15} />
+                    <BookOpen size={14} />
                     LEARNING AREAS
                   </div>
 
@@ -1231,9 +1337,17 @@ export default function AnalyticsPage() {
                               }
                             >
                               <div
-                                style={
-                                  styles.areaNumber
-                                }
+                                style={{
+                                  ...styles.areaNumber,
+                                  background:
+                                    index % 2 === 0
+                                      ? "#EDE9FE"
+                                      : "#DBEAFE",
+                                  color:
+                                    index % 2 === 0
+                                      ? "#7C3AED"
+                                      : "#2563EB",
+                                }}
                               >
                                 {String(
                                   index + 1
@@ -1270,6 +1384,10 @@ export default function AnalyticsPage() {
                               style={{
                                 ...styles.areaFill,
                                 width: `${mastery}%`,
+                                background:
+                                  index % 2 === 0
+                                    ? "linear-gradient(90deg, #A78BFA, #7C3AED)"
+                                    : "linear-gradient(90deg, #93C5FD, #2563EB)",
                               }}
                             />
                           </div>
@@ -1299,7 +1417,7 @@ export default function AnalyticsPage() {
                       color: "#DC2626",
                     }}
                   >
-                    <TriangleAlert size={15} />
+                    <TriangleAlert size={14} />
                     KNOWLEDGE GAPS
                   </div>
 
@@ -1329,7 +1447,7 @@ export default function AnalyticsPage() {
                   <div
                     style={styles.successIcon}
                   >
-                    <Award size={20} />
+                    <Award size={18} />
                   </div>
 
                   <div>
@@ -1357,7 +1475,7 @@ export default function AnalyticsPage() {
                           }
                         >
                           <TriangleAlert
-                            size={16}
+                            size={15}
                           />
                         </div>
 
@@ -1366,7 +1484,7 @@ export default function AnalyticsPage() {
                         </span>
 
                         <ChevronRight
-                          size={16}
+                          size={15}
                           color="#94A3B8"
                         />
                       </div>
@@ -1384,7 +1502,7 @@ export default function AnalyticsPage() {
                   <div
                     style={styles.sectionKicker}
                   >
-                    <Target size={15} />
+                    <Target size={14} />
                     CONCEPT PROGRESS
                   </div>
 
@@ -1483,7 +1601,16 @@ export default function AnalyticsPage() {
                                 }
                               </span>
 
-                              <strong>
+                              <strong
+                                style={{
+                                  color:
+                                    mastery >= 75
+                                      ? "#059669"
+                                      : mastery >= 50
+                                        ? "#7C3AED"
+                                        : "#EA580C",
+                                }}
+                              >
                                 {mastery.toFixed(
                                   0
                                 )}
@@ -1501,6 +1628,12 @@ export default function AnalyticsPage() {
                               style={{
                                 ...styles.conceptFill,
                                 width: `${mastery}%`,
+                                background:
+                                  mastery >= 75
+                                    ? "linear-gradient(90deg, #34D399, #059669)"
+                                    : mastery >= 50
+                                      ? "linear-gradient(90deg, #A78BFA, #7C3AED)"
+                                      : "linear-gradient(90deg, #FDBA74, #EA580C)",
                               }}
                             />
                           </div>
@@ -1522,7 +1655,7 @@ export default function AnalyticsPage() {
                 <div
                   style={styles.sectionKicker}
                 >
-                  <Clock3 size={15} />
+                  <Clock3 size={14} />
                   STUDY ACTIVITY
                 </div>
 
@@ -1543,7 +1676,7 @@ export default function AnalyticsPage() {
               </div>
 
               <div style={styles.activityBadge}>
-                <Clock3 size={14} />
+                <Clock3 size={13} />
                 Weekly activity
               </div>
             </div>
@@ -1576,7 +1709,7 @@ export default function AnalyticsPage() {
                     tickLine={false}
                     tick={{
                       fill: "#64748B",
-                      fontSize: 12,
+                      fontSize: 11,
                     }}
                   />
 
@@ -1585,7 +1718,7 @@ export default function AnalyticsPage() {
                     tickLine={false}
                     tick={{
                       fill: "#94A3B8",
-                      fontSize: 11,
+                      fontSize: 10,
                     }}
                   />
 
@@ -1593,7 +1726,7 @@ export default function AnalyticsPage() {
                     contentStyle={{
                       borderRadius: 12,
                       border:
-                        "1px solid #E2E8F0",
+                        "1px solid #DDD6FE",
                     }}
                     formatter={(value: any) => [
                       `${Number(
@@ -1606,7 +1739,7 @@ export default function AnalyticsPage() {
                   <Bar
                     dataKey="hours"
                     fill="#6366F1"
-                    radius={[7, 7, 0, 0]}
+                    radius={[8, 8, 0, 0]}
                     barSize={38}
                   />
                 </BarChart>
@@ -1619,8 +1752,11 @@ export default function AnalyticsPage() {
           {/* ================================================= */}
 
           <section style={styles.insightCard}>
+            <div style={styles.insightCircleOne}></div>
+            <div style={styles.insightCircleTwo}></div>
+
             <div style={styles.insightIcon}>
-              <Sparkles size={24} />
+              <Sparkles size={23} />
             </div>
 
             <div style={styles.insightContent}>
@@ -1651,6 +1787,7 @@ export default function AnalyticsPage() {
             <div style={styles.insightStats}>
               <div>
                 <span>Cycle</span>
+
                 <strong>
                   {currentCycle}
                 </strong>
@@ -1658,6 +1795,7 @@ export default function AnalyticsPage() {
 
               <div>
                 <span>Mastery</span>
+
                 <strong>
                   {overallMastery.toFixed(0)}%
                 </strong>
@@ -1668,17 +1806,21 @@ export default function AnalyticsPage() {
       </main>
 
       <style jsx>{`
-        @keyframes loading {
+        @keyframes loadingMove {
           0% {
-            transform: translateX(-100%);
+            transform: translateX(-120%);
           }
 
           100% {
-            transform: translateX(250%);
+            transform: translateX(300%);
           }
         }
 
-        @media (max-width: 1250px) {
+        .dummy {
+          display: none;
+        }
+
+        @media (max-width: 1200px) {
           .dummy {
             display: none;
           }
@@ -1697,8 +1839,10 @@ export default function AnalyticsPage() {
 const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: "100vh",
-    background: "#F8FAFC",
+    background:
+      "linear-gradient(135deg, #F8F7FC 0%, #F5F7FF 52%, #FAF5FF 100%)",
     color: "#0F172A",
+    overflowX: "hidden",
   },
 
   main: {
@@ -1707,182 +1851,225 @@ const styles: Record<string, CSSProperties> = {
   },
 
   content: {
-    padding: "32px 36px 60px",
+    padding: "28px 34px 56px",
     maxWidth: 1600,
     margin: "0 auto",
   },
+
+  // =========================================================
+  // HEADER
+  // =========================================================
 
   pageHeader: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 24,
-    marginBottom: 28,
+    gap: 22,
+    marginBottom: 22,
   },
 
   eyebrow: {
     display: "flex",
     alignItems: "center",
-    gap: 7,
+    gap: 6,
     color: "#7C3AED",
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: 800,
-    letterSpacing: "0.12em",
-    marginBottom: 8,
+    letterSpacing: "0.13em",
+    marginBottom: 7,
   },
 
   pageTitle: {
     margin: 0,
-    fontSize: 32,
+    fontSize: 31,
     lineHeight: 1.15,
     fontWeight: 800,
-    letterSpacing: "-0.03em",
-    color: "#0F172A",
+    letterSpacing: "-0.035em",
+    background:
+      "linear-gradient(90deg, #4C1D95 0%, #7C3AED 50%, #2563EB 100%)",
+    WebkitBackgroundClip: "text",
+    WebkitTextFillColor: "transparent",
   },
 
   pageSubtitle: {
-    margin: "9px 0 0",
+    margin: "8px 0 0",
     color: "#64748B",
-    fontSize: 14,
-    lineHeight: 1.6,
-    maxWidth: 700,
+    fontSize: 13,
+    lineHeight: 1.55,
+    maxWidth: 680,
   },
 
   currentCycleBadge: {
     display: "flex",
     alignItems: "center",
-    gap: 12,
-    background: "#FFFFFF",
-    border: "1px solid #E2E8F0",
-    borderRadius: 16,
-    padding: "12px 16px",
+    gap: 10,
+    background:
+      "linear-gradient(135deg, #FFFFFF 0%, #F5F3FF 58%, #EFF6FF 100%)",
+    border: "1px solid #DDD6FE",
+    borderRadius: 15,
+    padding: "11px 14px",
     boxShadow:
-      "0 8px 24px rgba(15, 23, 42, 0.05)",
+      "0 8px 25px rgba(91,33,182,0.07)",
   },
 
   currentCycleIcon: {
-    width: 38,
-    height: 38,
+    width: 37,
+    height: 37,
     borderRadius: 11,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "#F3E8FF",
-    color: "#7C3AED",
+    background:
+      "linear-gradient(135deg, #7C3AED 0%, #3B82F6 100%)",
+    color: "#FFFFFF",
   },
 
   badgeLabel: {
     display: "block",
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: 800,
     color: "#94A3B8",
-    letterSpacing: "0.08em",
+    letterSpacing: "0.09em",
   },
 
   badgeValue: {
     display: "block",
     marginTop: 2,
-    fontSize: 14,
+    fontSize: 13,
     color: "#334155",
   },
+
+  // =========================================================
+  // SUMMARY
+  // =========================================================
 
   summaryGrid: {
     display: "grid",
     gridTemplateColumns:
-      "minmax(270px, 1.35fr) repeat(3, minmax(190px, 1fr))",
-    gap: 16,
-    marginBottom: 20,
+      "minmax(270px, 1.35fr) repeat(3, minmax(180px, 1fr))",
+    gap: 13,
+    marginBottom: 17,
   },
 
   masteryCard: {
     position: "relative",
-    minHeight: 250,
-    padding: 22,
-    background: "#FFFFFF",
-    border: "1px solid #E2E8F0",
-    borderRadius: 20,
+    minHeight: 230,
+    padding: 20,
+    border: "1px solid #E7E5EE",
+    borderRadius: 19,
     boxShadow:
-      "0 8px 30px rgba(15, 23, 42, 0.045)",
+      "0 9px 30px rgba(91,33,182,0.05)",
     overflow: "hidden",
   },
 
+  decorativeCircleLarge: {
+    position: "absolute",
+    width: 150,
+    height: 150,
+    borderRadius: "50%",
+    right: -70,
+    top: -75,
+    background:
+      "radial-gradient(circle, rgba(139,92,246,0.12), transparent 70%)",
+  },
+
+  decorativeCircleSmall: {
+    position: "absolute",
+    width: 90,
+    height: 90,
+    borderRadius: "50%",
+    left: -50,
+    bottom: -50,
+    background:
+      "radial-gradient(circle, rgba(59,130,246,0.07), transparent 70%)",
+  },
+
   cardTop: {
+    position: "relative",
+    zIndex: 2,
     display: "flex",
     alignItems: "flex-start",
     justifyContent: "space-between",
   },
 
   cardEyebrow: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: 800,
     color: "#94A3B8",
     letterSpacing: "0.1em",
   },
 
   bigNumber: {
-    margin: "7px 0 0",
-    fontSize: 34,
+    margin: "6px 0 0",
+    fontSize: 32,
     fontWeight: 800,
     letterSpacing: "-0.04em",
     color: "#111827",
   },
 
   cardDescription: {
-    margin: "4px 0 0",
-    fontSize: 12,
+    margin: "3px 0 0",
+    fontSize: 10.5,
     color: "#64748B",
   },
 
   iconBoxPurple: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "#F3E8FF",
+    background:
+      "linear-gradient(135deg, #EDE9FE 0%, #DBEAFE 100%)",
     color: "#7C3AED",
+    position: "relative",
+    zIndex: 2,
   },
 
   iconBoxBlue: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "#EFF6FF",
+    background:
+      "linear-gradient(135deg, #DBEAFE 0%, #E0E7FF 100%)",
     color: "#2563EB",
   },
 
   iconBoxGreen: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "#ECFDF5",
+    background:
+      "linear-gradient(135deg, #D1FAE5 0%, #DBEAFE 100%)",
     color: "#059669",
   },
 
   iconBoxOrange: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "#FFF7ED",
+    background:
+      "linear-gradient(135deg, #FFEDD5 0%, #FCE7F3 100%)",
     color: "#EA580C",
   },
 
   masteryChart: {
     position: "absolute",
-    right: 20,
-    bottom: 12,
-    width: 125,
-    height: 125,
+    right: 18,
+    bottom: 17,
+    width: 118,
+    height: 118,
+    zIndex: 2,
   },
 
   masteryCenter: {
@@ -1895,54 +2082,96 @@ const styles: Record<string, CSSProperties> = {
     color: "#7C3AED",
   },
 
+  masteryFooter: {
+    position: "absolute",
+    left: 20,
+    right: 20,
+    bottom: 16,
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    color: "#94A3B8",
+    fontSize: 9.5,
+    zIndex: 2,
+  },
+
+  masteryFooterPill: {
+    padding: "4px 7px",
+    borderRadius: 999,
+    background: "#EDE9FE",
+    color: "#7C3AED",
+    fontWeight: 800,
+  },
+
   metricCard: {
-    minHeight: 250,
-    padding: 22,
-    background: "#FFFFFF",
-    border: "1px solid #E2E8F0",
-    borderRadius: 20,
+    position: "relative",
+    minHeight: 230,
+    padding: 20,
+    border: "1px solid #E7E5EE",
+    borderRadius: 19,
     boxShadow:
-      "0 8px 30px rgba(15, 23, 42, 0.045)",
+      "0 7px 25px rgba(17,24,39,0.035)",
+    overflow: "hidden",
+  },
+
+  metricTopDecor: {
+    position: "absolute",
+    width: 110,
+    height: 110,
+    borderRadius: "50%",
+    right: -50,
+    top: -60,
+    opacity: 0.65,
   },
 
   metricHeader: {
+    position: "relative",
+    zIndex: 2,
     display: "flex",
     alignItems: "center",
-    gap: 10,
+    gap: 9,
   },
 
   metricValue: {
-    marginTop: 27,
-    fontSize: 34,
+    position: "relative",
+    zIndex: 2,
+    marginTop: 26,
+    fontSize: 32,
     fontWeight: 800,
     letterSpacing: "-0.04em",
     color: "#111827",
   },
 
   metricDescription: {
-    margin: "9px 0 0",
+    position: "relative",
+    zIndex: 2,
+    margin: "8px 0 0",
     color: "#64748B",
-    fontSize: 12,
-    lineHeight: 1.6,
+    fontSize: 10.5,
+    lineHeight: 1.55,
+    maxWidth: 240,
   },
 
   metricFooter: {
+    position: "absolute",
+    left: 20,
+    right: 20,
+    bottom: 16,
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 8,
-    marginTop: 25,
-    paddingTop: 15,
+    gap: 7,
+    paddingTop: 13,
     borderTop: "1px solid #F1F5F9",
     color: "#64748B",
-    fontSize: 11,
+    fontSize: 9.5,
   },
 
   thetaPill: {
     display: "flex",
     alignItems: "center",
-    gap: 5,
-    padding: "5px 8px",
+    gap: 4,
+    padding: "4px 7px",
     borderRadius: 8,
     background: "#ECFDF5",
     color: "#059669",
@@ -1952,72 +2181,105 @@ const styles: Record<string, CSSProperties> = {
   cyclePill: {
     display: "flex",
     alignItems: "center",
-    gap: 5,
-    padding: "5px 8px",
+    gap: 4,
+    padding: "4px 7px",
     borderRadius: 8,
     background: "#EFF6FF",
     color: "#2563EB",
     fontWeight: 700,
   },
 
+  // =========================================================
+  // JOURNEY
+  // =========================================================
+
   journeyCard: {
-    background: "#FFFFFF",
-    border: "1px solid #E2E8F0",
-    borderRadius: 22,
-    padding: 26,
-    marginBottom: 20,
+    position: "relative",
+    overflow: "hidden",
+    background:
+      "linear-gradient(135deg, #FFFFFF 0%, #FAF9FF 58%, #F8FAFF 100%)",
+    border: "1px solid #E7E5EE",
+    borderRadius: 21,
+    padding: 23,
+    marginBottom: 17,
     boxShadow:
-      "0 10px 35px rgba(15, 23, 42, 0.045)",
+      "0 9px 30px rgba(91,33,182,0.045)",
+  },
+
+  journeyBackgroundOne: {
+    position: "absolute",
+    width: 240,
+    height: 240,
+    borderRadius: "50%",
+    right: -130,
+    top: -120,
+    background:
+      "radial-gradient(circle, rgba(124,58,237,0.07), transparent 70%)",
+  },
+
+  journeyBackgroundTwo: {
+    position: "absolute",
+    width: 180,
+    height: 180,
+    borderRadius: "50%",
+    left: -100,
+    bottom: -110,
+    background:
+      "radial-gradient(circle, rgba(59,130,246,0.06), transparent 70%)",
   },
 
   journeyHeader: {
+    position: "relative",
+    zIndex: 2,
     display: "flex",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    gap: 20,
-    marginBottom: 28,
+    gap: 18,
+    marginBottom: 24,
   },
 
   sectionHeader: {
+    position: "relative",
+    zIndex: 2,
     display: "flex",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    gap: 20,
-    marginBottom: 24,
+    gap: 18,
+    marginBottom: 18,
   },
 
   sectionKicker: {
     display: "flex",
     alignItems: "center",
-    gap: 7,
+    gap: 6,
     color: "#7C3AED",
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: 800,
     letterSpacing: "0.1em",
-    marginBottom: 7,
+    marginBottom: 6,
   },
 
   sectionTitle: {
     margin: 0,
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: 800,
     letterSpacing: "-0.025em",
     color: "#111827",
   },
 
   sectionSubtitle: {
-    margin: "5px 0 0",
+    margin: "4px 0 0",
     color: "#64748B",
-    fontSize: 12,
+    fontSize: 10.5,
     lineHeight: 1.5,
   },
 
   growthBadge: {
     display: "flex",
     alignItems: "center",
-    gap: 9,
-    padding: "10px 13px",
-    borderRadius: 12,
+    gap: 8,
+    padding: "8px 11px",
+    borderRadius: 11,
     background: "#ECFDF5",
     color: "#059669",
     border: "1px solid #D1FAE5",
@@ -2030,15 +2292,21 @@ const styles: Record<string, CSSProperties> = {
     borderColor: "#FECACA",
   },
 
+  // =========================================================
+  // TIMELINE
+  // =========================================================
+
   cycleTimeline: {
+    position: "relative",
+    zIndex: 2,
     display: "flex",
     flexDirection: "column",
   },
 
   timelineItem: {
     display: "grid",
-    gridTemplateColumns: "42px 1fr",
-    gap: 14,
+    gridTemplateColumns: "38px 1fr",
+    gap: 11,
   },
 
   timelineRail: {
@@ -2049,24 +2317,26 @@ const styles: Record<string, CSSProperties> = {
   },
 
   timelineDot: {
-    width: 32,
-    height: 32,
+    width: 29,
+    height: 29,
     borderRadius: "50%",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "#F1F5F9",
+    background:
+      "linear-gradient(135deg, #F1F5F9 0%, #EDE9FE 100%)",
     color: "#64748B",
     border: "4px solid #FFFFFF",
     boxShadow:
       "0 0 0 1px #E2E8F0",
     zIndex: 2,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: 800,
   },
 
   timelineDotActive: {
-    background: "#7C3AED",
+    background:
+      "linear-gradient(135deg, #7C3AED 0%, #3B82F6 100%)",
     color: "#FFFFFF",
     boxShadow:
       "0 0 0 4px #EDE9FE",
@@ -2074,17 +2344,18 @@ const styles: Record<string, CSSProperties> = {
 
   timelineLine: {
     position: "absolute",
-    top: 32,
+    top: 30,
     bottom: 0,
     width: 2,
-    background: "#E2E8F0",
+    background:
+      "linear-gradient(180deg, #DDD6FE, #DBEAFE)",
   },
 
   cycleProgressCard: {
-    padding: "17px 18px 19px",
-    marginBottom: 13,
-    border: "1px solid #E2E8F0",
-    borderRadius: 16,
+    padding: "15px 16px 17px",
+    marginBottom: 11,
+    border: "1px solid #E7E5EE",
+    borderRadius: 14,
     background: "#FFFFFF",
   },
 
@@ -2093,35 +2364,36 @@ const styles: Record<string, CSSProperties> = {
     background:
       "linear-gradient(135deg, #FFFFFF 0%, #FAF5FF 100%)",
     boxShadow:
-      "0 8px 25px rgba(124, 58, 237, 0.08)",
+      "0 7px 23px rgba(124,58,237,0.07)",
   },
 
   cycleCardHeader: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    gap: 16,
+    gap: 14,
   },
 
   cycleTitleRow: {
     display: "flex",
     alignItems: "center",
-    gap: 8,
+    gap: 7,
   },
 
   cycleTitle: {
     margin: 0,
-    fontSize: 15,
+    fontSize: 13.5,
     fontWeight: 800,
     color: "#1E293B",
   },
 
   currentLabel: {
-    padding: "3px 7px",
-    borderRadius: 6,
-    background: "#EDE9FE",
+    padding: "3px 6px",
+    borderRadius: 5,
+    background:
+      "linear-gradient(135deg, #EDE9FE 0%, #DBEAFE 100%)",
     color: "#7C3AED",
-    fontSize: 8,
+    fontSize: 7.5,
     fontWeight: 900,
     letterSpacing: "0.08em",
   },
@@ -2129,10 +2401,10 @@ const styles: Record<string, CSSProperties> = {
   dateRow: {
     display: "flex",
     alignItems: "center",
-    gap: 5,
-    marginTop: 5,
+    gap: 4,
+    marginTop: 4,
     color: "#94A3B8",
-    fontSize: 11,
+    fontSize: 9.5,
   },
 
   cycleChange: {
@@ -2141,9 +2413,9 @@ const styles: Record<string, CSSProperties> = {
     gap: 4,
     color: "#059669",
     background: "#ECFDF5",
-    borderRadius: 8,
-    padding: "5px 8px",
-    fontSize: 11,
+    borderRadius: 7,
+    padding: "4px 7px",
+    fontSize: 10,
     fontWeight: 800,
   },
 
@@ -2155,9 +2427,9 @@ const styles: Record<string, CSSProperties> = {
   cycleStats: {
     display: "grid",
     gridTemplateColumns: "repeat(3, 1fr)",
-    gap: 12,
-    marginTop: 18,
-    padding: "12px 0",
+    gap: 10,
+    marginTop: 15,
+    padding: "11px 0",
     borderTop: "1px solid #F1F5F9",
     borderBottom: "1px solid #F1F5F9",
   },
@@ -2165,15 +2437,15 @@ const styles: Record<string, CSSProperties> = {
   progressHeader: {
     display: "flex",
     justifyContent: "space-between",
-    marginTop: 15,
-    marginBottom: 7,
+    marginTop: 13,
+    marginBottom: 6,
     color: "#64748B",
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: 700,
   },
 
   cycleProgressTrack: {
-    height: 8,
+    height: 7,
     borderRadius: 10,
     background: "#EDE9FE",
     overflow: "hidden",
@@ -2183,15 +2455,18 @@ const styles: Record<string, CSSProperties> = {
     height: "100%",
     borderRadius: 10,
     background:
-      "linear-gradient(90deg, #8B5CF6, #7C3AED)",
+      "linear-gradient(90deg, #A78BFA, #7C3AED, #6366F1)",
     transition: "width 0.5s ease",
   },
 
   cycleChartContainer: {
-    marginTop: 20,
-    padding: "20px 20px 10px",
-    borderRadius: 16,
-    background: "#F8FAFC",
+    position: "relative",
+    zIndex: 2,
+    marginTop: 16,
+    padding: "18px 18px 8px",
+    borderRadius: 14,
+    background:
+      "linear-gradient(135deg, #F8FAFC 0%, #FAF9FF 100%)",
     border: "1px solid #F1F5F9",
   },
 
@@ -2199,52 +2474,57 @@ const styles: Record<string, CSSProperties> = {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 5,
+    marginBottom: 4,
   },
 
   chartTitle: {
     margin: 0,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 800,
     color: "#334155",
   },
 
   chartSubtitle: {
-    margin: "4px 0 0",
-    fontSize: 11,
+    margin: "3px 0 0",
+    fontSize: 9.5,
     color: "#94A3B8",
   },
 
   chartLegend: {
     display: "flex",
     alignItems: "center",
-    gap: 6,
+    gap: 5,
     color: "#64748B",
-    fontSize: 11,
+    fontSize: 9.5,
     fontWeight: 600,
   },
 
   legendDot: {
-    width: 8,
-    height: 8,
+    width: 7,
+    height: 7,
     borderRadius: "50%",
-    background: "#7C3AED",
+    background:
+      "linear-gradient(135deg, #7C3AED, #3B82F6)",
   },
+
+  // =========================================================
+  // TWO COLUMN
+  // =========================================================
 
   twoColumnGrid: {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
-    gap: 20,
-    marginBottom: 20,
+    gap: 17,
+    marginBottom: 17,
   },
 
   card: {
     background: "#FFFFFF",
-    border: "1px solid #E2E8F0",
-    borderRadius: 20,
-    padding: 24,
+    border: "1px solid #E7E5EE",
+    borderRadius: 19,
+    padding: 21,
     boxShadow:
-      "0 8px 30px rgba(15, 23, 42, 0.04)",
+      "0 7px 25px rgba(17,24,39,0.035)",
     minWidth: 0,
   },
 
@@ -2256,81 +2536,83 @@ const styles: Record<string, CSSProperties> = {
   bloomList: {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
-    gap: 8,
-    marginTop: 5,
+    gap: 7,
+    marginTop: 2,
   },
 
   bloomItem: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: "9px 10px",
-    background: "#F8FAFC",
-    borderRadius: 10,
-    fontSize: 11,
+    padding: "8px 9px",
+    background:
+      "linear-gradient(135deg, #FAFAFC 0%, #F8FAFF 100%)",
+    border:
+      "1px solid #F1F5F9",
+    borderRadius: 9,
+    fontSize: 10.5,
     color: "#475569",
   },
 
   bloomItemLeft: {
     display: "flex",
     alignItems: "center",
-    gap: 8,
+    gap: 7,
   },
 
   bloomLevel: {
-    width: 25,
-    height: 25,
+    width: 23,
+    height: 23,
     borderRadius: 7,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "#EDE9FE",
+    background:
+      "linear-gradient(135deg, #EDE9FE 0%, #DBEAFE 100%)",
     color: "#7C3AED",
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: 800,
   },
 
   areaList: {
     display: "flex",
     flexDirection: "column",
-    gap: 20,
+    gap: 17,
   },
 
   areaItem: {
     display: "flex",
     flexDirection: "column",
-    gap: 8,
+    gap: 7,
   },
 
   areaHeader: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    gap: 10,
+    gap: 9,
   },
 
   areaNameWrap: {
     display: "flex",
     alignItems: "center",
-    gap: 10,
+    gap: 9,
     minWidth: 0,
   },
 
   areaNumber: {
-    width: 29,
-    height: 29,
+    width: 28,
+    height: 28,
     borderRadius: 8,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "#F1F5F9",
-    color: "#64748B",
-    fontSize: 9,
+    fontSize: 8.5,
     fontWeight: 800,
   },
 
   areaName: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: 700,
     color: "#334155",
     overflow: "hidden",
@@ -2339,12 +2621,12 @@ const styles: Record<string, CSSProperties> = {
   },
 
   areaValue: {
-    fontSize: 12,
+    fontSize: 11.5,
     color: "#475569",
   },
 
   areaTrack: {
-    height: 8,
+    height: 7,
     background: "#F1F5F9",
     borderRadius: 10,
     overflow: "hidden",
@@ -2353,107 +2635,139 @@ const styles: Record<string, CSSProperties> = {
   areaFill: {
     height: "100%",
     borderRadius: 10,
-    background:
-      "linear-gradient(90deg, #A78BFA, #7C3AED)",
   },
 
   countBadge: {
-    minWidth: 30,
-    height: 30,
-    padding: "0 8px",
-    borderRadius: 9,
+    minWidth: 28,
+    height: 28,
+    padding: "0 7px",
+    borderRadius: 8,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "#FEF2F2",
+    background:
+      "linear-gradient(135deg, #FEE2E2 0%, #FCE7F3 100%)",
     color: "#DC2626",
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: 800,
   },
+
+  // =========================================================
+  // GAPS
+  // =========================================================
 
   gapList: {
     display: "flex",
     flexDirection: "column",
-    gap: 9,
+    gap: 8,
   },
 
   gapItem: {
     display: "flex",
     alignItems: "center",
-    gap: 10,
-    padding: "12px 13px",
+    gap: 9,
+    padding: "10px 11px",
     border: "1px solid #F1F5F9",
-    borderRadius: 12,
-    background: "#FAFAFA",
+    borderRadius: 11,
+    background:
+      "linear-gradient(135deg, #FFFFFF 0%, #FAF9FF 100%)",
     color: "#334155",
-    fontSize: 12,
+    fontSize: 10.5,
     fontWeight: 600,
   },
 
   gapIcon: {
-    width: 30,
-    height: 30,
+    width: 28,
+    height: 28,
     flexShrink: 0,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 8,
-    background: "#FEF2F2",
+    background:
+      "linear-gradient(135deg, #FEE2E2 0%, #FCE7F3 100%)",
     color: "#DC2626",
   },
+
+  successBox: {
+    display: "flex",
+    alignItems: "center",
+    gap: 11,
+    padding: 14,
+    borderRadius: 12,
+    background:
+      "linear-gradient(135deg, #ECFDF5 0%, #EFF6FF 100%)",
+    border: "1px solid #D1FAE5",
+  },
+
+  successIcon: {
+    width: 36,
+    height: 36,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 10,
+    background:
+      "linear-gradient(135deg, #D1FAE5 0%, #DBEAFE 100%)",
+    color: "#059669",
+  },
+
+  // =========================================================
+  // CONCEPTS
+  // =========================================================
 
   conceptList: {
     display: "flex",
     flexDirection: "column",
-    gap: 17,
+    gap: 15,
   },
 
   conceptItem: {
-    paddingBottom: 16,
+    paddingBottom: 14,
     borderBottom: "1px solid #F1F5F9",
   },
 
   conceptHeader: {
     display: "flex",
     justifyContent: "space-between",
-    gap: 12,
+    gap: 10,
     alignItems: "center",
   },
 
   conceptName: {
     display: "block",
     color: "#334155",
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: 700,
   },
 
   conceptArea: {
     display: "block",
-    marginTop: 3,
+    marginTop: 2,
     color: "#94A3B8",
-    fontSize: 10,
+    fontSize: 9,
   },
 
   conceptRight: {
     display: "flex",
     alignItems: "center",
-    gap: 8,
+    gap: 7,
     flexShrink: 0,
-    fontSize: 11,
+    fontSize: 10.5,
     color: "#475569",
   },
 
   severityBadge: {
-    padding: "4px 7px",
+    padding: "3px 6px",
     border: "1px solid",
     borderRadius: 6,
-    fontSize: 8,
+    fontSize: 7.5,
     fontWeight: 800,
   },
 
   conceptTrack: {
     height: 6,
-    marginTop: 9,
+    marginTop: 8,
     background: "#F1F5F9",
     borderRadius: 10,
     overflow: "hidden",
@@ -2462,62 +2776,98 @@ const styles: Record<string, CSSProperties> = {
   conceptFill: {
     height: "100%",
     borderRadius: 10,
-    background: "#8B5CF6",
   },
+
+  // =========================================================
+  // WEEKLY
+  // =========================================================
 
   activityBadge: {
     display: "flex",
     alignItems: "center",
-    gap: 6,
-    padding: "7px 10px",
-    borderRadius: 9,
-    background: "#F1F5F9",
-    color: "#64748B",
-    fontSize: 10,
+    gap: 5,
+    padding: "6px 9px",
+    borderRadius: 8,
+    background:
+      "linear-gradient(135deg, #F5F3FF 0%, #EFF6FF 100%)",
+    color: "#6366F1",
+    fontSize: 9,
     fontWeight: 700,
   },
 
+  // =========================================================
+  // INSIGHT
+  // =========================================================
+
   insightCard: {
+    position: "relative",
+    overflow: "hidden",
     display: "flex",
     alignItems: "center",
-    gap: 18,
-    padding: 24,
+    gap: 16,
+    padding: 21,
     borderRadius: 20,
     background:
-      "linear-gradient(135deg, #2E1065 0%, #4C1D95 50%, #6D28D9 100%)",
+      "linear-gradient(135deg, #2E1065 0%, #4C1D95 45%, #6366F1 78%, #2563EB 100%)",
     color: "#FFFFFF",
     boxShadow:
-      "0 15px 40px rgba(76, 29, 149, 0.2)",
+      "0 14px 38px rgba(76,29,149,0.18)",
+  },
+
+  insightCircleOne: {
+    position: "absolute",
+    width: 220,
+    height: 220,
+    borderRadius: "50%",
+    right: -120,
+    top: -130,
+    background: "rgba(255,255,255,0.08)",
+  },
+
+  insightCircleTwo: {
+    position: "absolute",
+    width: 120,
+    height: 120,
+    borderRadius: "50%",
+    left: -70,
+    bottom: -70,
+    background: "rgba(255,255,255,0.05)",
   },
 
   insightIcon: {
-    width: 48,
-    height: 48,
+    width: 46,
+    height: 46,
     flexShrink: 0,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 14,
-    background: "rgba(255,255,255,0.13)",
+    borderRadius: 13,
+    background: "rgba(255,255,255,0.12)",
+    border:
+      "1px solid rgba(255,255,255,0.13)",
     color: "#DDD6FE",
+    position: "relative",
+    zIndex: 2,
   },
 
   insightContent: {
     flex: 1,
     minWidth: 0,
+    position: "relative",
+    zIndex: 2,
   },
 
   insightLabel: {
     display: "block",
     color: "#C4B5FD",
-    fontSize: 9,
+    fontSize: 8.5,
     fontWeight: 900,
     letterSpacing: "0.12em",
   },
 
   insightTitle: {
-    margin: "5px 0 5px",
-    fontSize: 17,
+    margin: "4px 0 4px",
+    fontSize: 16,
     fontWeight: 800,
     letterSpacing: "-0.02em",
   },
@@ -2525,64 +2875,54 @@ const styles: Record<string, CSSProperties> = {
   insightText: {
     margin: 0,
     color: "#DDD6FE",
-    fontSize: 12,
-    lineHeight: 1.6,
+    fontSize: 10.5,
+    lineHeight: 1.55,
   },
 
   insightStats: {
+    position: "relative",
+    zIndex: 2,
     display: "flex",
-    gap: 28,
-    paddingLeft: 25,
+    gap: 25,
+    paddingLeft: 22,
     borderLeft:
       "1px solid rgba(255,255,255,0.15)",
   },
 
-  successBox: {
-    display: "flex",
-    alignItems: "center",
-    gap: 13,
-    padding: 16,
-    borderRadius: 13,
-    background: "#ECFDF5",
-    border: "1px solid #D1FAE5",
-  },
-
-  successIcon: {
-    width: 38,
-    height: 38,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 10,
-    background: "#D1FAE5",
-    color: "#059669",
-  },
+  // =========================================================
+  // EMPTY
+  // =========================================================
 
   emptySmall: {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 180,
+    minHeight: 170,
     color: "#94A3B8",
-    fontSize: 12,
+    fontSize: 10.5,
   },
 
   emptyJourney: {
-    minHeight: 260,
+    minHeight: 240,
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
     textAlign: "center",
-    gap: 8,
+    gap: 7,
     color: "#94A3B8",
-    border: "1px dashed #CBD5E1",
-    borderRadius: 16,
-    background: "#F8FAFC",
+    border: "1px dashed #C4B5FD",
+    borderRadius: 15,
+    background:
+      "linear-gradient(135deg, #FAFAFF 0%, #F8FAFF 100%)",
   },
 
+  // =========================================================
+  // LOADING
+  // =========================================================
+
   loadingContainer: {
-    minHeight: "70vh",
+    minHeight: "72vh",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
@@ -2591,80 +2931,163 @@ const styles: Record<string, CSSProperties> = {
     padding: 30,
   },
 
-  loadingIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 18,
+  loadingGraphic: {
+    position: "relative",
+    width: 84,
+    height: 84,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "#F3E8FF",
-    color: "#7C3AED",
-    marginBottom: 18,
+  },
+
+  loadingGlowOne: {
+    position: "absolute",
+    width: 84,
+    height: 84,
+    borderRadius: "50%",
+    background:
+      "radial-gradient(circle, rgba(124,58,237,0.14), transparent 70%)",
+  },
+
+  loadingGlowTwo: {
+    position: "absolute",
+    width: 58,
+    height: 58,
+    borderRadius: "50%",
+    background:
+      "radial-gradient(circle, rgba(59,130,246,0.16), transparent 70%)",
+  },
+
+  loadingIcon: {
+    position: "relative",
+    zIndex: 2,
+    width: 58,
+    height: 58,
+    borderRadius: 17,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background:
+      "linear-gradient(135deg, #7C3AED 0%, #3B82F6 100%)",
+    color: "#FFFFFF",
+    boxShadow:
+      "0 12px 28px rgba(99,102,241,0.18)",
+  },
+
+  loadingBadge: {
+    marginTop: 17,
+    padding: "5px 8px",
+    borderRadius: 999,
+    background:
+      "linear-gradient(135deg, #EDE9FE 0%, #DBEAFE 100%)",
+    color: "#6D28D9",
+    fontSize: 8,
+    fontWeight: 800,
+    letterSpacing: "0.7px",
   },
 
   loadingTitle: {
-    margin: 0,
+    margin: "9px 0 4px",
     fontSize: 20,
     fontWeight: 800,
     color: "#1E293B",
   },
 
   loadingText: {
-    margin: "7px 0 20px",
+    margin: 0,
     color: "#64748B",
-    fontSize: 13,
+    fontSize: 12,
   },
 
   loadingBar: {
-    width: 230,
+    width: 220,
     height: 5,
     overflow: "hidden",
-    borderRadius: 10,
+    borderRadius: 999,
     background: "#EDE9FE",
+    marginTop: 19,
   },
 
   loadingBarInner: {
-    width: "40%",
+    width: "38%",
     height: "100%",
-    borderRadius: 10,
-    background: "#7C3AED",
-    animation: "loading 1.2s infinite",
+    borderRadius: 999,
+    background:
+      "linear-gradient(90deg, #7C3AED, #6366F1, #3B82F6)",
+    animation: "loadingMove 1.2s infinite",
   },
 
+  // =========================================================
+  // ERROR
+  // =========================================================
+
   errorContainer: {
-    minHeight: "70vh",
+    minHeight: "72vh",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
     textAlign: "center",
     padding: 30,
+    position: "relative",
+    overflow: "hidden",
+  },
+
+  errorGlow: {
+    position: "absolute",
+    width: 330,
+    height: 330,
+    borderRadius: "50%",
+    background:
+      "radial-gradient(circle, rgba(124,58,237,0.07), transparent 70%)",
+    top: "10%",
+    right: "15%",
   },
 
   errorIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 18,
+    width: 62,
+    height: 62,
+    borderRadius: 19,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "#FEF2F2",
+    background:
+      "linear-gradient(135deg, #FEE2E2 0%, #FCE7F3 100%)",
     color: "#DC2626",
-    marginBottom: 18,
+    marginBottom: 14,
+    position: "relative",
+    zIndex: 2,
+  },
+
+  errorBadge: {
+    position: "relative",
+    zIndex: 2,
+    padding: "5px 8px",
+    borderRadius: 999,
+    background:
+      "linear-gradient(135deg, #EDE9FE 0%, #DBEAFE 100%)",
+    color: "#6D28D9",
+    fontSize: 8,
+    fontWeight: 800,
+    letterSpacing: "0.7px",
   },
 
   errorTitle: {
-    margin: 0,
+    position: "relative",
+    zIndex: 2,
+    margin: "10px 0 5px",
     fontSize: 20,
     fontWeight: 800,
     color: "#1E293B",
   },
 
   errorText: {
-    margin: "8px 0 0",
+    position: "relative",
+    zIndex: 2,
+    margin: 0,
     maxWidth: 500,
     color: "#64748B",
-    fontSize: 13,
+    fontSize: 12,
+    lineHeight: 1.55,
   },
 };

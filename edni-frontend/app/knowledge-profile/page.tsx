@@ -266,11 +266,18 @@ export default function KnowledgeProfilePage() {
         return (
             <div style={styles.page}>
                 <Sidebar />
+
                 <div style={styles.main}>
-                    <TopBar />
+                    <TopBar title="Knowledge Profile" />
 
                     <div style={styles.loadingContainer}>
-                        <div style={styles.spinner}></div>
+                        <div style={styles.loadingGlow}>
+                            <div style={styles.spinner}></div>
+                        </div>
+
+                        <div style={styles.loadingBadge}>
+                            ✨ PERSONALIZED ANALYSIS
+                        </div>
 
                         <h2 style={styles.loadingTitle}>
                             Loading Knowledge Profile
@@ -281,18 +288,6 @@ export default function KnowledgeProfilePage() {
                         </p>
                     </div>
                 </div>
-
-                <style jsx>{`
-                    @keyframes spin {
-                        to {
-                            transform: rotate(360deg);
-                        }
-                    }
-
-                    .spinner {
-                        animation: spin 0.8s linear infinite;
-                    }
-                `}</style>
             </div>
         );
     }
@@ -307,10 +302,16 @@ export default function KnowledgeProfilePage() {
                 <Sidebar />
 
                 <div style={styles.main}>
-                    <TopBar />
+                    <TopBar title="Knowledge Profile" />
 
                     <div style={styles.errorContainer}>
+                        <div style={styles.errorDecorativeCircle}></div>
+
                         <div style={styles.errorIcon}>!</div>
+
+                        <div style={styles.errorBadge}>
+                            PROFILE UNAVAILABLE
+                        </div>
 
                         <h2 style={styles.errorTitle}>
                             Knowledge Profile Unavailable
@@ -326,6 +327,7 @@ export default function KnowledgeProfilePage() {
                             style={styles.primaryButton}
                         >
                             Take Diagnostic Assessment
+                            <span style={styles.buttonArrow}>→</span>
                         </button>
                     </div>
                 </div>
@@ -349,8 +351,6 @@ export default function KnowledgeProfilePage() {
         profile.learning_area_summary || {}
     );
 
-    // IMPORTANT:
-    // No useMemo here. This avoids the useMemo error.
     const bloomData = BLOOM_LEVELS.map((level) => ({
         ...level,
         mastery: getBloomMastery(
@@ -360,7 +360,6 @@ export default function KnowledgeProfilePage() {
         ),
     }));
 
-    // Normalize critical gaps so objects are never rendered directly.
     const normalizedGaps = (profile.critical_gaps || []).map((gap) => {
         if (typeof gap === "string") {
             return {
@@ -391,17 +390,17 @@ export default function KnowledgeProfilePage() {
             <Sidebar />
 
             <div style={styles.main}>
-                <TopBar />
+                <TopBar title="Knowledge Profile" />
 
                 <div style={styles.content}>
                     {/* ==================================================
-                        HEADER
+                        PAGE HEADER
                     ================================================== */}
 
                     <div style={styles.header}>
-                        <div>
+                        <div style={styles.headerLeft}>
                             <div style={styles.eyebrow}>
-                                PERSONALIZED LEARNING PROFILE
+                                ✨ PERSONALIZED LEARNING PROFILE
                             </div>
 
                             <h1 style={styles.pageTitle}>
@@ -415,16 +414,22 @@ export default function KnowledgeProfilePage() {
                         </div>
 
                         <div style={styles.cycleCard}>
-                            <div style={styles.cycleLabel}>
-                                DIAGNOSTIC CYCLE
-                            </div>
+                            <div style={styles.cycleGlow}></div>
 
-                            <div style={styles.cycleNumber}>
-                                #{profile.feedback_cycle || 1}
-                            </div>
+                            <div style={styles.cycleIcon}>◈</div>
 
-                            <div style={styles.cycleStatus}>
-                                Latest assessment
+                            <div style={styles.cycleInfo}>
+                                <div style={styles.cycleLabel}>
+                                    DIAGNOSTIC CYCLE
+                                </div>
+
+                                <div style={styles.cycleNumber}>
+                                    #{profile.feedback_cycle || 1}
+                                </div>
+
+                                <div style={styles.cycleStatus}>
+                                    Latest assessment
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -434,7 +439,15 @@ export default function KnowledgeProfilePage() {
                     ================================================== */}
 
                     <section style={styles.hero}>
+                        <div style={styles.heroPatternOne}></div>
+                        <div style={styles.heroPatternTwo}></div>
+
                         <div style={styles.heroLeft}>
+                            <div style={styles.heroBadge}>
+                                <span>🎯</span>
+                                YOUR CURRENT PERFORMANCE
+                            </div>
+
                             <div style={styles.heroEyebrow}>
                                 OVERALL MASTERY
                             </div>
@@ -446,7 +459,7 @@ export default function KnowledgeProfilePage() {
                                         background: `conic-gradient(${getMasteryColor(
                                             overallMastery
                                         )} ${overallMastery * 3.6
-                                            }deg, #e2e8f0 ${overallMastery * 3.6
+                                            }deg, #ddd6fe ${overallMastery * 3.6
                                             }deg)`,
                                     }}
                                 >
@@ -470,7 +483,7 @@ export default function KnowledgeProfilePage() {
                                     </div>
                                 </div>
 
-                                <div>
+                                <div style={styles.heroTextArea}>
                                     <h2 style={styles.heroTitle}>
                                         {getMasteryLabel(overallMastery)}
                                     </h2>
@@ -492,18 +505,27 @@ export default function KnowledgeProfilePage() {
                                                     100
                                                 )}%`,
                                                 background:
-                                                    getMasteryColor(
+                                                    `linear-gradient(90deg, ${getMasteryColor(
                                                         overallMastery
-                                                    ),
+                                                    )}, #8B5CF6)`,
                                             }}
                                         />
+                                    </div>
+
+                                    <div style={styles.progressLabels}>
+                                        <span>0%</span>
+                                        <span>100%</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         <div style={styles.thetaCard}>
-                            <div style={styles.thetaIcon}>θ</div>
+                            <div style={styles.thetaBackgroundCircle}></div>
+
+                            <div style={styles.thetaIcon}>
+                                θ
+                            </div>
 
                             <div>
                                 <div style={styles.thetaLabel}>
@@ -531,6 +553,8 @@ export default function KnowledgeProfilePage() {
                             label="Accuracy"
                             value={`${accuracy.toFixed(1)}%`}
                             description={`${profile.correct_answers} correct answers`}
+                            gradient="linear-gradient(135deg, #EDE9FE 0%, #DBEAFE 100%)"
+                            color="#7C3AED"
                         />
 
                         <StatCard
@@ -538,6 +562,8 @@ export default function KnowledgeProfilePage() {
                             label="Questions"
                             value={String(profile.total_questions)}
                             description="Questions assessed"
+                            gradient="linear-gradient(135deg, #DBEAFE 0%, #E0E7FF 100%)"
+                            color="#4F46E5"
                         />
 
                         <StatCard
@@ -547,6 +573,8 @@ export default function KnowledgeProfilePage() {
                                 profile.diagnostic_time_sec
                             )}
                             description="Assessment duration"
+                            gradient="linear-gradient(135deg, #F3E8FF 0%, #EDE9FE 100%)"
+                            color="#8B5CF6"
                         />
 
                         <StatCard
@@ -554,6 +582,8 @@ export default function KnowledgeProfilePage() {
                             label="Learning Areas"
                             value={String(learningAreas.length)}
                             description="Areas evaluated"
+                            gradient="linear-gradient(135deg, #E0E7FF 0%, #DBEAFE 100%)"
+                            color="#6366F1"
                         />
                     </div>
 
@@ -562,70 +592,110 @@ export default function KnowledgeProfilePage() {
                     ================================================== */}
 
                     <SectionHeader
-                        eyebrow="COGNITIVE PERFORMANCE"
+                        eyebrow="🧠 COGNITIVE PERFORMANCE"
                         title="Bloom's Taxonomy"
                         description="Your mastery across different levels of thinking."
                     />
 
                     <div style={styles.bloomGrid}>
-                        {bloomData.map((level) => (
-                            <div
-                                key={level.id}
-                                style={styles.bloomCard}
-                            >
-                                <div style={styles.bloomTop}>
-                                    <div style={styles.bloomIcon}>
-                                        {level.icon}
-                                    </div>
+                        {bloomData.map((level, index) => {
+                            const bloomGradients = [
+                                "linear-gradient(135deg, #EDE9FE 0%, #DBEAFE 100%)",
+                                "linear-gradient(135deg, #DBEAFE 0%, #E0E7FF 100%)",
+                                "linear-gradient(135deg, #F3E8FF 0%, #EDE9FE 100%)",
+                                "linear-gradient(135deg, #E0E7FF 0%, #DBEAFE 100%)",
+                                "linear-gradient(135deg, #DDD6FE 0%, #E0E7FF 100%)",
+                                "linear-gradient(135deg, #EDE9FE 0%, #BFDBFE 100%)",
+                            ];
 
-                                    <div style={styles.bloomNumber}>
-                                        {level.id}
-                                    </div>
-                                </div>
-
-                                <h3 style={styles.bloomTitle}>
-                                    {level.label}
-                                </h3>
-
-                                <p style={styles.bloomDescription}>
-                                    {level.description}
-                                </p>
-
-                                <div style={styles.bloomValue}>
-                                    {level.mastery.toFixed(0)}%
-                                </div>
-
-                                <div style={styles.progressTrack}>
+                            return (
+                                <div
+                                    key={level.id}
+                                    style={styles.bloomCard}
+                                >
                                     <div
                                         style={{
-                                            ...styles.progressFill,
-                                            width: `${Math.min(
-                                                Math.max(
-                                                    level.mastery,
-                                                    0
-                                                ),
-                                                100
-                                            )}%`,
+                                            ...styles.bloomAccent,
                                             background:
-                                                getMasteryColor(
-                                                    level.mastery
-                                                ),
+                                                bloomGradients[index],
                                         }}
                                     />
-                                </div>
 
-                                <div
-                                    style={{
-                                        ...styles.statusText,
-                                        color: getMasteryColor(
-                                            level.mastery
-                                        ),
-                                    }}
-                                >
-                                    {getMasteryLabel(level.mastery)}
+                                    <div style={styles.bloomTop}>
+                                        <div
+                                            style={{
+                                                ...styles.bloomIcon,
+                                                background:
+                                                    bloomGradients[index],
+                                            }}
+                                        >
+                                            {level.icon}
+                                        </div>
+
+                                        <div style={styles.bloomNumber}>
+                                            0{level.id}
+                                        </div>
+                                    </div>
+
+                                    <h3 style={styles.bloomTitle}>
+                                        {level.label}
+                                    </h3>
+
+                                    <p style={styles.bloomDescription}>
+                                        {level.description}
+                                    </p>
+
+                                    <div style={styles.bloomValueRow}>
+                                        <div
+                                            style={{
+                                                ...styles.bloomValue,
+                                                color: getMasteryColor(
+                                                    level.mastery
+                                                ),
+                                            }}
+                                        >
+                                            {level.mastery.toFixed(0)}%
+                                        </div>
+
+                                        <div
+                                            style={{
+                                                ...styles.bloomStatusPill,
+                                                color: getMasteryColor(
+                                                    level.mastery
+                                                ),
+                                                background:
+                                                    `${getMasteryColor(
+                                                        level.mastery
+                                                    )}12`,
+                                            }}
+                                        >
+                                            {getMasteryLabel(
+                                                level.mastery
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div style={styles.progressTrack}>
+                                        <div
+                                            style={{
+                                                ...styles.progressFill,
+                                                width: `${Math.min(
+                                                    Math.max(
+                                                        level.mastery,
+                                                        0
+                                                    ),
+                                                    100
+                                                )}%`,
+                                                background:
+                                                    `linear-gradient(90deg, ${getMasteryColor(
+                                                        level.mastery
+                                                    )}, #8B5CF6)`,
+                                            }}
+                                        />
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
 
                     {/* ==================================================
@@ -633,7 +703,7 @@ export default function KnowledgeProfilePage() {
                     ================================================== */}
 
                     <SectionHeader
-                        eyebrow="SUBJECT PERFORMANCE"
+                        eyebrow="📚 SUBJECT PERFORMANCE"
                         title="Learning Area Performance"
                         description="See how you performed across each learning area."
                     />
@@ -642,9 +712,16 @@ export default function KnowledgeProfilePage() {
                         <EmptyState text="No learning area data available." />
                     ) : (
                         <div style={styles.areaGrid}>
-                            {learningAreas.map(([area, mastery]) => {
+                            {learningAreas.map(([area, mastery], index) => {
                                 const numericMastery =
                                     Number(mastery) || 0;
+
+                                const areaGradients = [
+                                    "linear-gradient(135deg, #EDE9FE 0%, #DBEAFE 100%)",
+                                    "linear-gradient(135deg, #DBEAFE 0%, #E0E7FF 100%)",
+                                    "linear-gradient(135deg, #F3E8FF 0%, #EDE9FE 100%)",
+                                    "linear-gradient(135deg, #E0E7FF 0%, #DBEAFE 100%)",
+                                ];
 
                                 return (
                                     <div
@@ -652,14 +729,30 @@ export default function KnowledgeProfilePage() {
                                         style={styles.areaCard}
                                     >
                                         <div
+                                            style={{
+                                                ...styles.areaTopStrip,
+                                                background:
+                                                    areaGradients[
+                                                    index %
+                                                    areaGradients.length
+                                                    ],
+                                            }}
+                                        />
+
+                                        <div
                                             style={
                                                 styles.areaCardHeader
                                             }
                                         >
                                             <div
-                                                style={
-                                                    styles.areaIcon
-                                                }
+                                                style={{
+                                                    ...styles.areaIcon,
+                                                    background:
+                                                        areaGradients[
+                                                        index %
+                                                        areaGradients.length
+                                                        ],
+                                                }}
                                             >
                                                 {area
                                                     .charAt(0)
@@ -721,9 +814,9 @@ export default function KnowledgeProfilePage() {
                                                         100
                                                     )}%`,
                                                     background:
-                                                        getMasteryColor(
+                                                        `linear-gradient(90deg, ${getMasteryColor(
                                                             numericMastery
-                                                        ),
+                                                        )}, #6366F1)`,
                                                 }}
                                             />
                                         </div>
@@ -738,13 +831,15 @@ export default function KnowledgeProfilePage() {
                     ================================================== */}
 
                     <SectionHeader
-                        eyebrow="ATTENTION REQUIRED"
+                        eyebrow="⚠️ ATTENTION REQUIRED"
                         title="Critical Knowledge Gaps"
                         description="Concepts that may require additional study or remediation."
                     />
 
                     {normalizedGaps.length === 0 ? (
                         <div style={styles.successCard}>
+                            <div style={styles.successGlow}></div>
+
                             <div style={styles.successIcon}>✓</div>
 
                             <div>
@@ -845,7 +940,7 @@ export default function KnowledgeProfilePage() {
                     ================================================== */}
 
                     <SectionHeader
-                        eyebrow="DETAILED ANALYSIS"
+                        eyebrow="🔬 DETAILED ANALYSIS"
                         title="Concept-Level Analysis"
                         description="Explore your performance on individual concepts."
                     />
@@ -945,6 +1040,7 @@ export default function KnowledgeProfilePage() {
                                                 </span>
 
                                                 <span
+                                                    className="expand-icon"
                                                     style={
                                                         styles.expandIcon
                                                     }
@@ -1070,7 +1166,16 @@ export default function KnowledgeProfilePage() {
                                                                                     `Level ${key}`}
                                                                             </span>
 
-                                                                            <strong>
+                                                                            <strong
+                                                                                style={{
+                                                                                    color: getMasteryColor(
+                                                                                        Number(
+                                                                                            result.mastery ||
+                                                                                            0
+                                                                                        )
+                                                                                    ),
+                                                                                }}
+                                                                            >
                                                                                 {Number(
                                                                                     result.mastery ||
                                                                                     0
@@ -1100,12 +1205,12 @@ export default function KnowledgeProfilePage() {
                                                                                         100
                                                                                     )}%`,
                                                                                     background:
-                                                                                        getMasteryColor(
+                                                                                        `linear-gradient(90deg, ${getMasteryColor(
                                                                                             Number(
                                                                                                 result.mastery ||
                                                                                                 0
                                                                                             )
-                                                                                        ),
+                                                                                        )}, #8B5CF6)`,
                                                                                 }}
                                                                             />
                                                                         </div>
@@ -1185,16 +1290,6 @@ export default function KnowledgeProfilePage() {
                     transform: rotate(45deg);
                 }
 
-                .spinner {
-                    animation: spin 0.8s linear infinite;
-                }
-
-                @keyframes spin {
-                    to {
-                        transform: rotate(360deg);
-                    }
-                }
-
                 @media (max-width: 1200px) {
                     .stats-grid {
                         grid-template-columns: repeat(2, 1fr);
@@ -1202,50 +1297,62 @@ export default function KnowledgeProfilePage() {
                 }
 
                 @media (max-width: 900px) {
+                    .main-content {
+                        margin-left: 0 !important;
+                    }
+
                     .hero {
-                        grid-template-columns: 1fr;
+                        grid-template-columns: 1fr !important;
                     }
 
                     .bloom-grid {
-                        grid-template-columns: repeat(2, 1fr);
+                        grid-template-columns: repeat(2, 1fr) !important;
                     }
 
                     .area-grid {
-                        grid-template-columns: 1fr;
+                        grid-template-columns: 1fr !important;
                     }
                 }
 
                 @media (max-width: 650px) {
                     .stats-grid {
-                        grid-template-columns: 1fr;
+                        grid-template-columns: 1fr !important;
                     }
 
                     .bloom-grid {
-                        grid-template-columns: 1fr;
+                        grid-template-columns: 1fr !important;
                     }
 
                     .heroMasteryRow {
-                        flex-direction: column;
-                        align-items: flex-start;
+                        flex-direction: column !important;
+                        align-items: flex-start !important;
                     }
 
                     .header {
-                        flex-direction: column;
+                        flex-direction: column !important;
                     }
 
                     .cycleCard {
-                        width: 100%;
+                        width: 100% !important;
                     }
 
                     .conceptSummary {
-                        flex-direction: column;
-                        align-items: flex-start;
-                        gap: 16px;
+                        flex-direction: column !important;
+                        align-items: flex-start !important;
+                        gap: 16px !important;
                     }
 
                     .conceptRight {
-                        width: 100%;
-                        justify-content: space-between;
+                        width: 100% !important;
+                        justify-content: space-between !important;
+                    }
+
+                    .detailGrid {
+                        grid-template-columns: repeat(2, 1fr) !important;
+                    }
+
+                    .bloomResultGrid {
+                        grid-template-columns: 1fr !important;
                     }
                 }
             `}</style>
@@ -1262,15 +1369,32 @@ function StatCard({
     label,
     value,
     description,
+    gradient,
+    color,
 }: {
     icon: string;
     label: string;
     value: string;
     description: string;
+    gradient: string;
+    color: string;
 }) {
     return (
-        <div style={styles.statCard}>
-            <div style={styles.statIcon}>{icon}</div>
+        <div
+            style={{
+                ...styles.statCard,
+                borderTop: `3px solid ${color}`,
+            }}
+        >
+            <div
+                style={{
+                    ...styles.statIcon,
+                    background: gradient,
+                    color,
+                }}
+            >
+                {icon}
+            </div>
 
             <div style={styles.statContent}>
                 <span style={styles.statLabel}>{label}</span>
@@ -1281,6 +1405,13 @@ function StatCard({
                     {description}
                 </span>
             </div>
+
+            <div
+                style={{
+                    ...styles.statDecoration,
+                    background: gradient,
+                }}
+            />
         </div>
     );
 }
@@ -1353,8 +1484,9 @@ const styles: Record<string, React.CSSProperties> = {
     page: {
         minHeight: "100vh",
         background:
-            "linear-gradient(135deg, #f8fafc 0%, #eef2ff 50%, #f8fafc 100%)",
+            "linear-gradient(135deg, #F8F7FC 0%, #F5F7FF 50%, #FAF5FF 100%)",
         color: "#0f172a",
+        overflowX: "hidden",
     },
 
     main: {
@@ -1365,7 +1497,7 @@ const styles: Record<string, React.CSSProperties> = {
     content: {
         maxWidth: "1500px",
         margin: "0 auto",
-        padding: "38px 42px 60px",
+        padding: "30px 38px 60px",
     },
 
     // ========================================================
@@ -1377,7 +1509,11 @@ const styles: Record<string, React.CSSProperties> = {
         alignItems: "flex-start",
         justifyContent: "space-between",
         gap: "24px",
-        marginBottom: "32px",
+        marginBottom: "24px",
+    },
+
+    headerLeft: {
+        position: "relative",
     },
 
     eyebrow: {
@@ -1385,57 +1521,102 @@ const styles: Record<string, React.CSSProperties> = {
         alignItems: "center",
         padding: "7px 12px",
         borderRadius: "999px",
-        background: "#eef2ff",
-        color: "#4f46e5",
-        fontSize: "11px",
+        background:
+            "linear-gradient(135deg, #EDE9FE 0%, #DBEAFE 100%)",
+        color: "#6D28D9",
+        fontSize: "10px",
         fontWeight: 800,
-        letterSpacing: "1.5px",
-        marginBottom: "12px",
+        letterSpacing: "1.3px",
+        marginBottom: "10px",
     },
 
     pageTitle: {
         margin: 0,
-        fontSize: "38px",
+        fontSize: "34px",
         lineHeight: 1.1,
         fontWeight: 800,
-        letterSpacing: "-1.2px",
-        color: "#0f172a",
+        letterSpacing: "-1px",
+        background:
+            "linear-gradient(90deg, #4C1D95 0%, #6366F1 58%, #2563EB 100%)",
+        WebkitBackgroundClip: "text",
+        WebkitTextFillColor: "transparent",
     },
 
     subtitle: {
-        margin: "10px 0 0",
+        margin: "9px 0 0",
         color: "#64748b",
-        fontSize: "15px",
+        fontSize: "13px",
         maxWidth: "650px",
         lineHeight: 1.6,
     },
 
     cycleCard: {
-        minWidth: "180px",
-        padding: "18px 20px",
+        minWidth: "190px",
+        position: "relative",
+        overflow: "hidden",
+        padding: "16px 18px",
         borderRadius: "18px",
-        background: "#ffffff",
-        border: "1px solid #e2e8f0",
-        boxShadow: "0 8px 30px rgba(15, 23, 42, 0.06)",
+        background:
+            "linear-gradient(135deg, #FFFFFF 0%, #F5F3FF 55%, #EFF6FF 100%)",
+        border: "1px solid #DDD6FE",
+        boxShadow: "0 10px 30px rgba(91, 33, 182, 0.08)",
+        display: "flex",
+        alignItems: "center",
+        gap: "12px",
+    },
+
+    cycleGlow: {
+        position: "absolute",
+        width: "80px",
+        height: "80px",
+        borderRadius: "50%",
+        right: "-35px",
+        top: "-35px",
+        background:
+            "radial-gradient(circle, rgba(139,92,246,0.18), transparent 70%)",
+    },
+
+    cycleIcon: {
+        width: "40px",
+        height: "40px",
+        minWidth: "40px",
+        borderRadius: "12px",
+        background:
+            "linear-gradient(135deg, #7C3AED 0%, #3B82F6 100%)",
+        color: "#FFFFFF",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: "18px",
+        fontWeight: 800,
+        boxShadow: "0 7px 16px rgba(99,102,241,0.18)",
+    },
+
+    cycleInfo: {
+        position: "relative",
+        zIndex: 2,
     },
 
     cycleLabel: {
-        fontSize: "10px",
+        fontSize: "9px",
         fontWeight: 800,
         color: "#94a3b8",
-        letterSpacing: "1.3px",
+        letterSpacing: "1.2px",
     },
 
     cycleNumber: {
-        marginTop: "5px",
-        fontSize: "25px",
+        marginTop: "3px",
+        fontSize: "23px",
         fontWeight: 800,
-        color: "#4f46e5",
+        background:
+            "linear-gradient(90deg, #6D28D9, #2563EB)",
+        WebkitBackgroundClip: "text",
+        WebkitTextFillColor: "transparent",
     },
 
     cycleStatus: {
-        marginTop: "3px",
-        fontSize: "12px",
+        marginTop: "2px",
+        fontSize: "10px",
         color: "#64748b",
     },
 
@@ -1444,90 +1625,147 @@ const styles: Record<string, React.CSSProperties> = {
     // ========================================================
 
     hero: {
+        position: "relative",
         display: "grid",
-        gridTemplateColumns: "1fr 300px",
-        gap: "20px",
-        marginBottom: "22px",
+        gridTemplateColumns: "1fr 280px",
+        gap: "15px",
+        marginBottom: "17px",
+        overflow: "hidden",
+    },
+
+    heroPatternOne: {
+        position: "absolute",
+        width: "230px",
+        height: "230px",
+        borderRadius: "50%",
+        right: "170px",
+        top: "-130px",
+        background:
+            "radial-gradient(circle, rgba(139,92,246,0.09), transparent 70%)",
+        pointerEvents: "none",
+    },
+
+    heroPatternTwo: {
+        position: "absolute",
+        width: "180px",
+        height: "180px",
+        borderRadius: "50%",
+        left: "-80px",
+        bottom: "-110px",
+        background:
+            "radial-gradient(circle, rgba(59,130,246,0.07), transparent 70%)",
+        pointerEvents: "none",
     },
 
     heroLeft: {
-        padding: "30px",
-        borderRadius: "24px",
+        position: "relative",
+        overflow: "hidden",
+        padding: "25px",
+        borderRadius: "21px",
         background:
-            "linear-gradient(135deg, #ffffff 0%, #f8faff 100%)",
-        border: "1px solid #e2e8f0",
-        boxShadow: "0 14px 45px rgba(15, 23, 42, 0.07)",
+            "linear-gradient(135deg, #FFFFFF 0%, #FAF9FF 54%, #F7F9FF 100%)",
+        border: "1px solid #E5E7EB",
+        boxShadow: "0 12px 34px rgba(91,33,182,0.065)",
+    },
+
+    heroBadge: {
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "7px",
+        padding: "5px 9px",
+        borderRadius: "999px",
+        background:
+            "linear-gradient(135deg, #F5F3FF 0%, #EFF6FF 100%)",
+        color: "#6D28D9",
+        fontSize: "9px",
+        fontWeight: 800,
+        letterSpacing: "0.5px",
+        marginBottom: "12px",
     },
 
     heroEyebrow: {
-        fontSize: "11px",
+        fontSize: "10px",
         fontWeight: 800,
         color: "#64748b",
         letterSpacing: "1.4px",
-        marginBottom: "22px",
+        marginBottom: "17px",
     },
 
     heroMasteryRow: {
         display: "flex",
         alignItems: "center",
-        gap: "28px",
+        gap: "24px",
     },
 
     masteryCircle: {
-        width: "150px",
-        height: "150px",
-        minWidth: "150px",
+        width: "138px",
+        height: "138px",
+        minWidth: "138px",
         borderRadius: "50%",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         position: "relative",
+        boxShadow:
+            "0 12px 30px rgba(124,58,237,0.10)",
     },
 
     masteryCircleInner: {
-        width: "122px",
-        height: "122px",
+        width: "112px",
+        height: "112px",
         borderRadius: "50%",
         background: "#ffffff",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         flexDirection: "column",
+        boxShadow:
+            "inset 0 0 0 1px rgba(226,232,240,0.8)",
     },
 
     masteryNumber: {
-        fontSize: "25px",
+        fontSize: "24px",
         fontWeight: 800,
         lineHeight: 1,
     },
 
     masteryCircleText: {
-        marginTop: "7px",
-        fontSize: "11px",
+        marginTop: "6px",
+        fontSize: "10px",
         color: "#94a3b8",
         fontWeight: 600,
     },
 
+    heroTextArea: {
+        flex: 1,
+        minWidth: 0,
+    },
+
     heroTitle: {
-        margin: "0 0 7px",
-        fontSize: "25px",
+        margin: "0 0 6px",
+        fontSize: "24px",
         fontWeight: 800,
+        background:
+            "linear-gradient(90deg, #4C1D95, #6366F1)",
+        WebkitBackgroundClip: "text",
+        WebkitTextFillColor: "transparent",
     },
 
     heroDescription: {
         margin: 0,
         color: "#64748b",
-        fontSize: "14px",
+        fontSize: "12.5px",
         lineHeight: 1.6,
+        maxWidth: "500px",
     },
 
     heroProgress: {
         width: "100%",
-        maxWidth: "420px",
+        maxWidth: "440px",
         height: "8px",
-        marginTop: "20px",
+        marginTop: "17px",
         borderRadius: "999px",
-        background: "#e2e8f0",
+        background: "#EDE9FE",
         overflow: "hidden",
     },
 
@@ -1537,47 +1775,81 @@ const styles: Record<string, React.CSSProperties> = {
         transition: "width 0.5s ease",
     },
 
+    progressLabels: {
+        width: "100%",
+        maxWidth: "440px",
+        display: "flex",
+        justifyContent: "space-between",
+        marginTop: "5px",
+        color: "#94a3b8",
+        fontSize: "9px",
+        fontWeight: 600,
+    },
+
     thetaCard: {
-        padding: "28px",
-        borderRadius: "24px",
+        position: "relative",
+        overflow: "hidden",
+        padding: "24px",
+        borderRadius: "21px",
         background:
-            "linear-gradient(145deg, #312e81 0%, #4f46e5 100%)",
+            "linear-gradient(145deg, #4C1D95 0%, #6D28D9 42%, #6366F1 76%, #2563EB 100%)",
         color: "#ffffff",
         display: "flex",
         alignItems: "center",
-        gap: "18px",
-        boxShadow: "0 14px 45px rgba(79, 70, 229, 0.22)",
+        gap: "15px",
+        boxShadow:
+            "0 14px 35px rgba(91,33,182,0.20)",
+    },
+
+    thetaBackgroundCircle: {
+        position: "absolute",
+        width: "160px",
+        height: "160px",
+        borderRadius: "50%",
+        right: "-80px",
+        top: "-70px",
+        background: "rgba(255,255,255,0.09)",
     },
 
     thetaIcon: {
-        width: "58px",
-        height: "58px",
-        borderRadius: "17px",
-        background: "rgba(255,255,255,0.14)",
+        width: "55px",
+        height: "55px",
+        borderRadius: "16px",
+        background: "rgba(255,255,255,0.13)",
+        border:
+            "1px solid rgba(255,255,255,0.16)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        fontSize: "30px",
+        fontSize: "27px",
         fontWeight: 700,
+        position: "relative",
+        zIndex: 2,
     },
 
     thetaLabel: {
-        fontSize: "10px",
+        fontSize: "9px",
         fontWeight: 800,
-        letterSpacing: "1.4px",
-        opacity: 0.7,
+        letterSpacing: "1.3px",
+        opacity: 0.72,
+        position: "relative",
+        zIndex: 2,
     },
 
     thetaValue: {
-        fontSize: "34px",
+        fontSize: "32px",
         fontWeight: 800,
-        marginTop: "4px",
+        marginTop: "3px",
+        position: "relative",
+        zIndex: 2,
     },
 
     thetaDescription: {
-        fontSize: "12px",
-        opacity: 0.75,
+        fontSize: "10.5px",
+        opacity: 0.76,
         marginTop: "2px",
+        position: "relative",
+        zIndex: 2,
     },
 
     // ========================================================
@@ -1587,43 +1859,59 @@ const styles: Record<string, React.CSSProperties> = {
     statsGrid: {
         display: "grid",
         gridTemplateColumns: "repeat(4, 1fr)",
-        gap: "16px",
-        marginBottom: "58px",
+        gap: "12px",
+        marginBottom: "48px",
     },
 
     statCard: {
+        position: "relative",
+        overflow: "hidden",
         display: "flex",
         alignItems: "center",
-        gap: "15px",
-        padding: "20px",
-        background: "#ffffff",
-        border: "1px solid #e2e8f0",
-        borderRadius: "18px",
-        boxShadow: "0 7px 25px rgba(15, 23, 42, 0.045)",
+        gap: "12px",
+        padding: "16px",
+        background: "#FFFFFF",
+        border:
+            "1px solid #E7E5EE",
+        borderRadius: "16px",
+        boxShadow:
+            "0 6px 20px rgba(17,24,39,0.04)",
+    },
+
+    statDecoration: {
+        position: "absolute",
+        width: "70px",
+        height: "70px",
+        borderRadius: "50%",
+        right: "-30px",
+        top: "-30px",
+        opacity: 0.45,
     },
 
     statIcon: {
-        width: "45px",
-        height: "45px",
-        minWidth: "45px",
-        borderRadius: "14px",
-        background: "#eef2ff",
-        color: "#4f46e5",
+        width: "42px",
+        height: "42px",
+        minWidth: "42px",
+        borderRadius: "13px",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        fontSize: "19px",
+        fontSize: "18px",
         fontWeight: 800,
+        position: "relative",
+        zIndex: 2,
     },
 
     statContent: {
         minWidth: 0,
+        position: "relative",
+        zIndex: 2,
     },
 
     statLabel: {
         display: "block",
-        fontSize: "11px",
-        fontWeight: 700,
+        fontSize: "9px",
+        fontWeight: 800,
         color: "#94a3b8",
         textTransform: "uppercase",
         letterSpacing: "0.7px",
@@ -1631,8 +1919,8 @@ const styles: Record<string, React.CSSProperties> = {
 
     statValue: {
         display: "block",
-        marginTop: "3px",
-        fontSize: "22px",
+        marginTop: "2px",
+        fontSize: "21px",
         fontWeight: 800,
         color: "#0f172a",
     },
@@ -1640,7 +1928,7 @@ const styles: Record<string, React.CSSProperties> = {
     statDescription: {
         display: "block",
         marginTop: "2px",
-        fontSize: "11px",
+        fontSize: "9.5px",
         color: "#94a3b8",
     },
 
@@ -1649,27 +1937,28 @@ const styles: Record<string, React.CSSProperties> = {
     // ========================================================
 
     sectionHeader: {
-        marginBottom: "20px",
+        marginBottom: "16px",
     },
 
     sectionEyebrow: {
-        fontSize: "10px",
+        fontSize: "9px",
         fontWeight: 800,
-        letterSpacing: "1.5px",
-        color: "#6366f1",
-        marginBottom: "6px",
+        letterSpacing: "1.4px",
+        color: "#6D28D9",
+        marginBottom: "5px",
     },
 
     sectionTitle: {
         margin: 0,
-        fontSize: "25px",
+        fontSize: "23px",
         fontWeight: 800,
-        letterSpacing: "-0.5px",
+        letterSpacing: "-0.4px",
+        color: "#1E293B",
     },
 
     sectionDescription: {
-        margin: "6px 0 0",
-        fontSize: "13px",
+        margin: "5px 0 0",
+        fontSize: "12px",
         color: "#64748b",
     },
 
@@ -1680,16 +1969,27 @@ const styles: Record<string, React.CSSProperties> = {
     bloomGrid: {
         display: "grid",
         gridTemplateColumns: "repeat(3, 1fr)",
-        gap: "16px",
-        marginBottom: "58px",
+        gap: "13px",
+        marginBottom: "48px",
     },
 
     bloomCard: {
-        padding: "22px",
-        background: "#ffffff",
-        border: "1px solid #e2e8f0",
-        borderRadius: "20px",
-        boxShadow: "0 7px 25px rgba(15, 23, 42, 0.045)",
+        position: "relative",
+        overflow: "hidden",
+        padding: "18px",
+        background: "#FFFFFF",
+        border: "1px solid #E7E5EE",
+        borderRadius: "17px",
+        boxShadow:
+            "0 6px 20px rgba(17,24,39,0.04)",
+    },
+
+    bloomAccent: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        height: "4px",
     },
 
     bloomTop: {
@@ -1699,47 +1999,61 @@ const styles: Record<string, React.CSSProperties> = {
     },
 
     bloomIcon: {
-        width: "43px",
-        height: "43px",
-        borderRadius: "13px",
-        background: "#f1f5f9",
+        width: "40px",
+        height: "40px",
+        borderRadius: "12px",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        fontSize: "20px",
+        fontSize: "18px",
     },
 
     bloomNumber: {
-        fontSize: "12px",
+        fontSize: "10px",
         fontWeight: 800,
-        color: "#cbd5e1",
+        color: "#CBD5E1",
     },
 
     bloomTitle: {
-        margin: "18px 0 4px",
-        fontSize: "17px",
+        margin: "14px 0 4px",
+        fontSize: "15px",
         fontWeight: 800,
     },
 
     bloomDescription: {
         margin: 0,
-        minHeight: "38px",
+        minHeight: "34px",
         color: "#64748b",
-        fontSize: "12px",
+        fontSize: "10.5px",
         lineHeight: 1.5,
     },
 
+    bloomValueRow: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: "8px",
+        marginTop: "14px",
+        marginBottom: "8px",
+    },
+
     bloomValue: {
-        marginTop: "18px",
-        fontSize: "27px",
+        fontSize: "23px",
+        fontWeight: 800,
+    },
+
+    bloomStatusPill: {
+        padding: "4px 7px",
+        borderRadius: "999px",
+        fontSize: "8.5px",
         fontWeight: 800,
     },
 
     progressTrack: {
         width: "100%",
-        height: "7px",
+        height: "6px",
         borderRadius: "999px",
-        background: "#e2e8f0",
+        background: "#EDE9FE",
         overflow: "hidden",
     },
 
@@ -1750,8 +2064,8 @@ const styles: Record<string, React.CSSProperties> = {
     },
 
     statusText: {
-        marginTop: "8px",
-        fontSize: "11px",
+        marginTop: "7px",
+        fontSize: "10px",
         fontWeight: 700,
     },
 
@@ -1762,54 +2076,64 @@ const styles: Record<string, React.CSSProperties> = {
     areaGrid: {
         display: "grid",
         gridTemplateColumns: "repeat(2, 1fr)",
-        gap: "16px",
-        marginBottom: "58px",
+        gap: "13px",
+        marginBottom: "48px",
     },
 
     areaCard: {
-        padding: "21px",
-        borderRadius: "19px",
-        background: "#ffffff",
-        border: "1px solid #e2e8f0",
-        boxShadow: "0 7px 25px rgba(15, 23, 42, 0.045)",
+        position: "relative",
+        overflow: "hidden",
+        padding: "18px",
+        borderRadius: "17px",
+        background: "#FFFFFF",
+        border: "1px solid #E7E5EE",
+        boxShadow:
+            "0 6px 20px rgba(17,24,39,0.04)",
+    },
+
+    areaTopStrip: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        height: "4px",
     },
 
     areaCardHeader: {
         display: "flex",
         alignItems: "center",
-        gap: "13px",
-        marginBottom: "16px",
+        gap: "11px",
+        marginBottom: "14px",
     },
 
     areaIcon: {
-        width: "44px",
-        height: "44px",
-        minWidth: "44px",
-        borderRadius: "13px",
-        background: "#eef2ff",
-        color: "#4f46e5",
+        width: "41px",
+        height: "41px",
+        minWidth: "41px",
+        borderRadius: "12px",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         fontWeight: 800,
-        fontSize: "18px",
+        fontSize: "16px",
+        color: "#5B21B6",
     },
 
     areaTitle: {
         margin: 0,
-        fontSize: "15px",
+        fontSize: "14px",
         fontWeight: 800,
     },
 
     areaStatus: {
         display: "block",
-        marginTop: "3px",
+        marginTop: "2px",
         color: "#94a3b8",
-        fontSize: "11px",
+        fontSize: "9.5px",
     },
 
     areaValue: {
-        fontSize: "20px",
+        fontSize: "19px",
         fontWeight: 800,
     },
 
@@ -1820,107 +2144,133 @@ const styles: Record<string, React.CSSProperties> = {
     gapList: {
         display: "flex",
         flexDirection: "column",
-        gap: "12px",
-        marginBottom: "58px",
+        gap: "10px",
+        marginBottom: "48px",
     },
 
     gapCard: {
+        position: "relative",
         display: "flex",
         alignItems: "flex-start",
-        gap: "16px",
-        padding: "20px",
-        background: "#ffffff",
-        border: "1px solid #fecaca",
-        borderLeft: "4px solid #ef4444",
-        borderRadius: "16px",
-        boxShadow: "0 7px 25px rgba(15, 23, 42, 0.04)",
+        gap: "13px",
+        padding: "17px",
+        background:
+            "linear-gradient(135deg, #FFFFFF 0%, #FFF7F7 100%)",
+        border: "1px solid #FECACA",
+        borderLeft: "4px solid #EF4444",
+        borderRadius: "15px",
+        boxShadow:
+            "0 5px 17px rgba(17,24,39,0.035)",
     },
 
     gapIcon: {
-        width: "38px",
-        height: "38px",
-        minWidth: "38px",
+        width: "36px",
+        height: "36px",
+        minWidth: "36px",
         borderRadius: "11px",
-        background: "#fef2f2",
-        color: "#dc2626",
+        background:
+            "linear-gradient(135deg, #FEE2E2 0%, #FCE7F3 100%)",
+        color: "#DC2626",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         fontWeight: 900,
+        fontSize: "15px",
     },
 
     gapHeader: {
         display: "flex",
         alignItems: "center",
-        gap: "10px",
+        gap: "9px",
         flexWrap: "wrap",
     },
 
     gapTitle: {
         margin: 0,
-        fontSize: "15px",
+        fontSize: "14px",
         fontWeight: 800,
     },
 
     gapArea: {
-        margin: "5px 0 0",
+        margin: "4px 0 0",
         color: "#64748b",
-        fontSize: "12px",
+        fontSize: "10.5px",
     },
 
     gapMastery: {
         display: "flex",
         alignItems: "center",
-        gap: "10px",
-        marginTop: "10px",
-        fontSize: "12px",
+        gap: "8px",
+        marginTop: "8px",
+        fontSize: "10.5px",
         color: "#64748b",
     },
 
     severityBadge: {
         display: "inline-flex",
-        padding: "5px 9px",
+        padding: "4px 7px",
         borderRadius: "999px",
-        fontSize: "10px",
+        fontSize: "8.5px",
         fontWeight: 800,
         textTransform: "uppercase",
-        letterSpacing: "0.5px",
+        letterSpacing: "0.4px",
     },
 
     successCard: {
+        position: "relative",
+        overflow: "hidden",
         display: "flex",
         alignItems: "center",
-        gap: "15px",
-        padding: "22px",
-        marginBottom: "58px",
-        borderRadius: "18px",
-        background: "#f0fdf4",
-        border: "1px solid #bbf7d0",
+        gap: "13px",
+        padding: "18px",
+        marginBottom: "48px",
+        borderRadius: "16px",
+        background:
+            "linear-gradient(135deg, #F0FDF4 0%, #EFF6FF 100%)",
+        border: "1px solid #BBF7D0",
+    },
+
+    successGlow: {
+        position: "absolute",
+        width: "130px",
+        height: "130px",
+        borderRadius: "50%",
+        right: "-65px",
+        top: "-65px",
+        background:
+            "radial-gradient(circle, rgba(59,130,246,0.10), transparent 70%)",
     },
 
     successIcon: {
-        width: "42px",
-        height: "42px",
-        borderRadius: "13px",
-        background: "#dcfce7",
-        color: "#16a34a",
+        width: "40px",
+        height: "40px",
+        borderRadius: "12px",
+        background:
+            "linear-gradient(135deg, #DCFCE7 0%, #DBEAFE 100%)",
+        color: "#16A34A",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         fontWeight: 900,
+        position: "relative",
+        zIndex: 2,
     },
 
     successTitle: {
         margin: 0,
-        fontSize: "15px",
+        fontSize: "14px",
         fontWeight: 800,
         color: "#166534",
+        position: "relative",
+        zIndex: 2,
     },
 
     successText: {
         margin: "4px 0 0",
-        fontSize: "12px",
-        color: "#4d7c0f",
+        fontSize: "10.5px",
+        color: "#4D7C0F",
+        position: "relative",
+        zIndex: 2,
     },
 
     // ========================================================
@@ -1930,150 +2280,158 @@ const styles: Record<string, React.CSSProperties> = {
     conceptList: {
         display: "flex",
         flexDirection: "column",
-        gap: "10px",
-        marginBottom: "50px",
+        gap: "9px",
+        marginBottom: "45px",
     },
 
     conceptDetails: {
-        background: "#ffffff",
-        border: "1px solid #e2e8f0",
-        borderRadius: "17px",
+        background: "#FFFFFF",
+        border: "1px solid #E7E5EE",
+        borderRadius: "16px",
         overflow: "hidden",
-        boxShadow: "0 5px 20px rgba(15, 23, 42, 0.035)",
+        boxShadow:
+            "0 5px 18px rgba(17,24,39,0.035)",
     },
 
     conceptSummary: {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        gap: "20px",
-        padding: "19px 21px",
+        gap: "16px",
+        padding: "17px 19px",
         cursor: "pointer",
     },
 
     conceptMain: {
         display: "flex",
         alignItems: "center",
-        gap: "14px",
+        gap: "12px",
     },
 
     conceptIndex: {
-        width: "38px",
-        height: "38px",
-        minWidth: "38px",
+        width: "36px",
+        height: "36px",
+        minWidth: "36px",
         borderRadius: "11px",
-        background: "#f1f5f9",
+        background:
+            "linear-gradient(135deg, #EDE9FE 0%, #DBEAFE 100%)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        color: "#64748b",
-        fontSize: "11px",
+        color: "#6D28D9",
+        fontSize: "10px",
         fontWeight: 800,
     },
 
     conceptTitle: {
         margin: 0,
-        fontSize: "14px",
+        fontSize: "13.5px",
         fontWeight: 800,
     },
 
     conceptArea: {
         margin: "3px 0 0",
         color: "#94a3b8",
-        fontSize: "11px",
+        fontSize: "10px",
     },
 
     conceptRight: {
         display: "flex",
         alignItems: "center",
-        gap: "12px",
+        gap: "10px",
     },
 
     conceptMastery: {
-        fontSize: "18px",
+        fontSize: "17px",
         fontWeight: 800,
     },
 
     expandIcon: {
-        width: "28px",
-        height: "28px",
-        borderRadius: "9px",
-        background: "#f8fafc",
+        width: "27px",
+        height: "27px",
+        borderRadius: "8px",
+        background:
+            "linear-gradient(135deg, #F5F3FF 0%, #EFF6FF 100%)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        color: "#64748b",
-        fontSize: "18px",
+        color: "#6D28D9",
+        fontSize: "17px",
         transition: "transform 0.2s ease",
     },
 
     conceptDetailsContent: {
-        padding: "0 21px 22px",
-        borderTop: "1px solid #f1f5f9",
+        padding: "0 19px 20px",
+        borderTop: "1px solid #F1F5F9",
     },
 
     detailGrid: {
         display: "grid",
         gridTemplateColumns: "repeat(4, 1fr)",
-        gap: "10px",
-        paddingTop: "18px",
+        gap: "9px",
+        paddingTop: "16px",
     },
 
     detailItem: {
-        padding: "14px",
-        borderRadius: "13px",
-        background: "#f8fafc",
+        padding: "12px",
+        borderRadius: "11px",
+        background:
+            "linear-gradient(135deg, #FAFAFC 0%, #F8FAFF 100%)",
+        border: "1px solid #F1F5F9",
     },
 
     detailLabel: {
         display: "block",
-        fontSize: "10px",
+        fontSize: "9px",
         color: "#94a3b8",
         fontWeight: 700,
         textTransform: "uppercase",
-        letterSpacing: "0.5px",
+        letterSpacing: "0.4px",
     },
 
     detailValue: {
         display: "block",
-        marginTop: "5px",
-        fontSize: "13px",
+        marginTop: "4px",
+        fontSize: "11.5px",
         color: "#334155",
     },
 
     prerequisite: {
         display: "flex",
         alignItems: "center",
-        gap: "8px",
-        marginTop: "15px",
-        padding: "12px 14px",
-        borderRadius: "11px",
-        background: "#fff7ed",
-        color: "#c2410c",
-        fontSize: "12px",
+        gap: "7px",
+        marginTop: "13px",
+        padding: "10px 12px",
+        borderRadius: "10px",
+        background:
+            "linear-gradient(135deg, #FFF7ED 0%, #FDF2F8 100%)",
+        color: "#C2410C",
+        fontSize: "10.5px",
         fontWeight: 600,
     },
 
     bloomResults: {
-        marginTop: "20px",
+        marginTop: "18px",
     },
 
     bloomResultsTitle: {
-        margin: "0 0 12px",
-        fontSize: "13px",
+        margin: "0 0 10px",
+        fontSize: "12px",
         fontWeight: 800,
     },
 
     bloomResultGrid: {
         display: "grid",
         gridTemplateColumns: "repeat(2, 1fr)",
-        gap: "10px",
+        gap: "9px",
     },
 
     bloomResult: {
-        padding: "14px",
-        borderRadius: "12px",
-        background: "#f8fafc",
+        padding: "12px",
+        borderRadius: "11px",
+        background:
+            "linear-gradient(135deg, #FAFAFC 0%, #F8FAFF 100%)",
+        border: "1px solid #F1F5F9",
     },
 
     bloomResultTop: {
@@ -2081,16 +2439,16 @@ const styles: Record<string, React.CSSProperties> = {
         alignItems: "center",
         justifyContent: "space-between",
         gap: "10px",
-        marginBottom: "9px",
-        fontSize: "12px",
+        marginBottom: "8px",
+        fontSize: "10.5px",
         fontWeight: 700,
     },
 
     resultMeta: {
         display: "flex",
         justifyContent: "space-between",
-        marginTop: "8px",
-        fontSize: "10px",
+        marginTop: "7px",
+        fontSize: "9px",
         color: "#94a3b8",
     },
 
@@ -2099,19 +2457,28 @@ const styles: Record<string, React.CSSProperties> = {
     // ========================================================
 
     emptyState: {
-        padding: "45px 20px",
+        padding: "40px 20px",
         textAlign: "center",
-        background: "#ffffff",
-        border: "1px dashed #cbd5e1",
-        borderRadius: "18px",
-        marginBottom: "58px",
+        background:
+            "linear-gradient(135deg, #FFFFFF 0%, #F8F7FF 100%)",
+        border: "1px dashed #C4B5FD",
+        borderRadius: "17px",
+        marginBottom: "48px",
         color: "#64748b",
     },
 
     emptyIcon: {
-        fontSize: "30px",
-        color: "#94a3b8",
-        marginBottom: "8px",
+        width: "48px",
+        height: "48px",
+        margin: "0 auto 8px",
+        borderRadius: "14px",
+        background:
+            "linear-gradient(135deg, #EDE9FE 0%, #DBEAFE 100%)",
+        color: "#7C3AED",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: "25px",
     },
 
     // ========================================================
@@ -2122,14 +2489,14 @@ const styles: Record<string, React.CSSProperties> = {
         display: "flex",
         justifyContent: "space-between",
         gap: "20px",
-        paddingTop: "22px",
-        borderTop: "1px solid #e2e8f0",
+        paddingTop: "20px",
+        borderTop: "1px solid #E5E7EB",
         color: "#64748b",
-        fontSize: "12px",
+        fontSize: "10.5px",
     },
 
     footerLabel: {
-        marginRight: "8px",
+        marginRight: "7px",
         color: "#94a3b8",
         fontWeight: 600,
     },
@@ -2150,19 +2517,45 @@ const styles: Record<string, React.CSSProperties> = {
         justifyContent: "center",
         flexDirection: "column",
         padding: "40px",
+        position: "relative",
+    },
+
+    loadingGlow: {
+        width: "82px",
+        height: "82px",
+        borderRadius: "26px",
+        background:
+            "linear-gradient(135deg, #EDE9FE 0%, #DBEAFE 100%)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        boxShadow:
+            "0 14px 35px rgba(99,102,241,0.12)",
     },
 
     spinner: {
-        width: "42px",
-        height: "42px",
+        width: "40px",
+        height: "40px",
         borderRadius: "50%",
-        border: "4px solid #e2e8f0",
-        borderTopColor: "#4f46e5",
+        border: "4px solid #DDD6FE",
+        borderTopColor: "#6366F1",
         animation: "spin 0.8s linear infinite",
     },
 
+    loadingBadge: {
+        marginTop: "20px",
+        padding: "5px 9px",
+        borderRadius: "999px",
+        background:
+            "linear-gradient(135deg, #EDE9FE 0%, #DBEAFE 100%)",
+        color: "#6D28D9",
+        fontSize: "9px",
+        fontWeight: 800,
+        letterSpacing: "0.8px",
+    },
+
     loadingTitle: {
-        margin: "20px 0 5px",
+        margin: "10px 0 5px",
         fontSize: "20px",
         fontWeight: 800,
     },
@@ -2170,7 +2563,7 @@ const styles: Record<string, React.CSSProperties> = {
     loadingText: {
         margin: 0,
         color: "#64748b",
-        fontSize: "13px",
+        fontSize: "12px",
     },
 
     // ========================================================
@@ -2185,44 +2578,90 @@ const styles: Record<string, React.CSSProperties> = {
         flexDirection: "column",
         padding: "40px",
         textAlign: "center",
+        position: "relative",
+        overflow: "hidden",
+    },
+
+    errorDecorativeCircle: {
+        position: "absolute",
+        width: "280px",
+        height: "280px",
+        borderRadius: "50%",
+        background:
+            "radial-gradient(circle, rgba(124,58,237,0.08), transparent 70%)",
+        top: "15%",
+        right: "18%",
+        pointerEvents: "none",
     },
 
     errorIcon: {
-        width: "62px",
-        height: "62px",
+        width: "64px",
+        height: "64px",
         borderRadius: "20px",
-        background: "#fef2f2",
-        color: "#dc2626",
+        background:
+            "linear-gradient(135deg, #FEE2E2 0%, #FCE7F3 100%)",
+        color: "#DC2626",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        fontSize: "28px",
+        fontSize: "27px",
         fontWeight: 900,
+        position: "relative",
+        zIndex: 2,
+    },
+
+    errorBadge: {
+        marginTop: "14px",
+        padding: "5px 9px",
+        borderRadius: "999px",
+        background:
+            "linear-gradient(135deg, #EDE9FE 0%, #DBEAFE 100%)",
+        color: "#6D28D9",
+        fontSize: "9px",
+        fontWeight: 800,
+        letterSpacing: "0.7px",
+        position: "relative",
+        zIndex: 2,
     },
 
     errorTitle: {
-        margin: "18px 0 7px",
-        fontSize: "23px",
+        margin: "12px 0 6px",
+        fontSize: "22px",
         fontWeight: 800,
+        position: "relative",
+        zIndex: 2,
     },
 
     errorText: {
         maxWidth: "500px",
-        margin: "0 0 20px",
+        margin: "0 0 18px",
         color: "#64748b",
-        fontSize: "14px",
+        fontSize: "12.5px",
         lineHeight: 1.6,
+        position: "relative",
+        zIndex: 2,
     },
 
     primaryButton: {
         border: "none",
-        borderRadius: "12px",
-        padding: "12px 18px",
-        background: "#4f46e5",
-        color: "#ffffff",
-        fontSize: "13px",
-        fontWeight: 700,
+        borderRadius: "11px",
+        padding: "11px 16px",
+        background:
+            "linear-gradient(135deg, #7C3AED 0%, #6366F1 55%, #3B82F6 100%)",
+        color: "#FFFFFF",
+        fontSize: "11.5px",
+        fontWeight: 800,
         cursor: "pointer",
-        boxShadow: "0 8px 20px rgba(79, 70, 229, 0.22)",
+        boxShadow:
+            "0 9px 20px rgba(99,102,241,0.20)",
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "8px",
+        position: "relative",
+        zIndex: 2,
+    },
+
+    buttonArrow: {
+        fontSize: "15px",
     },
 };

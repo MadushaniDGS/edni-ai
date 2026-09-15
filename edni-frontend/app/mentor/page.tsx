@@ -297,18 +297,7 @@ export default function MentorPage() {
         }}
       >
         {/* TOP BAR */}
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: "240px",
-            right: 0,
-            height: "64px",
-            zIndex: 100,
-          }}
-        >
-          <TopBar title="AI Mentor" />
-        </div>
+        <TopBar title="AI Mentor" />
 
         {/* CHAT PAGE */}
         <div

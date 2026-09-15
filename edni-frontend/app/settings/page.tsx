@@ -299,9 +299,6 @@ export default function SettingsPage() {
   if (loading) {
     return (
       <>
-        <TopBar />
-        <Sidebar />
-
         <div className="loadingPage">
           <div className="loadingSticker">⚙️</div>
 
@@ -388,7 +385,7 @@ export default function SettingsPage() {
           GLOBAL APP NAVIGATION
       ====================================================== */}
 
-      <TopBar />
+      <TopBar title="Settings" />
       <Sidebar />
 
       {/* ======================================================
@@ -811,9 +808,9 @@ export default function SettingsPage() {
                                 )
                               }
                               className={`optionButton ${settings.theme ===
-                                  theme
-                                  ? "selected"
-                                  : ""
+                                theme
+                                ? "selected"
+                                : ""
                                 }`}
                             >
                               {theme === "light"
@@ -916,9 +913,9 @@ export default function SettingsPage() {
                               )
                             }
                             className={`fontButton ${settings.font_size ===
-                                item.value
-                                ? "selected"
-                                : ""
+                              item.value
+                              ? "selected"
+                              : ""
                               }`}
                           >
                             <span
@@ -3089,8 +3086,8 @@ function ChoiceSection({
             key={option.value}
             type="button"
             className={`choiceButton ${value === option.value
-                ? "selected"
-                : ""
+              ? "selected"
+              : ""
               }`}
             onClick={() =>
               onChange(option.value)

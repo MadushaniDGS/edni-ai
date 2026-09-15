@@ -1,8 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+
 import apiClient from "@/lib/apiClient";
+
+import {
+  Menu,
+  Bell,
+  Sun,
+  Moon,
+} from "lucide-react";
 
 interface TopBarProps {
   title?: string;
@@ -14,59 +22,245 @@ interface TopBarProps {
 export default function TopBar({
   title = "Dashboard",
   onMenuToggle,
-  isDarkMode = false,
+  isDarkMode,
   onThemeToggle,
 }: TopBarProps) {
   const router = useRouter();
+
   const [time, setTime] = useState(new Date());
   const [initial, setInitial] = useState("");
   const [semester, setSemester] = useState("");
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  // Real-time clock
+  // Local fallback for theme when parent does not provide theme state
+  const [localDarkMode, setLocalDarkMode] = useState(false);
+
+  const effectiveDarkMode =
+    isDarkMode ?? localDarkMode;
+
+  // ============================================================
+  // REAL-TIME CLOCK
+  // ============================================================
+
   useEffect(() => {
-    const t = setInterval(() => setTime(new Date()), 1000);
+    const t = setInterval(
+      () => setTime(new Date()),
+      1000
+    );
+
     return () => clearInterval(t);
   }, []);
 
-  // Load user data
+  // ============================================================
+  // LOAD USER DATA
+  // ============================================================
+
   useEffect(() => {
     const token = localStorage.getItem("edni_access");
+
     if (!token) return;
 
     apiClient
       .get("/user/auth/me")
       .then((res) => {
-        setInitial((res.data.first_name?.[0] ?? "A").toUpperCase());
-        if (res.data.semester) setSemester(res.data.semester);
+        setInitial(
+          (res.data.first_name?.[0] ?? "A").toUpperCase()
+        );
+
+        if (res.data.semester) {
+          setSemester(res.data.semester);
+        }
       })
       .catch(() => { });
   }, []);
 
-  const dateStr = time.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
+  // ============================================================
+  // LOAD UNREAD NOTIFICATIONS
+  // ============================================================
 
-  const timeStr = time.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
+  const fetchUnreadNotifications = useCallback(
+    async () => {
+      try {
+        const response =
+          await apiClient.get("/notifications");
 
-  const bgColor = isDarkMode ? "#1F2937" : "#FFFFFF";
-  const textColor = isDarkMode ? "#F3F4F6" : "#111827";
-  const borderColor = isDarkMode ? "#374151" : "#E5E7EB";
-  const hoverBg = isDarkMode ? "#374151" : "#F3F4F6";
-  const secondaryText = isDarkMode ? "#D1D5DB" : "#6B7280";
+        if (!Array.isArray(response.data)) {
+          setUnreadCount(0);
+          return;
+        }
 
-  const handleMessagesClick = async () => {
+        const unread = response.data.filter(
+          (notification: any) =>
+            notification?.unread === true
+        );
+
+        setUnreadCount(unread.length);
+      } catch (error) {
+        console.error(
+          "Failed to load notification status:",
+          error
+        );
+      }
+    },
+    []
+  );
+
+  useEffect(() => {
+    fetchUnreadNotifications();
+
+    const handleFocus = () => {
+      fetchUnreadNotifications();
+    };
+
+    window.addEventListener(
+      "focus",
+      handleFocus
+    );
+
+    return () => {
+      window.removeEventListener(
+        "focus",
+        handleFocus
+      );
+    };
+  }, [fetchUnreadNotifications]);
+
+  // ============================================================
+  // DATE / TIME
+  // ============================================================
+
+  const dateStr = time.toLocaleDateString(
+    "en-US",
+    {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    }
+  );
+
+  const timeStr = time.toLocaleTimeString(
+    "en-US",
+    {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    }
+  );
+
+  // ============================================================
+  // COLORS
+  // ============================================================
+
+  const bgColor = effectiveDarkMode
+    ? "#111827"
+    : "#FFFFFF";
+
+  const borderColor = effectiveDarkMode
+    ? "#374151"
+    : "#E5E7EB";
+
+  const secondaryText = effectiveDarkMode
+    ? "#D1D5DB"
+    : "#64748B";
+
+  // ============================================================
+  // SIDEBAR TOGGLE
+  // ============================================================
+
+  const handleSidebarToggle = () => {
+    // Keep existing parent functionality
+    if (onMenuToggle) {
+      onMenuToggle();
+      return;
+    }
+
+    // Fallback so the button is still functional
+    // when no parent handler has been provided.
+    if (typeof window !== "undefined") {
+      const sidebar =
+        document.querySelector(
+          "aside"
+        ) as HTMLElement | null;
+
+      if (sidebar) {
+        const isHidden =
+          sidebar.dataset.collapsed === "true";
+
+        sidebar.style.transition =
+          "transform 0.25s ease";
+
+        sidebar.style.transform = isHidden
+          ? "translateX(0)"
+          : "translateX(-100%)";
+
+        sidebar.dataset.collapsed =
+          isHidden ? "false" : "true";
+      }
+
+      window.dispatchEvent(
+        new CustomEvent("edni-sidebar-toggle")
+      );
+    }
+  };
+
+  // ============================================================
+  // NOTIFICATIONS
+  // ============================================================
+
+  const handleNotificationsClick = async () => {
     try {
-      await apiClient.get("/notifications"); // GET /api/v1/notifications
+      const response =
+        await apiClient.get("/notifications");
+
+      if (Array.isArray(response.data)) {
+        const unread = response.data.filter(
+          (notification: any) =>
+            notification?.unread === true
+        );
+
+        setUnreadCount(unread.length);
+      }
+
       router.push("/notifications");
     } catch (error) {
-      console.error("Failed to load notifications", error);
+      console.error(
+        "Failed to load notifications",
+        error
+      );
+
+      router.push("/notifications");
     }
+  };
+
+  // ============================================================
+  // THEME TOGGLE
+  // ============================================================
+
+  const handleThemeToggle = () => {
+    if (onThemeToggle) {
+      onThemeToggle();
+      return;
+    }
+
+    setLocalDarkMode((previous) => {
+      const next = !previous;
+
+      if (typeof document !== "undefined") {
+        document.documentElement.style.colorScheme =
+          next ? "dark" : "light";
+
+        document.body.style.transition =
+          "background-color 0.3s ease, color 0.3s ease";
+
+        document.body.style.backgroundColor =
+          next ? "#111827" : "#FFFFFF";
+
+        document.body.style.color =
+          next ? "#F3F4F6" : "#111827";
+      }
+
+      return next;
+    });
   };
 
   return (
@@ -74,84 +268,173 @@ export default function TopBar({
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 12,
-        padding: "0 24px",
+        gap: 10,
+        padding: "0 22px",
         height: 64,
         borderBottom: `1px solid ${borderColor}`,
-        background: bgColor,
+        background: effectiveDarkMode
+          ? "rgba(17,24,39,0.96)"
+          : "rgba(255,255,255,0.96)",
+        backdropFilter: "blur(14px)",
+        WebkitBackdropFilter:
+          "blur(14px)",
         position: "sticky",
         top: 0,
         zIndex: 30,
         flexShrink: 0,
-        transition: "background-color 0.3s, border-color 0.3s",
+        transition:
+          "background-color 0.3s, border-color 0.3s",
+        boxShadow: effectiveDarkMode
+          ? "0 4px 18px rgba(0,0,0,0.12)"
+          : "0 4px 18px rgba(91,33,182,0.04)",
       }}
     >
-      {/* Menu Toggle Button (Hamburger) */}
-      <button
-        onClick={onMenuToggle}
+      {/* ======================================================
+          LEFT: SIDEBAR TOGGLE + TITLE
+      ======================================================= */}
+
+      <div
         style={{
           display: "flex",
           alignItems: "center",
-          marginLeft: "240px",
-          justifyContent: "center",
-          width: 40,
-          height: 40,
-          borderRadius: 8,
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          color: secondaryText,
-          fontSize: 20,
-          transition: "all 0.2s",
-          flexShrink: 0,
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = hoverBg;
-          e.currentTarget.style.color = "#4F46E5";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = "none";
-          e.currentTarget.style.color = secondaryText;
-        }}
-        title="Toggle Sidebar"
-      >
-        ☰
-      </button>
-
-      {/* Page Title */}
-      <span
-        style={{
-          fontSize: 18,
-          fontWeight: 700,
-          color: "#4F46E5",
-          letterSpacing: "-0.3px",
-          whiteSpace: "nowrap",
+          gap: 9,
+          minWidth: 0,
         }}
       >
-        {title}
-      </span>
+        {/* SIDEBAR TOGGLE */}
+        <button
+          onClick={handleSidebarToggle}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 39,
+            height: 39,
+            borderRadius: 11,
+            background:
+              effectiveDarkMode
+                ? "rgba(124,58,237,0.13)"
+                : "linear-gradient(135deg, #F5F3FF 0%, #EFF6FF 100%)",
+            border:
+              effectiveDarkMode
+                ? "1px solid rgba(139,92,246,0.20)"
+                : "1px solid #E9E7EF",
+            cursor: "pointer",
+            color:
+              effectiveDarkMode
+                ? "#C4B5FD"
+                : "#6D28D9",
+            transition: "all 0.2s ease",
+            flexShrink: 0,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background =
+              effectiveDarkMode
+                ? "rgba(124,58,237,0.23)"
+                : "linear-gradient(135deg, #EDE9FE 0%, #DBEAFE 100%)";
 
-      {/* Spacer */}
+            e.currentTarget.style.color =
+              effectiveDarkMode
+                ? "#DDD6FE"
+                : "#7C3AED";
+
+            e.currentTarget.style.boxShadow =
+              "0 6px 16px rgba(124,58,237,0.12)";
+
+            e.currentTarget.style.transform =
+              "translateY(-1px)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background =
+              effectiveDarkMode
+                ? "rgba(124,58,237,0.13)"
+                : "linear-gradient(135deg, #F5F3FF 0%, #EFF6FF 100%)";
+
+            e.currentTarget.style.color =
+              effectiveDarkMode
+                ? "#C4B5FD"
+                : "#6D28D9";
+
+            e.currentTarget.style.boxShadow =
+              "none";
+
+            e.currentTarget.style.transform =
+              "translateY(0)";
+          }}
+          title="Toggle Sidebar"
+          aria-label="Toggle Sidebar"
+        >
+          <Menu
+            size={20}
+            strokeWidth={2.3}
+          />
+        </button>
+
+        {/* PAGE TITLE */}
+        <span
+          style={{
+            fontSize: 17,
+            fontWeight: 800,
+            background:
+              "linear-gradient(90deg, #6D28D9 0%, #7C3AED 52%, #2563EB 100%)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor:
+              "transparent",
+            letterSpacing: "-0.3px",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            maxWidth: 320,
+          }}
+        >
+          {title}
+        </span>
+      </div>
+
+      {/* SPACER */}
       <div style={{ flex: 1 }} />
 
-      {/* Date & Time Section */}
+      {/* ======================================================
+          DATE + TIME
+      ======================================================= */}
+
       <div
         style={{
           display: "flex",
           flexDirection: "column",
           alignItems: "flex-end",
-          minWidth: 100,
-          gap: 4,
+          minWidth: 92,
+          gap: 3,
+          padding: "5px 9px",
+          borderRadius: 10,
+          background:
+            effectiveDarkMode
+              ? "rgba(255,255,255,0.04)"
+              : "linear-gradient(135deg, #FAF9FF 0%, #F8FAFF 100%)",
+          border:
+            effectiveDarkMode
+              ? "1px solid rgba(255,255,255,0.07)"
+              : "1px solid #EEF2FF",
         }}
       >
-        <span style={{ fontSize: 13, fontWeight: 600, color: secondaryText }}>
-          {dateStr}
-        </span>
         <span
           style={{
-            fontSize: 12,
+            fontSize: 10,
+            fontWeight: 600,
+            color: secondaryText,
+            lineHeight: 1,
+          }}
+        >
+          {dateStr}
+        </span>
+
+        <span
+          style={{
+            fontSize: 11,
             fontWeight: 800,
-            color: "#4F46E5",
+            color: effectiveDarkMode
+              ? "#A78BFA"
+              : "#6366F1",
             lineHeight: 1,
           }}
         >
@@ -159,67 +442,180 @@ export default function TopBar({
         </span>
       </div>
 
-      {/* Notifications Icon Button */}
+      {/* ======================================================
+          NOTIFICATIONS
+      ======================================================= */}
+
       <button
-        onClick={() => router.push("/notifications")}
+        onClick={handleNotificationsClick}
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          width: 40,
-          height: 40,
-          borderRadius: 8,
-          background: "none",
-          border: "none",
+          width: 39,
+          height: 39,
+          borderRadius: 11,
+          background:
+            effectiveDarkMode
+              ? "rgba(124,58,237,0.10)"
+              : "#FFFFFF",
+          border:
+            effectiveDarkMode
+              ? "1px solid rgba(139,92,246,0.15)"
+              : "1px solid #E9E7EF",
           cursor: "pointer",
-          fontSize: 18,
-          color: secondaryText,
-          transition: "all 0.2s",
+          color:
+            effectiveDarkMode
+              ? "#C4B5FD"
+              : "#64748B",
+          transition: "all 0.2s ease",
           position: "relative",
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.background = hoverBg;
-          e.currentTarget.style.color = "#4F46E5";
+          e.currentTarget.style.background =
+            effectiveDarkMode
+              ? "rgba(124,58,237,0.22)"
+              : "linear-gradient(135deg, #EDE9FE 0%, #DBEAFE 100%)";
+
+          e.currentTarget.style.color =
+            effectiveDarkMode
+              ? "#DDD6FE"
+              : "#7C3AED";
+
+          e.currentTarget.style.boxShadow =
+            "0 6px 16px rgba(124,58,237,0.11)";
+
+          e.currentTarget.style.transform =
+            "translateY(-1px)";
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.background = "none";
-          e.currentTarget.style.color = secondaryText;
+          e.currentTarget.style.background =
+            effectiveDarkMode
+              ? "rgba(124,58,237,0.10)"
+              : "#FFFFFF";
+
+          e.currentTarget.style.color =
+            effectiveDarkMode
+              ? "#C4B5FD"
+              : "#64748B";
+
+          e.currentTarget.style.boxShadow =
+            "none";
+
+          e.currentTarget.style.transform =
+            "translateY(0)";
         }}
         title="Notifications"
+        aria-label="Notifications"
       >
-        ✉️
+        <Bell
+          size={18}
+          strokeWidth={2.1}
+        />
+
+        {/* REAL UNREAD INDICATOR */}
+        {unreadCount > 0 && (
+          <span
+            style={{
+              position: "absolute",
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              right: 5,
+              top: 4,
+              background:
+                "linear-gradient(135deg, #A855F7 0%, #3B82F6 100%)",
+              border: `2px solid ${effectiveDarkMode
+                  ? "#111827"
+                  : "#FFFFFF"
+                }`,
+              boxSizing: "content-box",
+            }}
+          />
+        )}
       </button>
 
-      {/* Theme Toggle Button */}
+      {/* ======================================================
+          THEME TOGGLE
+      ======================================================= */}
+
       <button
-        onClick={onThemeToggle}
+        onClick={handleThemeToggle}
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          width: 40,
-          height: 40,
-          borderRadius: 8,
-          background: "none",
-          border: "none",
+          width: 39,
+          height: 39,
+          borderRadius: 11,
+          background:
+            effectiveDarkMode
+              ? "rgba(59,130,246,0.10)"
+              : "#FFFFFF",
+          border:
+            effectiveDarkMode
+              ? "1px solid rgba(59,130,246,0.15)"
+              : "1px solid #E9E7EF",
           cursor: "pointer",
-          fontSize: 18,
-          color: secondaryText,
-          transition: "all 0.2s",
+          color:
+            effectiveDarkMode
+              ? "#FDE68A"
+              : "#64748B",
+          transition: "all 0.2s ease",
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.background = hoverBg;
-          e.currentTarget.style.color = "#4F46E5";
+          e.currentTarget.style.background =
+            effectiveDarkMode
+              ? "rgba(59,130,246,0.20)"
+              : "linear-gradient(135deg, #FEF3C7 0%, #EDE9FE 100%)";
+
+          e.currentTarget.style.color =
+            effectiveDarkMode
+              ? "#FDE68A"
+              : "#7C3AED";
+
+          e.currentTarget.style.boxShadow =
+            "0 6px 16px rgba(124,58,237,0.10)";
+
+          e.currentTarget.style.transform =
+            "translateY(-1px)";
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.background = "none";
-          e.currentTarget.style.color = secondaryText;
-        }}
-        title="Toggle Theme"
-      >
-        {isDarkMode ? "☀️" : "🌙"}
-      </button>
+          e.currentTarget.style.background =
+            effectiveDarkMode
+              ? "rgba(59,130,246,0.10)"
+              : "#FFFFFF";
 
+          e.currentTarget.style.color =
+            effectiveDarkMode
+              ? "#FDE68A"
+              : "#64748B";
+
+          e.currentTarget.style.boxShadow =
+            "none";
+
+          e.currentTarget.style.transform =
+            "translateY(0)";
+        }}
+        title={
+          effectiveDarkMode
+            ? "Switch to Light Mode"
+            : "Switch to Dark Mode"
+        }
+        aria-label="Toggle Theme"
+      >
+        {effectiveDarkMode ? (
+          <Sun
+            size={18}
+            strokeWidth={2.1}
+          />
+        ) : (
+          <Moon
+            size={18}
+            strokeWidth={2.1}
+          />
+        )}
+      </button>
     </header>
   );
 }
